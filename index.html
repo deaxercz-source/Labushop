@@ -122,7 +122,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);min-he
 .page-title{font-size:22px;font-weight:800;letter-spacing:-0.6px;}
 
 /* ── STAT CARDS ── */
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px;}
 .stat-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:20px 22px;position:relative;overflow:hidden;transition:border-color 0.15s;}
 .stat-card:hover{border-color:var(--b2);}
 .stat-card-glow{position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;opacity:0.07;background:var(--glow,var(--or));}
@@ -471,8 +471,8 @@ function showPage(id,btn){
   btn.classList.add('active');
   render();
 }
-function openModal(id){
-  if(id==='modal-bonus') populateBonusModal();
+function openModal(id,personId){
+  if(id==='modal-bonus') populateBonusModal(personId);
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -505,6 +505,15 @@ function renderDashboard(){
   const totalDone=data.bonuses.filter(b=>b.status==='done').length;
   const totalPend=data.bonuses.filter(b=>b.status!=='done').length;
 
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
+  const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
+  function dateGte(d,ref){return d && new Date(d) >= ref;}
+  const bonusToday = data.bonuses.filter(b=>b.date===todayStr).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+  const bonusWeek  = data.bonuses.filter(b=>dateGte(b.date,weekAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+  const bonusMonth = data.bonuses.filter(b=>dateGte(b.date,monthAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+
   document.getElementById('stats-row').innerHTML=`
     <div class="stat-card">
       <div class="stat-card-glow" style="--glow:var(--gr)"></div>
@@ -517,13 +526,25 @@ function renderDashboard(){
       <div class="stat-icon-wrap"><i class="ti ti-users"></i></div>
       <div class="stat-label">Celkem lidí</div>
       <div class="stat-val">${data.people.length}</div>
+      <div class="stat-sub">${totalPend} dárků čeká</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-glow" style="--glow:var(--am)"></div>
+      <div class="stat-icon-wrap" style="--icon-bg:var(--am-d);--icon-c:var(--am)"><i class="ti ti-calendar-day"></i></div>
+      <div class="stat-label">Dnes</div>
+      <div class="stat-val money">${bonusToday.toLocaleString('cs-CZ')} Kč</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-glow" style="--glow:var(--bl)"></div>
+      <div class="stat-icon-wrap" style="--icon-bg:var(--bl-d);--icon-c:var(--bl)"><i class="ti ti-calendar-week"></i></div>
+      <div class="stat-label">Posledních 7 dní</div>
+      <div class="stat-val money">${bonusWeek.toLocaleString('cs-CZ')} Kč</div>
     </div>
     <div class="stat-card">
       <div class="stat-card-glow" style="--glow:var(--pu)"></div>
-      <div class="stat-icon-wrap" style="--icon-bg:var(--pu-d);--icon-c:var(--pu)"><i class="ti ti-gift"></i></div>
-      <div class="stat-label">Předáno dárků</div>
-      <div class="stat-val">${totalDone}</div>
-      <div class="stat-sub">${totalPend} čeká na předání</div>
+      <div class="stat-icon-wrap" style="--icon-bg:var(--pu-d);--icon-c:var(--pu)"><i class="ti ti-calendar-month"></i></div>
+      <div class="stat-label">Posledních 30 dní</div>
+      <div class="stat-val money">${bonusMonth.toLocaleString('cs-CZ')} Kč</div>
     </div>`;
 
   const sorted=[...data.bonuses].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10);
@@ -730,7 +751,7 @@ function populateBonusModal(prePersonId){
   document.getElementById('b-status').value='pending';
   document.getElementById('bonus-modal-title').textContent='Nový bonus';
 }
-function openEditBonus(personId){populateBonusModal(personId);openModal('modal-bonus');}
+function openEditBonus(personId){openModal('modal-bonus',personId);}
 function openEditBonusById(id){
   const b=data.bonuses.find(x=>x.id===id);
   if(!b) return;
