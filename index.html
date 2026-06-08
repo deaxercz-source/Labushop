@@ -498,7 +498,7 @@ function statusChip(s){
   return `<span class="chip ${c}">${l}</span>`;
 }
 
-function render(){renderDashboard();renderPeople();renderBonuses();renderSites();}
+function render(){data=JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[]};renderDashboard();renderPeople();renderBonuses();renderSites();}
 
 function renderDashboard(){
   const totalBonus=data.bonuses.reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
@@ -506,7 +506,7 @@ function renderDashboard(){
   const totalPend=data.bonuses.filter(b=>b.status!=='done').length;
 
   const now = new Date();
-  const todayStr = now.toISOString().slice(0,10);
+  const todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
   function dateGte(d,ref){return d && new Date(d) >= ref;}
@@ -754,7 +754,7 @@ function populateBonusModal(prePersonId){
   if(!data.sites.length) ss.innerHTML='<option value="">— nejdřív přidej stránky —</option>';
   document.getElementById('b-id').value='';
   document.getElementById('b-amount').value='';
-  document.getElementById('b-date').value=new Date().toISOString().slice(0,10);
+  const _ld=new Date();document.getElementById('b-date').value=_ld.getFullYear()+'-'+String(_ld.getMonth()+1).padStart(2,'0')+'-'+String(_ld.getDate()).padStart(2,'0');
   document.getElementById('b-gift').value='labubu';
   document.getElementById('b-status').value='pending';
   document.getElementById('bonus-modal-title').textContent='Nový bonus';
