@@ -281,19 +281,112 @@ option{background:#18181b;}
 .expense-sum-val{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;}
 
 /* ── MOBILE ── */
-@media(max-width:640px){
-  .sidebar{width:58px;padding:12px 8px;}
-  .logo{font-size:0;padding-bottom:14px;}
-  .logo::before{content:"🐣";font-size:22px;}
-  .nav-item span,.nav-section,.sidebar-user,.sidebar-footer .nav-item span{display:none;}
-  .nav-item{justify-content:center;padding:10px;}
-  .main{padding:16px 14px;}
-  .stats-row{grid-template-columns:1fr 1fr;}
+@media(max-width:768px){
+  /* Hide sidebar, use bottom nav */
+  .sidebar{display:none;}
+  .app{flex-direction:column;}
+  .main{padding:14px 14px 90px;max-width:100%;}
+
+  /* Bottom navigation bar */
+  .bottom-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:var(--s1);
+    border-top:1px solid var(--b2);
+    z-index:50;
+    padding:0;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .bottom-nav-item{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:10px 4px;
+    cursor:pointer;
+    border:none;
+    background:none;
+    color:var(--t3);
+    font-family:inherit;
+    font-size:10px;
+    font-weight:600;
+    gap:4px;
+    transition:color 0.12s;
+    position:relative;
+  }
+  .bottom-nav-item i{font-size:20px;}
+  .bottom-nav-item.active{color:var(--or);}
+  .bottom-nav-item .bn-badge{
+    position:absolute;
+    top:6px;
+    right:calc(50% - 16px);
+    background:var(--re);
+    color:#fff;
+    border-radius:99px;
+    font-size:9px;
+    font-weight:700;
+    padding:1px 5px;
+    min-width:16px;
+    text-align:center;
+  }
+
+  /* Stats */
+  .stats-row{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+  .stat-card{padding:14px 14px;}
+  .stat-val{font-size:22px;}
+  .stat-val.money{font-size:17px;}
+  .stat-icon-wrap{width:30px;height:30px;border-radius:8px;margin-bottom:10px;}
+  .stat-icon-wrap i{font-size:15px;}
+
+  /* Page header */
+  .page-header{margin-bottom:16px;}
+  .page-title{font-size:18px;}
+
+  /* Person cards */
+  .pc-header{padding:12px 14px;gap:10px;}
+  .avatar-lg{width:34px;height:34px;font-size:13px;border-radius:9px;}
+  .pc-name{font-size:14px;}
+  .pc-sub{font-size:11px;}
+  .pc-total{font-size:13px;}
+  .pc-stats{grid-template-columns:1fr 1fr 1fr;}
+  .pc-stat{padding:10px 10px;}
+  .pc-stat:nth-child(3n){border-right:none;}
+  .pc-stat-val{font-size:15px;}
+  .pc-sites{grid-template-columns:1fr;gap:10px;padding:12px 14px;}
+
+  /* Table — hide less important columns */
+  .hide-mobile{display:none;}
+  table{font-size:12px;}
+  th{padding:8px 10px;font-size:10px;}
+  td{padding:8px 10px;}
+
+  /* Recent rows */
+  .recent-row{padding:10px 14px;gap:10px;}
+  .rr-right{flex-wrap:wrap;gap:5px;max-width:160px;}
+  .chip{font-size:11px;padding:2px 7px;}
+
+  /* Modal */
+  .modal{padding:20px 18px;border-radius:16px 16px 0 0;margin-top:auto;max-width:100%;}
+  .modal-overlay{align-items:flex-end;padding:0;}
   .form-row{grid-template-columns:1fr;}
-  .pc-stats{grid-template-columns:1fr 1fr;}
-  .pc-stat:nth-child(2n){border-right:none;}
-  .pc-sites{grid-template-columns:1fr;}
-  .rr-right{display:none;}
+
+  /* Sites grid */
+  .sites-grid{grid-template-columns:1fr 1fr;}
+
+  /* Search */
+  #people-search{font-size:16px;}
+
+  /* pc-actions */
+  .pc-actions{flex-wrap:wrap;}
+
+  /* Expense cards */
+  .expense-summary{gap:16px;}
+}
+
+@media(min-width:769px){
+  .bottom-nav{display:none;}
 }
 </style>
 </head>
@@ -345,6 +438,31 @@ option{background:#18181b;}
         <i class="ti ti-logout"></i><span>Odhlásit</span>
       </button>
     </div>
+  </nav>
+
+  <!-- BOTTOM NAV (mobile only) -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bottom-nav-item active" onclick="showPageMobile('dashboard',this)">
+      <i class="ti ti-layout-dashboard"></i>
+      <span>Přehled</span>
+    </button>
+    <button class="bottom-nav-item" onclick="showPageMobile('people',this)">
+      <i class="ti ti-users"></i>
+      <span id="bn-badge-people"></span>
+      <span>Lidé</span>
+    </button>
+    <button class="bottom-nav-item" onclick="showPageMobile('bonuses',this)">
+      <i class="ti ti-coin"></i>
+      <span>Bonusy</span>
+    </button>
+    <button class="bottom-nav-item" onclick="showPageMobile('expenses',this)">
+      <i class="ti ti-receipt"></i>
+      <span>Výdaje</span>
+    </button>
+    <button class="bottom-nav-item" onclick="showPageMobile('sites',this)">
+      <i class="ti ti-world"></i>
+      <span>Více</span>
+    </button>
   </nav>
 
   <main class="main">
@@ -624,10 +742,34 @@ function statusChip(s){
   return '<span class="chip '+cl[0]+'">'+cl[1]+'</span>';
 }
 
+function showPageMobile(id, btn){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  document.querySelectorAll('.bottom-nav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  render();
+}
+
+function updateBottomNavBadge(){
+  var pending=data.bonuses.filter(function(b){return b.status!=='done';}).length;
+  var el=document.getElementById('bn-badge-people');
+  if(el){
+    if(pending>0){
+      el.className='bn-badge';
+      el.textContent=pending;
+    } else {
+      el.className='';
+      el.textContent='';
+    }
+  }
+}
+
 function render(){
   data=JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[],costs:[],expenses:[]};
   if(!data.costs)data.costs=[];
   if(!data.expenses)data.expenses=[];
+  updateBottomNavBadge();
   renderDashboard();renderPeople();renderBonuses();renderSites();renderExpenses();
 }
 
@@ -852,7 +994,7 @@ function renderBonuses(){
         '<option value="wait"'+(b.status==='wait'?' selected':'')+'>🕐 Vyzvednutí</option>'+
         '<option value="done"'+(b.status==='done'?' selected':'')+'>✅ Předáno</option>'+
       '</select></td>'+
-      '<td style="font-size:12px;color:var(--t3);font-family:monospace;">'+(b.date?b.date.replace('T',' ').slice(0,16):'—')+'</td>'+
+      '<td class="hide-mobile" style="font-size:12px;color:var(--t3);font-family:monospace;">'+(b.date?b.date.replace('T',' ').slice(0,16):'—')+'</td>'+
       '<td style="white-space:nowrap;">'+
         '<button class="btn btn-ghost btn-sm" onclick="openEditBonusById(\''+b.id+'\')"><i class="ti ti-edit"></i></button>'+
         '<button class="btn btn-danger btn-sm" onclick="deleteBonus(\''+b.id+'\')"><i class="ti ti-trash"></i></button>'+
