@@ -620,51 +620,57 @@ function renderDashboard(){
   const totalBonus=data.bonuses.reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
   const totalDone=data.bonuses.filter(b=>b.status==='done').length;
   const totalPend=data.bonuses.filter(b=>b.status!=='done').length;
-
-  const now = new Date();
-  const todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
-  const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
-  function dateGte(d,ref){return d && new Date(d) >= ref;}
   const totalExpenses=data.expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
   const totalCosts=data.costs.reduce((s,c)=>s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0)),0);
   const netProfit=totalBonus-totalExpenses-totalCosts;
-  const bonusToday = data.bonuses.filter(b=>b.date===todayStr).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
-  const bonusWeek  = data.bonuses.filter(b=>dateGte(b.date,weekAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
-  const bonusMonth = data.bonuses.filter(b=>dateGte(b.date,monthAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+  const now=new Date();
+  const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
+  const monthAgo=new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
+  function dateGte(d,ref){return d&&new Date(d)>=ref;}
+  const bonusToday=data.bonuses.filter(b=>b.date&&b.date.startsWith(todayStr)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+  const bonusWeek=data.bonuses.filter(b=>dateGte(b.date,weekAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
+  const bonusMonth=data.bonuses.filter(b=>dateGte(b.date,monthAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
 
-  document.getElementById('stats-row').innerHTML=`
-    <div class="stat-card">
-      <div class="stat-card-glow" style="--glow:var(--gr)"></div>
-      <div class="stat-icon-wrap" style="--icon-bg:var(--gr-d);--icon-c:var(--gr)"><i class="ti ti-cash"></i></div>
-      <div class="stat-label">Celkový bonus</div>
-      <div class="stat-val money">${totalBonus.toLocaleString('cs-CZ')} Kč</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-glow" style="--glow:var(--or)"></div>
-      <div class="stat-icon-wrap"><i class="ti ti-users"></i></div>
-      <div class="stat-label">Celkem lidí</div>
-      <div class="stat-val">${data.people.length}</div>
-      <div class="stat-sub">${totalPend} dárků čeká</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-glow" style="--glow:var(--am)"></div>
-      <div class="stat-icon-wrap" style="--icon-bg:var(--am-d);--icon-c:var(--am)"><i class="ti ti-calendar-day"></i></div>
-      <div class="stat-label">Dnes</div>
-      <div class="stat-val money">${bonusToday.toLocaleString('cs-CZ')} Kč</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-glow" style="--glow:var(--bl)"></div>
-      <div class="stat-icon-wrap" style="--icon-bg:var(--bl-d);--icon-c:var(--bl)"><i class="ti ti-calendar-week"></i></div>
-      <div class="stat-label">Posledních 7 dní</div>
-      <div class="stat-val money">${bonusWeek.toLocaleString('cs-CZ')} Kč</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-glow" style="--glow:var(--pu)"></div>
-      <div class="stat-icon-wrap" style="--icon-bg:var(--pu-d);--icon-c:var(--pu)"><i class="ti ti-calendar-month"></i></div>
-      <div class="stat-label">Posledních 30 dní</div>
-      <div class="stat-val money">${bonusMonth.toLocaleString('cs-CZ')} Kč</div>
-    </div>`;
+  document.getElementById('stats-row').innerHTML=
+    '<div class="stat-card">' +
+      '<div class="stat-card-glow" style="--glow:var(--gr)"></div>' +
+      '<div class="stat-icon-wrap" style="--icon-bg:var(--gr-d);--icon-c:var(--gr)"><i class="ti ti-cash"></i></div>' +
+      '<div class="stat-label">Celkový bonus</div>' +
+      '<div class="stat-val money">'+totalBonus.toLocaleString('cs-CZ')+' Kč</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-card-glow" style="--glow:var(--or)"></div>' +
+      '<div class="stat-icon-wrap"><i class="ti ti-users"></i></div>' +
+      '<div class="stat-label">Celkem lidí</div>' +
+      '<div class="stat-val">'+data.people.length+'</div>' +
+      '<div class="stat-sub">'+totalPend+' dárků čeká</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-card-glow" style="--glow:'+(netProfit>=0?'#2ECC8F':'#F87171')+'"></div>' +
+      '<div class="stat-icon-wrap" style="--icon-bg:'+(netProfit>=0?'var(--gr-d)':'var(--re-d)')+';--icon-c:'+(netProfit>=0?'var(--gr)':'var(--re)')+'"><i class="ti ti-trending-up"></i></div>' +
+      '<div class="stat-label">Čistý zisk</div>' +
+      '<div class="stat-val" style="font-family:'DM Mono',monospace;font-size:20px;color:'+(netProfit>=0?'var(--gr)':'var(--re)')+';">'+netProfit.toLocaleString('cs-CZ')+' Kč</div>' +
+      '<div class="stat-sub">výdaje: '+(totalExpenses+totalCosts).toLocaleString('cs-CZ')+' Kč</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-card-glow" style="--glow:var(--am)"></div>' +
+      '<div class="stat-icon-wrap" style="--icon-bg:var(--am-d);--icon-c:var(--am)"><i class="ti ti-calendar-day"></i></div>' +
+      '<div class="stat-label">Dnes</div>' +
+      '<div class="stat-val money">'+bonusToday.toLocaleString('cs-CZ')+' Kč</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-card-glow" style="--glow:var(--bl)"></div>' +
+      '<div class="stat-icon-wrap" style="--icon-bg:var(--bl-d);--icon-c:var(--bl)"><i class="ti ti-calendar-week"></i></div>' +
+      '<div class="stat-label">Posledních 7 dní</div>' +
+      '<div class="stat-val money">'+bonusWeek.toLocaleString('cs-CZ')+' Kč</div>' +
+    '</div>' +
+    '<div class="stat-card">' +
+      '<div class="stat-card-glow" style="--glow:var(--pu)"></div>' +
+      '<div class="stat-icon-wrap" style="--icon-bg:var(--pu-d);--icon-c:var(--pu)"><i class="ti ti-calendar-month"></i></div>' +
+      '<div class="stat-label">Posledních 30 dní</div>' +
+      '<div class="stat-val money">'+bonusMonth.toLocaleString('cs-CZ')+' Kč</div>' +
+    '</div>';
 
   const sorted=[...data.bonuses].filter(b=>b.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
   const el=document.getElementById('dash-recent');
@@ -675,18 +681,18 @@ function renderDashboard(){
   el.innerHTML=sorted.map(b=>{
     const person=data.people.find(p=>p.id===b.personId);
     const site=data.sites.find(s=>s.id===b.siteId);
-    return `<div class="recent-row">
-      <div class="avatar avatar-sm">${person?ini(person.name):'?'}</div>
-      <div class="rr-info">
-        <div class="rr-name">${person?person.name:'?'}</div>
-        <div class="rr-sub">${site?site.name:'?'} &middot; ${b.date?b.date.replace('T',' ').slice(0,16):'bez data'}</div>
-      </div>
-      <div class="rr-right">
-        <span class="chip chip-green chip-mono">+${parseFloat(b.amount||0).toLocaleString('cs-CZ')} Kč</span>
-        ${giftChip(b.gift)}
-        ${statusChip(b.status)}
-      </div>
-    </div>`;
+    return '<div class="recent-row">' +
+      '<div class="avatar avatar-sm">'+(person?ini(person.name):'?')+'</div>' +
+      '<div class="rr-info">' +
+        '<div class="rr-name">'+(person?person.name:'?')+'</div>' +
+        '<div class="rr-sub">'+(site?site.name:'?')+' &middot; '+(b.date?b.date.replace('T',' ').slice(0,16):'bez data')+'</div>' +
+      '</div>' +
+      '<div class="rr-right">' +
+        '<span class="chip chip-green chip-mono">+'+parseFloat(b.amount||0).toLocaleString('cs-CZ')+' Kč</span>' +
+        giftChip(b.gift) +
+        statusChip(b.status) +
+      '</div>' +
+    '</div>';
   }).join('');
 }
 
