@@ -335,6 +335,12 @@ option{background:#18181b;}
         <h1 class="page-title">Lidé</h1>
         <button class="btn btn-primary" onclick="openModal('modal-person')"><i class="ti ti-user-plus"></i> Přidat</button>
       </div>
+      <div style="position:relative;margin-bottom:16px;">
+        <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--t3);pointer-events:none;"></i>
+        <input id="people-search" type="text" placeholder="Hledat jméno..." oninput="renderPeople()"
+          style="width:100%;padding:10px 14px 10px 38px;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r3);color:var(--t1);font-family:inherit;font-size:14px;outline:none;transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='var(--or)'" onblur="this.style.borderColor='var(--b2)'">
+      </div>
       <div id="people-cards"></div>
     </div>
 
@@ -546,11 +552,18 @@ function renderDashboard(){
 
 function renderPeople(){
   const c=document.getElementById('people-cards');
+  const searchEl=document.getElementById('people-search');
+  const q=(searchEl?searchEl.value.trim().toLowerCase():'');
+  const filtered=data.people.filter(p=>p.name.toLowerCase().includes(q));
   if(!data.people.length){
     c.innerHTML='<div style="text-align:center;color:var(--t3);padding:48px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Zatím nikdo — přidej prvního člověka 🐣</div>';
     return;
   }
-  c.innerHTML=data.people.map(p=>{
+  if(!filtered.length){
+    c.innerHTML='<div style="text-align:center;color:var(--t3);padding:48px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Nikdo nenalezen 🔍</div>';
+    return;
+  }
+  c.innerHTML=filtered.map(p=>{
     const mb=data.bonuses.filter(b=>b.personId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     const total=mb.reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
     const labC=mb.filter(b=>b.gift==='labubu').length;
