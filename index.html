@@ -641,6 +641,10 @@ option{background:#18181b;}
         <input class="form-control" id="b-date" type="datetime-local">
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">Poznámka</label>
+      <input class="form-control" id="b-note" placeholder="např. čekám na výběr, ověření, dodělá zítra...">
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-bonus')">Zrušit</button>
       <button class="btn btn-primary" onclick="saveBonus()"><i class="ti ti-check"></i> Uložit</button>
@@ -965,7 +969,8 @@ function renderDashboard(){
         giftChip(b.gift)+
         statusChip(b.status)+
       '</div>'+
-    '</div>';
+    '</div>'+
+    (b.note?'<div style="padding:2px 14px 8px 56px;font-size:12px;color:var(--t2);"><i class="ti ti-notes" style="font-size:12px;margin-right:4px;"></i>'+b.note+'</div>':'');
   }).join('');
 }
 
@@ -1015,7 +1020,8 @@ function renderPeople(){
           '<button class="btn btn-ghost btn-sm" onclick="openEditBonusById(\''+b.id+'\');event.stopPropagation()"><i class="ti ti-edit"></i></button>'+
           '<button class="btn btn-danger btn-sm" onclick="deleteBonus(\''+b.id+'\');event.stopPropagation()"><i class="ti ti-trash"></i></button>'+
         '</td>'+
-      '</tr>';
+      '</tr>'+
+      (b.note?'<tr><td colspan="6" style="padding:4px 10px 10px;font-size:12px;color:var(--t2);"><i class="ti ti-notes" style="font-size:12px;margin-right:4px;"></i>'+b.note+'</td></tr>':'');
     }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px;font-size:12px;">Žádné bonusy</td></tr>';
 
     return '<div class="pc" id="pc-'+p.id+'">'+
@@ -1095,7 +1101,8 @@ function renderBonuses(){
         '<button class="btn btn-ghost btn-sm" onclick="openEditBonusById(\''+b.id+'\')"><i class="ti ti-edit"></i></button>'+
         '<button class="btn btn-danger btn-sm" onclick="deleteBonus(\''+b.id+'\')"><i class="ti ti-trash"></i></button>'+
       '</td>'+
-    '</tr>';
+    '</tr>'+
+    (b.note?'<tr><td colspan="7" style="padding:4px 16px 10px;font-size:12px;color:var(--t2);"><i class="ti ti-notes" style="font-size:12px;margin-right:4px;"></i>'+b.note+'</td></tr>':'');
   }).join('');
 }
 
@@ -1169,6 +1176,7 @@ function populateBonusModal(prePersonId){
   document.getElementById('b-date').value=ld.getFullYear()+'-'+String(ld.getMonth()+1).padStart(2,'0')+'-'+String(ld.getDate()).padStart(2,'0')+'T'+String(ld.getHours()).padStart(2,'0')+':'+String(ld.getMinutes()).padStart(2,'0');
   document.getElementById('b-gift').value='labubu';
   document.getElementById('b-status').value='pending';
+  document.getElementById('b-note').value='';
   document.getElementById('bonus-modal-title').textContent='Nový bonus';
 }
 function openEditBonus(personId){openModal('modal-bonus',personId);}
@@ -1184,6 +1192,7 @@ function openEditBonusById(id){
   document.getElementById('b-gift').value=b.gift;
   document.getElementById('b-status').value=b.status;
   document.getElementById('b-date').value=b.date||'';
+  document.getElementById('b-note').value=b.note||'';
   document.getElementById('bonus-modal-title').textContent='Upravit bonus';
   openModal('modal-bonus');
 }
@@ -1201,13 +1210,14 @@ function saveBonus(){
   var gift=document.getElementById('b-gift').value;
   var status=document.getElementById('b-status').value;
   var date=document.getElementById('b-date').value;
+  var note=document.getElementById('b-note').value;
   var editId=document.getElementById('b-id').value;
   if(!personId||!siteId)return alert('Vyber člověka a stránku');
   if(editId){
     var b=data.bonuses.find(function(x){return x.id===editId;});
-    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.status=status;b.date=date;}
+    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.status=status;b.date=date;b.note=note;}
   } else {
-    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,status:status,date:date});
+    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,status:status,date:date,note:note});
   }
   save();render();closeModal('modal-bonus');
 }
