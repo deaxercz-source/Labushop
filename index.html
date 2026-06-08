@@ -122,7 +122,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);min-he
 .page-title{font-size:22px;font-weight:800;letter-spacing:-0.6px;}
 
 /* ── STAT CARDS ── */
-.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
 .stat-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:20px 22px;position:relative;overflow:hidden;transition:border-color 0.15s;}
 .stat-card:hover{border-color:var(--b2);}
 .stat-card-glow{position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;opacity:0.07;background:var(--glow,var(--or));}
@@ -204,7 +204,7 @@ option{background:#222226;}
 .pc.open .pc-body{display:block;}
 
 /* Mini stats strip */
-.pc-stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--b1);}
+.pc-stats{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--b1);}
 .pc-stat{padding:13px 16px;text-align:center;border-right:1px solid var(--b1);}
 .pc-stat:last-child{border-right:none;}
 .pc-stat-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;margin-bottom:4px;}
@@ -253,6 +253,18 @@ option{background:#18181b;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;}
 
+/* ── EXPENSE CARDS ── */
+.expense-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px 20px;margin-bottom:10px;transition:border-color 0.15s;}
+.expense-card:hover{border-color:var(--b2);}
+.expense-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.expense-name{font-size:14px;font-weight:600;}
+.expense-amount{font-family:'DM Mono',monospace;font-size:14px;color:var(--re);font-weight:600;}
+.expense-meta{font-size:12px;color:var(--t3);}
+.expense-summary{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px 20px;margin-bottom:20px;display:flex;gap:24px;flex-wrap:wrap;}
+.expense-sum-item{display:flex;flex-direction:column;gap:3px;}
+.expense-sum-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;}
+.expense-sum-val{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;}
+
 /* ── MOBILE ── */
 @media(max-width:640px){
   .sidebar{width:58px;padding:12px 8px;}
@@ -264,7 +276,7 @@ option{background:#18181b;}
   .stats-row{grid-template-columns:1fr 1fr;}
   .form-row{grid-template-columns:1fr;}
   .pc-stats{grid-template-columns:1fr 1fr;}
-  .pc-stat:nth-child(2){border-right:none;}
+  .pc-stat:nth-child(2n){border-right:none;}
   .pc-sites{grid-template-columns:1fr;}
   .rr-right{display:none;}
 }
@@ -303,6 +315,10 @@ option{background:#18181b;}
     </button>
     <button class="nav-item" onclick="showPage('bonuses',this)">
       <i class="ti ti-coin"></i><span>Bonusy</span>
+    </button>
+    <div class="nav-section">Finance</div>
+    <button class="nav-item" onclick="showPage('expenses',this)">
+      <i class="ti ti-receipt"></i><span>Výdaje</span>
     </button>
     <div class="nav-section">Nastavení</div>
     <button class="nav-item" onclick="showPage('sites',this)">
@@ -358,6 +374,17 @@ option{background:#18181b;}
       </div>
     </div>
 
+    <!-- EXPENSES -->
+    <div id="page-expenses" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Výdaje</h1>
+        <button class="btn btn-primary" onclick="openModal('modal-expense')"><i class="ti ti-plus"></i> Přidat výdaj</button>
+      </div>
+      <div id="expense-summary"></div>
+      <p class="sec-label">Záznamy</p>
+      <div id="expenses-list"></div>
+    </div>
+
     <!-- SITES -->
     <div id="page-sites" class="page">
       <div class="page-header">
@@ -399,7 +426,7 @@ option{background:#18181b;}
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Člověk</label>
-        <select class="form-control" id="b-person"></select>
+        <select class="form-control" id="b-person" onchange="filterSitesForPerson(this.value)"></select>
       </div>
       <div class="form-group">
         <label class="form-label">Stránka</label>
@@ -441,6 +468,81 @@ option{background:#18181b;}
   </div>
 </div>
 
+<!-- MODAL: expense -->
+<div class="modal-overlay" id="modal-expense">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="expense-modal-title">Nový výdaj</h2>
+      <button class="modal-close" onclick="closeModal('modal-expense')"><i class="ti ti-x"></i></button>
+    </div>
+    <input type="hidden" id="ex-id">
+    <div class="form-group">
+      <label class="form-label">Název</label>
+      <input class="form-control" id="ex-name" placeholder="např. Reklama Instagram, Spolupráce s...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Částka (Kč)</label>
+        <input class="form-control" id="ex-amount" type="number" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input class="form-control" id="ex-date" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kategorie</label>
+      <select class="form-control" id="ex-category">
+        <option value="reklama">📢 Reklama / spolupráce</option>
+        <option value="material">📦 Materiál / balení</option>
+        <option value="postovne">🚚 Poštovné</option>
+        <option value="jine">💸 Jiné</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Poznámka</label>
+      <input class="form-control" id="ex-note" placeholder="volitelná poznámka">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-expense')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveExpense()"><i class="ti ti-check"></i> Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: person cost -->
+<div class="modal-overlay" id="modal-cost">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="cost-modal-title">Náklady</h2>
+      <button class="modal-close" onclick="closeModal('modal-cost')"><i class="ti ti-x"></i></button>
+    </div>
+    <input type="hidden" id="co-person-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🐣 Cena dárku (Kč)</label>
+        <input class="form-control" id="co-gift" type="number" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🚚 Poštovné (Kč)</label>
+        <input class="form-control" id="co-postage" type="number" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">💸 Jiné náklady (Kč)</label>
+      <input class="form-control" id="co-other" type="number" placeholder="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Poznámka</label>
+      <input class="form-control" id="co-note" placeholder="volitelná poznámka">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cost')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveCost()"><i class="ti ti-check"></i> Uložit</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: site -->
 <div class="modal-overlay" id="modal-site">
   <div class="modal">
@@ -460,7 +562,9 @@ option{background:#18181b;}
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[]};
+let data = JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[],costs:[],expenses:[]};
+if(!data.costs) data.costs=[];
+if(!data.expenses) data.expenses=[];
 function save(){localStorage.setItem('labubu-data',JSON.stringify(data));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
@@ -473,6 +577,18 @@ function showPage(id,btn){
 }
 function openModal(id,personId){
   if(id==='modal-bonus') populateBonusModal(personId);
+  if(id==='modal-expense'){
+    if(!document.getElementById('ex-id').value){
+      document.getElementById('ex-id').value='';
+      document.getElementById('ex-name').value='';
+      document.getElementById('ex-amount').value='';
+      const _ed=new Date();
+      document.getElementById('ex-date').value=_ed.getFullYear()+'-'+String(_ed.getMonth()+1).padStart(2,'0')+'-'+String(_ed.getDate()).padStart(2,'0');
+      document.getElementById('ex-category').value='reklama';
+      document.getElementById('ex-note').value='';
+      document.getElementById('expense-modal-title').textContent='Nový výdaj';
+    }
+  }
   document.getElementById(id).classList.add('open');
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -498,7 +614,7 @@ function statusChip(s){
   return `<span class="chip ${c}">${l}</span>`;
 }
 
-function render(){data=JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[]};renderDashboard();renderPeople();renderBonuses();renderSites();}
+function render(){data=JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[],costs:[],expenses:[]};if(!data.costs)data.costs=[];if(!data.expenses)data.expenses=[];renderDashboard();renderPeople();renderBonuses();renderSites();renderExpenses();}
 
 function renderDashboard(){
   const totalBonus=data.bonuses.reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
@@ -510,6 +626,9 @@ function renderDashboard(){
   const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
   function dateGte(d,ref){return d && new Date(d) >= ref;}
+  const totalExpenses=data.expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  const totalCosts=data.costs.reduce((s,c)=>s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0)),0);
+  const netProfit=totalBonus-totalExpenses-totalCosts;
   const bonusToday = data.bonuses.filter(b=>b.date===todayStr).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
   const bonusWeek  = data.bonuses.filter(b=>dateGte(b.date,weekAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
   const bonusMonth = data.bonuses.filter(b=>dateGte(b.date,monthAgo)).reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
@@ -586,6 +705,9 @@ function renderPeople(){
   }
   c.innerHTML=filtered.map(p=>{
     const mb=data.bonuses.filter(b=>b.personId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const cost=data.costs?data.costs.find(c=>c.personId===p.id):null;
+    const totalCost=cost?(parseFloat(cost.gift||0)+parseFloat(cost.postage||0)+parseFloat(cost.other||0)):0;
+    const profit=total-totalCost;
     const total=mb.reduce((s,b)=>s+(parseFloat(b.amount)||0),0);
     const labC=mb.filter(b=>b.gift==='labubu').length;
     const dumC=mb.filter(b=>b.gift==='dumpling').length;
@@ -645,6 +767,14 @@ function renderPeople(){
             <div class="pc-stat-val money">${total.toLocaleString('cs-CZ')} Kč</div>
           </div>
           <div class="pc-stat">
+            <div class="pc-stat-lbl">Náklady</div>
+            <div class="pc-stat-val" style="font-family:'DM Mono',monospace;font-size:14px;color:var(--re);">${totalCost.toLocaleString('cs-CZ')} Kč</div>
+          </div>
+          <div class="pc-stat">
+            <div class="pc-stat-lbl">Zisk</div>
+            <div class="pc-stat-val" style="font-family:'DM Mono',monospace;font-size:14px;color:${profit>=0?'var(--gr)":'var(--re)'};">${profit.toLocaleString('cs-CZ')} Kč</div>
+          </div>
+          <div class="pc-stat">
             <div class="pc-stat-lbl">🐣 Labubu</div>
             <div class="pc-stat-val">${labC}</div>
           </div>
@@ -681,6 +811,7 @@ function renderPeople(){
         </table>
         <div class="pc-actions">
           <button class="btn btn-primary btn-sm" onclick="openEditBonus('${p.id}');event.stopPropagation()"><i class="ti ti-plus"></i> Přidat bonus</button>
+          <button class="btn btn-ghost btn-sm" onclick="openCostModal('${p.id}');event.stopPropagation()"><i class="ti ti-wallet"></i> Náklady</button>
           <button class="btn btn-danger btn-sm" onclick="deletePerson('${p.id}')"><i class="ti ti-trash"></i> Smazat</button>
         </div>
       </div>
@@ -742,7 +873,13 @@ function populateBonusModal(prePersonId){
   ps.innerHTML=data.people.map(p=>`<option value="${p.id}" ${p.id===prePersonId?'selected':''}>${p.name}</option>`).join('');
   if(!data.people.length) ps.innerHTML='<option value="">— nejdřív přidej lidi —</option>';
   const ss=document.getElementById('b-site');
-  ss.innerHTML=data.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  // Filtruj stránky — skryj ty které daný člověk už má
+  const editId=document.getElementById('b-id').value;
+  const personId=prePersonId||ps.value;
+  const usedSiteIds=new Set(data.bonuses.filter(b=>b.personId===personId && b.id!==editId).map(b=>b.siteId));
+  const availableSites=data.sites.filter(s=>!usedSiteIds.has(s.id));
+  ss.innerHTML=availableSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  if(!availableSites.length) ss.innerHTML='<option value="">— všechny stránky hotovy —</option>';
   if(!data.sites.length) ss.innerHTML='<option value="">— nejdřív přidej stránky —</option>';
   document.getElementById('b-id').value='';
   document.getElementById('b-amount').value='';
@@ -817,6 +954,117 @@ function deleteSite(id){
   data.sites=data.sites.filter(s=>s.id!==id);
   save();render();
 }
+
+function filterSitesForPerson(personId){
+  const editId=document.getElementById('b-id').value;
+  const usedSiteIds=new Set(data.bonuses.filter(b=>b.personId===personId && b.id!==editId).map(b=>b.siteId));
+  const availableSites=data.sites.filter(s=>!usedSiteIds.has(s.id));
+  const ss=document.getElementById('b-site');
+  ss.innerHTML=availableSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  if(!availableSites.length) ss.innerHTML='<option value="">— všechny stránky hotovy —</option>';
+}
+
+function openCostModal(personId){
+  const person=data.people.find(p=>p.id===personId);
+  document.getElementById('co-person-id').value=personId;
+  document.getElementById('cost-modal-title').textContent=`Náklady — ${person?person.name:''}`;
+  const cost=data.costs.find(c=>c.personId===personId);
+  document.getElementById('co-gift').value=cost?cost.gift||'':'';
+  document.getElementById('co-postage').value=cost?cost.postage||'':'';
+  document.getElementById('co-other').value=cost?cost.other||'':'';
+  document.getElementById('co-note').value=cost?cost.note||'':'';
+  openModal('modal-cost');
+}
+
+function saveCost(){
+  const personId=document.getElementById('co-person-id').value;
+  const gift=document.getElementById('co-gift').value;
+  const postage=document.getElementById('co-postage').value;
+  const other=document.getElementById('co-other').value;
+  const note=document.getElementById('co-note').value;
+  const idx=data.costs.findIndex(c=>c.personId===personId);
+  if(idx>=0){ data.costs[idx]={personId,gift,postage,other,note}; }
+  else { data.costs.push({personId,gift,postage,other,note}); }
+  save();render();closeModal('modal-cost');
+}
+
+function renderExpenses(){
+  const list=document.getElementById('expenses-list');
+  const summary=document.getElementById('expense-summary');
+  if(!list) return;
+  const catLabels={reklama:'📢 Reklama / spolupráce',material:'📦 Materiál / balení',postovne:'🚚 Poštovné',jine:'💸 Jiné'};
+  const total=data.expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  const byMonth={};
+  data.expenses.forEach(e=>{
+    const m=e.date?e.date.slice(0,7):'bez data';
+    byMonth[m]=(byMonth[m]||0)+(parseFloat(e.amount)||0);
+  });
+  summary.innerHTML=`<div class="expense-summary">
+    <div class="expense-sum-item">
+      <div class="expense-sum-label">Celkem výdaje</div>
+      <div class="expense-sum-val" style="color:var(--re);">-${total.toLocaleString('cs-CZ')} Kč</div>
+    </div>
+    <div class="expense-sum-item">
+      <div class="expense-sum-label">Počet záznamů</div>
+      <div class="expense-sum-val">${data.expenses.length}</div>
+    </div>
+  </div>`;
+  if(!data.expenses.length){
+    list.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Zatím žádné výdaje</div>';
+    return;
+  }
+  const sorted=[...data.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  list.innerHTML=sorted.map(e=>`<div class="expense-card">
+    <div class="expense-header">
+      <div>
+        <div class="expense-name">${e.name}</div>
+        <div class="expense-meta">${catLabels[e.category]||e.category} ${e.date?'· '+e.date:''} ${e.note?'· '+e.note:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="expense-amount">-${parseFloat(e.amount||0).toLocaleString('cs-CZ')} Kč</div>
+        <button class="btn btn-ghost btn-sm" onclick="editExpense('${e.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+function saveExpense(){
+  const name=document.getElementById('ex-name').value.trim();
+  const amount=document.getElementById('ex-amount').value;
+  const date=document.getElementById('ex-date').value;
+  const category=document.getElementById('ex-category').value;
+  const note=document.getElementById('ex-note').value;
+  const editId=document.getElementById('ex-id').value;
+  if(!name) return alert('Zadej název');
+  if(editId){
+    const e=data.expenses.find(x=>x.id===editId);
+    if(e){e.name=name;e.amount=amount;e.date=date;e.category=category;e.note=note;}
+  } else {
+    data.expenses.push({id:uid(),name,amount,date,category,note});
+  }
+  save();render();closeModal('modal-expense');
+}
+
+function editExpense(id){
+  const e=data.expenses.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('ex-id').value=e.id;
+  document.getElementById('ex-name').value=e.name;
+  document.getElementById('ex-amount').value=e.amount;
+  document.getElementById('ex-date').value=e.date||'';
+  document.getElementById('ex-category').value=e.category;
+  document.getElementById('ex-note').value=e.note||'';
+  document.getElementById('expense-modal-title').textContent='Upravit výdaj';
+  openModal('modal-expense');
+}
+
+function deleteExpense(id){
+  if(!confirm('Smazat tento výdaj?')) return;
+  data.expenses=data.expenses.filter(e=>e.id!==id);
+  save();render();
+}
+
 render();
 </script>
 </body>
