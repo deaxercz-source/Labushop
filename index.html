@@ -547,7 +547,15 @@ function renderDashboard(){
       <div class="stat-val money">${bonusMonth.toLocaleString('cs-CZ')} Kč</div>
     </div>`;
 
-  const sorted=[...data.bonuses].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10);
+  const sorted=[...data.bonuses].sort((a,b)=>{
+    // Pokud obě mají datum, řaď podle data
+    if(a.date && b.date) return b.date.localeCompare(a.date);
+    // Záznam s datem jde před záznam bez data
+    if(a.date && !b.date) return -1;
+    if(!a.date && b.date) return 1;
+    // Oba bez data — řaď podle ID (timestamp v base36)
+    return b.id.localeCompare(a.id);
+  }).slice(0,10);
   const el=document.getElementById('dash-recent');
   if(!sorted.length){
     el.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px;font-size:13px;">Zatím žádná aktivita — přidej první bonus 🐣</div>';
