@@ -271,6 +271,30 @@ option{background:#18181b;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;}
 
+/* ── NOTE CARDS ── */
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.note-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px 18px;position:relative;transition:border-color 0.15s;}
+.note-card:hover{border-color:var(--b2);}
+.note-card.color-orange{border-left:3px solid var(--or);background:rgba(255,107,43,0.04);}
+.note-card.color-green{border-left:3px solid var(--gr);background:rgba(46,204,143,0.04);}
+.note-card.color-blue{border-left:3px solid var(--bl);background:rgba(91,164,245,0.04);}
+.note-card.color-purple{border-left:3px solid var(--pu);background:rgba(167,139,250,0.04);}
+.note-card.color-red{border-left:3px solid var(--re);background:rgba(248,113,113,0.04);}
+.note-card-title{font-size:14px;font-weight:700;margin-bottom:6px;padding-right:50px;}
+.note-card-text{font-size:13px;color:var(--t2);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+.note-card-meta{font-size:11px;color:var(--t3);margin-top:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.note-card-person{background:var(--or-d);color:var(--or);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;}
+.note-card-actions{position:absolute;top:10px;right:10px;display:flex;gap:4px;}
+
+/* Person notes inline */
+.person-notes{padding:12px 16px;border-bottom:1px solid var(--b1);}
+.person-notes-title{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.person-note-item{background:var(--s2);border-radius:var(--r3);padding:8px 12px;margin-bottom:6px;font-size:12px;}
+.person-note-item:last-child{margin-bottom:0;}
+.person-note-item-title{font-weight:700;color:var(--t1);margin-bottom:2px;}
+.person-note-item-text{color:var(--t2);line-height:1.4;white-space:pre-wrap;}
+.note-color-btn.active{border-color:var(--t1) !important;}
+
 /* ── EXPENSE CARDS ── */
 .expense-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px 20px;margin-bottom:10px;transition:border-color 0.15s;}
 .expense-card:hover{border-color:var(--b2);}
@@ -475,6 +499,9 @@ option{background:#18181b;}
     <button class="nav-item" onclick="showPage('expenses',this)">
       <i class="ti ti-receipt"></i><span>Výdaje</span>
     </button>
+    <button class="nav-item" onclick="showPage('notes',this)">
+      <i class="ti ti-notebook"></i><span>Poznámky</span>
+    </button>
     <div class="nav-section">Nastavení</div>
     <button class="nav-item" onclick="showPage('sites',this)">
       <i class="ti ti-world"></i><span>Stránky</span>
@@ -506,9 +533,9 @@ option{background:#18181b;}
       <i class="ti ti-receipt"></i>
       <span>Výdaje</span>
     </button>
-    <button class="bottom-nav-item" onclick="showPageMobile('sites',this)">
-      <i class="ti ti-world"></i>
-      <span>Více</span>
+    <button class="bottom-nav-item" onclick="showPageMobile('notes',this)">
+      <i class="ti ti-notebook"></i>
+      <span>Poznámky</span>
     </button>
   </nav>
 
@@ -563,6 +590,15 @@ option{background:#18181b;}
       <div id="expense-summary"></div>
       <p class="sec-label">Záznamy</p>
       <div id="expenses-list"></div>
+    </div>
+
+    <!-- NOTES -->
+    <div id="page-notes" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Poznámky</h1>
+        <button class="btn btn-primary" onclick="openModal('modal-note')"><i class="ti ti-plus"></i> Přidat</button>
+      </div>
+      <div id="notes-list"></div>
     </div>
 
     <!-- SITES -->
@@ -727,6 +763,47 @@ option{background:#18181b;}
   </div>
 </div>
 
+<!-- MODAL: note -->
+<div class="modal-overlay" id="modal-note">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="note-modal-title">Nová poznámka</h2>
+      <button class="modal-close" onclick="closeModal('modal-note')"><i class="ti ti-x"></i></button>
+    </div>
+    <input type="hidden" id="n-id">
+    <div class="form-group">
+      <label class="form-label">Název</label>
+      <input class="form-control" id="n-title" placeholder="např. Čekám na výběr od Tipsportu...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Text</label>
+      <textarea class="form-control" id="n-text" rows="4" placeholder="Piš sem cokoliv..." style="resize:vertical;"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Přiřadit k osobě (volitelné)</label>
+      <select class="form-control" id="n-person">
+        <option value="">— obecná poznámka —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Barva</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="n-color-picker">
+        <button type="button" onclick="selectNoteColor('default')" class="note-color-btn active" data-color="default" style="width:28px;height:28px;border-radius:8px;border:2px solid var(--b2);background:var(--s2);cursor:pointer;"></button>
+        <button type="button" onclick="selectNoteColor('orange')" class="note-color-btn" data-color="orange" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(255,107,43,0.25);cursor:pointer;"></button>
+        <button type="button" onclick="selectNoteColor('green')" class="note-color-btn" data-color="green" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(46,204,143,0.25);cursor:pointer;"></button>
+        <button type="button" onclick="selectNoteColor('blue')" class="note-color-btn" data-color="blue" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(91,164,245,0.25);cursor:pointer;"></button>
+        <button type="button" onclick="selectNoteColor('purple')" class="note-color-btn" data-color="purple" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(167,139,250,0.25);cursor:pointer;"></button>
+        <button type="button" onclick="selectNoteColor('red')" class="note-color-btn" data-color="red" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(248,113,113,0.25);cursor:pointer;"></button>
+      </div>
+      <input type="hidden" id="n-color" value="default">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-note')">Zrušit</button>
+      <button class="btn btn-primary" onclick="saveNote()"><i class="ti ti-check"></i> Uložit</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: site -->
 <div class="modal-overlay" id="modal-site">
   <div class="modal">
@@ -774,6 +851,7 @@ function initData(userId){
       if(!data.bonuses) data.bonuses=[];
       if(!data.costs) data.costs=[];
       if(!data.expenses) data.expenses=[];
+      if(!data.notes) data.notes=[];
     } else {
       // First time — migrate from localStorage if exists
       var local = JSON.parse(localStorage.getItem('labubu-data')||'null');
@@ -811,6 +889,7 @@ function showPage(id,btn){
 }
 function openModal(id,personId){
   if(id==='modal-bonus') populateBonusModal(personId);
+  if(id==='modal-note' && !document.getElementById('n-id').value) openNoteModal(personId||'');
   if(id==='modal-expense'){
     if(!document.getElementById('ex-id').value){
       document.getElementById('ex-id').value='';
@@ -843,6 +922,96 @@ function statusChip(s){
   return '<span class="chip '+cl[0]+'">'+cl[1]+'</span>';
 }
 
+function selectNoteColor(color){
+  document.getElementById('n-color').value=color;
+  document.querySelectorAll('.note-color-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.color===color);
+  });
+}
+
+function openNoteModal(personId){
+  document.getElementById('n-id').value='';
+  document.getElementById('n-title').value='';
+  document.getElementById('n-text').value='';
+  document.getElementById('n-color').value='default';
+  document.querySelectorAll('.note-color-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.color==='default');
+  });
+  var sel=document.getElementById('n-person');
+  sel.innerHTML='<option value="">— obecná poznámka —</option>'+
+    data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===personId?' selected':'')+'>'+p.name+'</option>';}).join('');
+  document.getElementById('note-modal-title').textContent='Nová poznámka';
+  openModal('modal-note');
+}
+
+function editNote(id){
+  var n=data.notes.find(function(x){return x.id===id;});
+  if(!n)return;
+  document.getElementById('n-id').value=n.id;
+  document.getElementById('n-title').value=n.title||'';
+  document.getElementById('n-text').value=n.text||'';
+  document.getElementById('n-color').value=n.color||'default';
+  document.querySelectorAll('.note-color-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.color===(n.color||'default'));
+  });
+  var sel=document.getElementById('n-person');
+  sel.innerHTML='<option value="">— obecná poznámka —</option>'+
+    data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===n.personId?' selected':'')+'>'+p.name+'</option>';}).join('');
+  document.getElementById('note-modal-title').textContent='Upravit poznámku';
+  openModal('modal-note');
+}
+
+function saveNote(){
+  var title=document.getElementById('n-title').value.trim();
+  var text=document.getElementById('n-text').value.trim();
+  var personId=document.getElementById('n-person').value;
+  var color=document.getElementById('n-color').value;
+  var editId=document.getElementById('n-id').value;
+  if(!title&&!text)return alert('Zadej název nebo text');
+  var now=new Date();
+  var dateStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(editId){
+    var n=data.notes.find(function(x){return x.id===editId;});
+    if(n){n.title=title;n.text=text;n.personId=personId;n.color=color;}
+  } else {
+    if(!data.notes)data.notes=[];
+    data.notes.push({id:uid(),title:title,text:text,personId:personId,color:color,date:dateStr});
+  }
+  save();render();closeModal('modal-note');
+}
+
+function deleteNote(id){
+  if(!confirm('Smazat poznámku?'))return;
+  data.notes=data.notes.filter(function(n){return n.id!==id;});
+  save();render();
+}
+
+function renderNotes(){
+  var list=document.getElementById('notes-list');
+  if(!list)return;
+  if(!data.notes)data.notes=[];
+  if(!data.notes.length){
+    list.innerHTML='<div style="text-align:center;color:var(--t3);padding:48px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Zatím žádné poznámky 📝</div>';
+    return;
+  }
+  var sorted=data.notes.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  list.innerHTML='<div class="notes-grid">'+sorted.map(function(n){
+    var person=n.personId?data.people.find(function(p){return p.id===n.personId;}):null;
+    return '<div class="note-card'+(n.color&&n.color!=='default'?' color-'+n.color:'')+'">'+
+      '<div class="note-card-actions">'+
+        '<button class="btn btn-ghost btn-sm" onclick="editNote(''+n.id+'')"><i class="ti ti-edit"></i></button>'+
+        '<button class="btn btn-danger btn-sm" onclick="deleteNote(''+n.id+'')"><i class="ti ti-trash"></i></button>'+
+      '</div>'+
+      (n.title?'<div class="note-card-title">'+n.title+'</div>':'')+
+      (n.text?'<div class="note-card-text">'+n.text+'</div>':'')+
+      '<div class="note-card-meta">'+
+        (person?'<span class="note-card-person">'+person.name+'</span>':'')+
+        '<span>'+(n.date||'')+'</span>'+
+      '</div>'+
+    '</div>';
+  }).join('')+'</div>';
+}
+
 function showPageMobile(id, btn){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
@@ -869,8 +1038,9 @@ function updateBottomNavBadge(){
 function render(){
   if(!data.costs)data.costs=[];
   if(!data.expenses)data.expenses=[];
+  if(!data.notes)data.notes=[];
   updateBottomNavBadge();
-  renderDashboard();renderPeople();renderBonuses();renderSites();renderExpenses();
+  renderDashboard();renderPeople();renderBonuses();renderSites();renderExpenses();renderNotes();
 }
 
 function renderDashboard(){
@@ -1065,10 +1235,34 @@ function renderPeople(){
             '</div>'+
           '</div>'+
         '</div>'+
+        (function(){
+          var pNotes=(data.notes||[]).filter(function(n){return n.personId===p.id;});
+          if(!pNotes.length) return '';
+          return '<div class="person-notes">'+
+            '<div class="person-notes-title">'+
+              '<span><i class="ti ti-notebook" style="font-size:12px;margin-right:4px;"></i> Poznámky ('+pNotes.length+')</span>'+
+              '<button class="btn btn-ghost btn-sm" onclick="openNoteModal(\''+p.id+'\');event.stopPropagation()" style="padding:2px 8px;font-size:11px;">+ Přidat</button>'+
+            '</div>'+
+            pNotes.map(function(n){
+              return '<div class="person-note-item'+(n.color&&n.color!=='default'?' color-'+n.color:'')+'" style="border-left:2px solid '+(n.color==='orange'?'var(--or)':n.color==='green'?'var(--gr)':n.color==='blue'?'var(--bl)':n.color==='purple'?'var(--pu)':n.color==='red'?'var(--re)':'var(--b2)')+';">'+
+                (n.title?'<div class="person-note-item-title">'+n.title+'</div>':'')+
+                (n.text?'<div class="person-note-item-text">'+n.text+'</div>':'')+
+                '<div style="font-size:10px;color:var(--t3);margin-top:4px;display:flex;justify-content:space-between;">'+
+                  '<span>'+(n.date||'')+'</span>'+
+                  '<span style="display:flex;gap:4px;">'+
+                    '<button class="btn btn-ghost btn-sm" onclick="editNote(\''+n.id+'\');event.stopPropagation()" style="padding:1px 6px;font-size:11px;"><i class="ti ti-edit"></i></button>'+
+                    '<button class="btn btn-danger btn-sm" onclick="deleteNote(\''+n.id+'\');event.stopPropagation()" style="padding:1px 6px;font-size:11px;"><i class="ti ti-trash"></i></button>'+
+                  '</span>'+
+                '</div>'+
+              '</div>';
+            }).join('')+
+          '</div>';
+        })()+
         '<table><thead><tr><th>Datum</th><th>Stránka</th><th>Bonus</th><th>Dárek</th><th>Stav</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'+
         '<div class="pc-actions">'+
           '<button class="btn btn-primary btn-sm" onclick="openEditBonus(\''+p.id+'\');event.stopPropagation()"><i class="ti ti-plus"></i> Přidat bonus</button>'+
           '<button class="btn btn-ghost btn-sm" onclick="openCostModal(\''+p.id+'\');event.stopPropagation()"><i class="ti ti-wallet"></i> Náklady</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="openNoteModal(\''+p.id+'\');event.stopPropagation()"><i class="ti ti-notebook"></i> Poznámka</button>'+
           '<button class="btn btn-danger btn-sm" onclick="deletePerson(\''+p.id+'\')"><i class="ti ti-trash"></i> Smazat</button>'+
         '</div>'+
       '</div>'+
