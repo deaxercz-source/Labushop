@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
   firebase.initializeApp({
     apiKey: "AIzaSyCtw2jh80pjX6DfGYnp9dooDS38h9Wmshg",
@@ -31,7 +32,8 @@
     projectId: "stanek-kalendar",
     appId: "1:927791584501:web:ae99a0fd7499efd66d61bc"
   });
-  const auth = firebase.auth();
+  var auth = firebase.auth();
+  var db = firebase.firestore();
   window._fbSignIn = async function() {
     const email = document.getElementById("login-email").value.trim();
     const pass  = document.getElementById("login-pass").value;
@@ -58,6 +60,7 @@
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("app-root").style.display = "flex";
         document.getElementById("user-email").textContent = user.email;
+        initData(user.uid);
       } else {
         document.getElementById("login-screen").style.display = "flex";
         document.getElementById("app-root").style.display = "none";
@@ -443,6 +446,16 @@ option{background:#18181b;}
   </div>
 </div>
 
+<!-- ── LOADING ── -->
+<div id="loading-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+  <div style="font-size:48px;">🐣</div>
+  <div style="color:var(--t2);font-size:14px;font-weight:600;">Načítám data...</div>
+  <div style="width:40px;height:3px;background:var(--or);border-radius:3px;animation:loadbar 1s ease-in-out infinite alternate;"></div>
+</div>
+<style>
+@keyframes loadbar{from{transform:scaleX(0.3);}to{transform:scaleX(1);}}
+</style>
+
 <!-- ── APP ── -->
 <div id="app-root" class="app" style="display:none;">
 
@@ -729,11 +742,61 @@ option{background:#18181b;}
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[],costs:[],expenses:[]};
-if(!data.costs)data.costs=[];
-if(!data.expenses)data.expenses=[];
-function save(){localStorage.setItem('labubu-data',JSON.stringify(data));}
+var data = {people:[],sites:[],bonuses:[],costs:[],expenses:[]};
+var DB_DOC = 'labubu/main';
+var _saveTimer = null;
+
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+// Save to Firestore with debounce (500ms)
+function save(){
+  if(_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function(){
+    db.doc(DB_DOC).set(data).catch(function(e){
+      console.error('Save error:', e);
+    });
+  }, 500);
+}
+
+// Load from Firestore and subscribe to real-time updates
+function initData(userId){
+  DB_DOC = 'labubu/' + userId;
+  showLoading(true);
+  db.doc(DB_DOC).onSnapshot(function(doc){
+    if(doc.exists){
+      data = doc.data();
+      if(!data.people) data.people=[];
+      if(!data.sites) data.sites=[];
+      if(!data.bonuses) data.bonuses=[];
+      if(!data.costs) data.costs=[];
+      if(!data.expenses) data.expenses=[];
+    } else {
+      // First time — migrate from localStorage if exists
+      var local = JSON.parse(localStorage.getItem('labubu-data')||'null');
+      if(local){
+        data = local;
+        if(!data.costs) data.costs=[];
+        if(!data.expenses) data.expenses=[];
+        db.doc(DB_DOC).set(data).then(function(){
+          localStorage.removeItem('labubu-data');
+          console.log('Migrated from localStorage');
+        });
+      } else {
+        data = {people:[],sites:[],bonuses:[],costs:[],expenses:[]};
+      }
+    }
+    showLoading(false);
+    render();
+  }, function(err){
+    console.error('Firestore error:', err);
+    showLoading(false);
+  });
+}
+
+function showLoading(show){
+  var el = document.getElementById('loading-screen');
+  if(el) el.style.display = show ? 'flex' : 'none';
+}
 
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -800,7 +863,6 @@ function updateBottomNavBadge(){
 }
 
 function render(){
-  data=JSON.parse(localStorage.getItem('labubu-data')||'null')||{people:[],sites:[],bonuses:[],costs:[],expenses:[]};
   if(!data.costs)data.costs=[];
   if(!data.expenses)data.expenses=[];
   updateBottomNavBadge();
@@ -1232,7 +1294,7 @@ function deleteSite(id){
   data.sites=data.sites.filter(function(s){return s.id!==id;});
   save();render();
 }
-render();
+// render() is called by Firestore onSnapshot
 </script>
 
 <script>
