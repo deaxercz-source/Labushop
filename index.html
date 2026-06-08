@@ -2,6 +2,21 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
+<meta name="theme-color" content="#080809">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Labubu">
+<link rel="manifest" href="data:application/json,{
+  %22name%22:%22Labubu%22,
+  %22short_name%22:%22Labubu%22,
+  %22start_url%22:%22.%22,
+  %22display%22:%22standalone%22,
+  %22background_color%22:%22%23080809%22,
+  %22theme_color%22:%22%23080809%22,
+  %22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%23131316'/%3E%3Ctext x='256' y='340' font-family='system-ui,sans-serif' font-size='300' font-weight='800' fill='%23FF6B2B' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22}]
+}">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%23131316'/><text x='256' y='340' font-family='system-ui,sans-serif' font-size='300' font-weight='800' fill='%23FF6B2B' text-anchor='middle'>L</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🐣 Labubu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -631,6 +646,12 @@ function renderDashboard(){
   var bonusToday=data.bonuses.filter(function(b){return b.date&&b.date.startsWith(todayStr);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
   var bonusWeek=data.bonuses.filter(function(b){return dGte(b.date,weekAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
   var bonusMonth=data.bonuses.filter(function(b){return dGte(b.date,monthAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var expToday=data.expenses.filter(function(e){return e.date&&e.date.startsWith(todayStr);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
+  var expWeek=data.expenses.filter(function(e){return dGte(e.date,weekAgo);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
+  var expMonth=data.expenses.filter(function(e){return dGte(e.date,monthAgo);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
+  var netToday=bonusToday-expToday;
+  var netWeek=bonusWeek-expWeek;
+  var netMonth=bonusMonth-expMonth;
   var profitColor=netProfit>=0?'var(--gr)':'var(--re)';
   var profitGlow=netProfit>=0?'#2ECC8F':'#F87171';
   var profitIconBg=netProfit>=0?'var(--gr-d)':'var(--re-d)';
@@ -659,13 +680,25 @@ function renderDashboard(){
       '<div class="stat-card-glow" style="--glow:var(--am)"></div>'+
       '<div class="stat-icon-wrap" style="--icon-bg:var(--am-d);--icon-c:var(--am)"><i class="ti ti-calendar-day"></i></div>'+
       '<div class="stat-label">Dnes</div>'+
-      '<div class="stat-val money">'+bonusToday.toLocaleString('cs-CZ')+' Kč</div>'+
+      '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:2px;">'+
+        '<div class="stat-val money">'+bonusToday.toLocaleString('cs-CZ')+' Kč</div>'+
+        '<div style="text-align:right;padding-bottom:3px;">'+
+          '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;">zisk</div>'+
+          '<div style="font-family:monospace;font-size:14px;font-weight:700;color:'+(netToday>=0?'var(--gr)':'var(--re)')+'">'+netToday.toLocaleString('cs-CZ')+' Kč</div>'+
+        '</div>'+
+      '</div>'+
     '</div>'+
     '<div class="stat-card">'+
       '<div class="stat-card-glow" style="--glow:var(--bl)"></div>'+
       '<div class="stat-icon-wrap" style="--icon-bg:var(--bl-d);--icon-c:var(--bl)"><i class="ti ti-calendar-week"></i></div>'+
       '<div class="stat-label">Posledních 7 dní</div>'+
-      '<div class="stat-val money">'+bonusWeek.toLocaleString('cs-CZ')+' Kč</div>'+
+      '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:2px;">'+
+        '<div class="stat-val money">'+bonusWeek.toLocaleString('cs-CZ')+' Kč</div>'+
+        '<div style="text-align:right;padding-bottom:3px;">'+
+          '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;">zisk</div>'+
+          '<div style="font-family:monospace;font-size:14px;font-weight:700;color:'+(netWeek>=0?'var(--gr)':'var(--re)')+'">'+netWeek.toLocaleString('cs-CZ')+' Kč</div>'+
+        '</div>'+
+      '</div>'+
     '</div>'+
     '<div class="stat-card">'+
       '<div class="stat-card-glow" style="--glow:var(--pu)"></div>'+
@@ -1024,6 +1057,35 @@ function deleteSite(id){
   save();render();
 }
 render();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  var swCode = `
+    var CACHE='labubu-v1';
+    var FILES=['/'];
+    self.addEventListener('install',function(e){
+      e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(FILES);}));
+    });
+    self.addEventListener('fetch',function(e){
+      e.respondWith(
+        caches.match(e.request).then(function(r){
+          return r||fetch(e.request).then(function(res){
+            return caches.open(CACHE).then(function(c){
+              c.put(e.request,res.clone());
+              return res;
+            });
+          });
+        })
+      );
+    });
+  `;
+  var blob=new Blob([swCode],{type:'application/javascript'});
+  var url=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).then(function(){
+    console.log('SW registered');
+  }).catch(function(e){console.log('SW error',e);});
+}
 </script>
 </body>
 </html>
