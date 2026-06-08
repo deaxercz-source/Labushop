@@ -431,7 +431,7 @@ option{background:#18181b;}
       </div>
       <div class="form-group">
         <label class="form-label">Datum</label>
-        <input class="form-control" id="b-date" type="date">
+        <input class="form-control" id="b-date" type="datetime-local">
       </div>
     </div>
     <div class="modal-actions">
@@ -547,15 +547,7 @@ function renderDashboard(){
       <div class="stat-val money">${bonusMonth.toLocaleString('cs-CZ')} Kč</div>
     </div>`;
 
-  const sorted=[...data.bonuses].sort((a,b)=>{
-    // Pokud obě mají datum, řaď podle data
-    if(a.date && b.date) return b.date.localeCompare(a.date);
-    // Záznam s datem jde před záznam bez data
-    if(a.date && !b.date) return -1;
-    if(!a.date && b.date) return 1;
-    // Oba bez data — řaď podle ID (timestamp v base36)
-    return b.id.localeCompare(a.id);
-  }).slice(0,10);
+  const sorted=[...data.bonuses].filter(b=>b.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20);
   const el=document.getElementById('dash-recent');
   if(!sorted.length){
     el.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px;font-size:13px;">Zatím žádná aktivita — přidej první bonus 🐣</div>';
@@ -568,7 +560,7 @@ function renderDashboard(){
       <div class="avatar avatar-sm">${person?ini(person.name):'?'}</div>
       <div class="rr-info">
         <div class="rr-name">${person?person.name:'?'}</div>
-        <div class="rr-sub">${site?site.name:'?'} &middot; ${b.date||'bez data'}</div>
+        <div class="rr-sub">${site?site.name:'?'} &middot; ${b.date?b.date.replace('T',' ').slice(0,16):'bez data'}</div>
       </div>
       <div class="rr-right">
         <span class="chip chip-green chip-mono">+${parseFloat(b.amount||0).toLocaleString('cs-CZ')} Kč</span>
@@ -718,7 +710,7 @@ function renderBonuses(){
           <option value="done"    ${b.status==='done'?'selected':''}>✅ Předáno</option>
         </select>
       </td>
-      <td style="font-size:12px;color:var(--t3);font-family:'DM Mono',monospace;">${b.date||'—'}</td>
+      <td style="font-size:12px;color:var(--t3);font-family:'DM Mono',monospace;">${b.date?b.date.replace('T',' ').slice(0,16):'—'}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="openEditBonusById('${b.id}')"><i class="ti ti-edit"></i></button>
         <button class="btn btn-danger btn-sm" onclick="deleteBonus('${b.id}')"><i class="ti ti-trash"></i></button>
@@ -754,7 +746,7 @@ function populateBonusModal(prePersonId){
   if(!data.sites.length) ss.innerHTML='<option value="">— nejdřív přidej stránky —</option>';
   document.getElementById('b-id').value='';
   document.getElementById('b-amount').value='';
-  const _ld=new Date();document.getElementById('b-date').value=_ld.getFullYear()+'-'+String(_ld.getMonth()+1).padStart(2,'0')+'-'+String(_ld.getDate()).padStart(2,'0');
+  const _ld=new Date();document.getElementById('b-date').value=_ld.getFullYear()+'-'+String(_ld.getMonth()+1).padStart(2,'0')+'-'+String(_ld.getDate()).padStart(2,'0')+'T'+String(_ld.getHours()).padStart(2,'0')+':'+String(_ld.getMinutes()).padStart(2,'0');
   document.getElementById('b-gift').value='labubu';
   document.getElementById('b-status').value='pending';
   document.getElementById('bonus-modal-title').textContent='Nový bonus';
