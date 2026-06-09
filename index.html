@@ -561,7 +561,7 @@ function openEditBonus(personId){openModal('modal-bonus',personId);}
 function openEditBonusById(id){
   var b=data.bonuses.find(function(x){return x.id===id;});
   if(!b)return;
-  populateBonusModal();
+  populateBonusModal(b.personId);
   document.getElementById('b-id').value=b.id;
   document.getElementById('b-person').value=b.personId;
   filterSitesForPerson(b.personId);
@@ -572,7 +572,7 @@ function openEditBonusById(id){
   document.getElementById('b-date').value=b.date||'';
   document.getElementById('b-note').value=b.note||'';
   document.getElementById('bonus-modal-title').textContent='Upravit bonus';
-  openModal('modal-bonus');
+  document.getElementById('modal-bonus').classList.add('open');
 }
 
 // ── SAVE FUNCTIONS ──
