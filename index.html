@@ -165,6 +165,15 @@ function updateBottomNavBadge(){
 }
 
 // ── RENDER ──
+function copyName(name, el){
+  navigator.clipboard.writeText(name).then(function(){
+    var orig = el.textContent;
+    el.textContent = '✓ Zkopírováno';
+    el.style.color = 'var(--gr)';
+    setTimeout(function(){ el.textContent = orig; el.style.color = ''; }, 1500);
+  });
+}
+
 function openPersonDetail(personId){
   // Přepni na stránku Lidé
   var peopleBtn = document.querySelector('.nav-item:nth-child(5)');
@@ -457,7 +466,7 @@ function renderPeople(){
       '<div class="pc-header" onclick="togglePc(\''+p.id+'\')">'+
         '<div class="avatar avatar-lg">'+av+'</div>'+
         '<div class="pc-info">'+
-          '<div class="pc-name">'+p.name+'</div>'+
+          '<div class="pc-name" onclick="copyName(\''+p.name+'\',this);event.stopPropagation()" style="cursor:pointer;" title="Klikni pro kopírování">'+p.name+'</div>'+
           '<div class="pc-sub">'+
             '<span>'+mb.length+' bonus'+(mb.length===1?'':'ů')+'</span>'+
             '<span class="pc-sub-dot">·</span>'+
