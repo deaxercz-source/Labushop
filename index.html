@@ -611,6 +611,7 @@ function populateBonusModal(prePersonId){
   filterSitesForPerson(prePersonId||ps.value);
   document.getElementById('b-id').value='';
   document.getElementById('b-amount').value='';
+  document.getElementById('b-qty').value='1';
   document.getElementById('b-note').value='';
   var ld=new Date();
   document.getElementById('b-date').value=ld.getFullYear()+'-'+String(ld.getMonth()+1).padStart(2,'0')+'-'+String(ld.getDate()).padStart(2,'0')+'T'+String(ld.getHours()).padStart(2,'0')+':'+String(ld.getMinutes()).padStart(2,'0');
@@ -631,6 +632,7 @@ function openEditBonusById(id){
   document.getElementById('b-gift').value=b.gift;
   document.getElementById('b-status').value=b.status;
   document.getElementById('b-date').value=b.date||'';
+  document.getElementById('b-qty').value=b.qty||'1';
   document.getElementById('b-note').value=b.note||'';
   document.getElementById('bonus-modal-title').textContent='Upravit bonus';
   document.getElementById('modal-bonus').classList.add('open');
@@ -652,13 +654,14 @@ function saveBonus(){
   var status=document.getElementById('b-status').value;
   var date=document.getElementById('b-date').value;
   var note=document.getElementById('b-note').value;
+  var qty=document.getElementById('b-qty').value||'1';
   var editId=document.getElementById('b-id').value;
   if(!personId||!siteId)return alert('Vyber člověka a stránku');
   if(editId){
     var b=data.bonuses.find(function(x){return x.id===editId;});
-    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.status=status;b.date=date;b.note=note;}
+    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.qty=qty;b.status=status;b.date=date;b.note=note;}
   } else {
-    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,status:status,date:date,note:note});
+    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,qty:qty,status:status,date:date,note:note});
   }
   save();render();closeModal('modal-bonus');
 }
@@ -1403,6 +1406,10 @@ select.form-control{cursor:pointer;}
     </div>
     <div class="form-row">
       <div class="form-group">
+        <label class="form-label">Počet kusů</label>
+        <input class="form-control" id="b-qty" type="number" placeholder="1" min="1" value="1">
+      </div>
+      <div class="form-group">
         <label class="form-label">Stav dárku</label>
         <select class="form-control" id="b-status">
           <option value="pending">⏳ Čeká</option>
@@ -1411,10 +1418,10 @@ select.form-control{cursor:pointer;}
           <option value="done">✅ Předáno</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Datum</label>
-        <input class="form-control" id="b-date" type="datetime-local">
-      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Datum</label>
+      <input class="form-control" id="b-date" type="datetime-local">
     </div>
     <div class="form-group">
       <label class="form-label">Poznámka</label>
