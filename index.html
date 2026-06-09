@@ -178,9 +178,10 @@ function render(){
 }
 
 function renderDashboard(){
-  var totalBonus=data.bonuses.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var totalDone=data.bonuses.filter(function(b){return b.status==='done';}).length;
-  var totalPend=data.bonuses.filter(function(b){return b.status!=='done';}).length;
+  var activeBonuses=data.bonuses.filter(function(b){return b.date;});
+  var totalBonus=activeBonuses.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var totalDone=activeBonuses.filter(function(b){return b.status==='done';}).length;
+  var totalPend=activeBonuses.filter(function(b){return b.status!=='done';}).length;
   var totalExpenses=data.expenses.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
   var totalCosts=data.costs.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0);
   var netProfit=totalBonus-totalExpenses-totalCosts;
@@ -189,9 +190,9 @@ function renderDashboard(){
   var weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   var monthAgo=new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
   function dGte(d,r){return d&&new Date(d)>=r;}
-  var bonusToday=data.bonuses.filter(function(b){return b.date&&b.date.startsWith(todayStr);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var bonusWeek=data.bonuses.filter(function(b){return dGte(b.date,weekAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var bonusMonth=data.bonuses.filter(function(b){return dGte(b.date,monthAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var bonusToday=activeBonuses.filter(function(b){return b.date.startsWith(todayStr);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var bonusWeek=activeBonuses.filter(function(b){return dGte(b.date,weekAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var bonusMonth=activeBonuses.filter(function(b){return dGte(b.date,monthAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
   var expToday=data.expenses.filter(function(e){return e.date&&e.date.startsWith(todayStr);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
   var expWeek=data.expenses.filter(function(e){return dGte(e.date,weekAgo);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
   var expMonth=data.expenses.filter(function(e){return dGte(e.date,monthAgo);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
@@ -302,7 +303,8 @@ function renderPeople(){
   var html='';
   filtered.forEach(function(p){
     var mb=data.bonuses.filter(function(b){return b.personId===p.id;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
-    var total=mb.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+    var activeMb=mb.filter(function(b){return b.date;});
+    var total=activeMb.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
     var labC=mb.filter(function(b){return b.gift==='labubu';}).length;
     var dumC=mb.filter(function(b){return b.gift==='dumpling';}).length;
     var doneC=mb.filter(function(b){return b.status==='done';}).length;
@@ -429,7 +431,7 @@ function togglePc(id){document.getElementById('pc-'+id).classList.toggle('open')
 
 function renderBonuses(){
   var tbody=document.getElementById('bonuses-list');
-  var sorted=data.bonuses.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  var sorted=data.bonuses.filter(function(b){return b.date;}).slice().sort(function(a,b){return b.date.localeCompare(a.date);});
   if(!sorted.length){tbody.innerHTML='<tr class="empty-row"><td colspan="7">Zatím žádné bonusy</td></tr>';return;}
   var html='';
   sorted.forEach(function(b){
