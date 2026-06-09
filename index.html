@@ -604,6 +604,60 @@ function filterSitesForPerson(personId){
   ss.innerHTML=available.map(function(s){return '<option value="'+s.id+'">'+s.name+'</option>';}).join('');
   if(!available.length) ss.innerHTML='<option value="">— všechny stránky hotovy —</option>';
 }
+function addGiftRow(type, qty){
+  var list = document.getElementById('b-gifts-list');
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.innerHTML =
+    '<select class="form-control" style="flex:1;" onchange="">' +
+      '<option value="labubu"'+(type==='labubu'?' selected':'')+'>🐣 Labubu</option>' +
+      '<option value="dumpling"'+(type==='dumpling'?' selected':'')+'>🥟 Dumpling</option>' +
+    '</select>' +
+    '<input class="form-control" type="number" min="1" value="'+(qty||1)+'" placeholder="ks" style="width:70px;" title="Počet kusů">' +
+    '<button type="button" onclick="this.parentElement.remove()" style="background:var(--re-d);color:var(--re);border:none;border-radius:5px;width:30px;height:36px;cursor:pointer;font-size:16px;flex-shrink:0;">×</button>';
+  list.appendChild(row);
+}
+
+function getGiftsFromModal(){
+  var rows = document.getElementById('b-gifts-list').querySelectorAll('div');
+  var gifts = [];
+  rows.forEach(function(row){
+    var sel = row.querySelector('select');
+    var inp = row.querySelector('input');
+    if(sel && inp){
+      gifts.push({type: sel.value, qty: parseInt(inp.value)||1});
+    }
+  });
+  return gifts;
+}
+
+function setGiftsToModal(gifts){
+  var list = document.getElementById('b-gifts-list');
+  list.innerHTML = '';
+  if(!gifts || !gifts.length){
+    addGiftRow('labubu', 1);
+  } else {
+    gifts.forEach(function(g){ addGiftRow(g.type, g.qty); });
+  }
+}
+
+function giftsToDisplay(gifts){
+  if(!gifts || !gifts.length) return '';
+  return gifts.map(function(g){
+    return (g.qty>1?g.qty+'× ':'')+( g.type==='labubu'?'🐣 Labubu':'🥟 Dumpling');
+  }).join(', ');
+}
+
+function giftChips(gifts){
+  if(!gifts||!gifts.length) return '<span class="chip chip-purple">🐣 Labubu</span>';
+  return gifts.map(function(g){
+    var chip = g.type==='labubu'
+      ? '<span class="chip chip-purple">🐣 Labubu</span>'
+      : '<span class="chip chip-amber">🥟 Dumpling</span>';
+    return (g.qty>1?'<span style="font-size:11px;color:var(--t3);margin-right:2px;">'+g.qty+'×</span>':'')+chip;
+  }).join(' ');
+}
+
 function populateBonusModal(prePersonId){
   var ps=document.getElementById('b-person');
   ps.innerHTML=data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===prePersonId?' selected':'')+'>'+p.name+'</option>';}).join('');
@@ -611,11 +665,10 @@ function populateBonusModal(prePersonId){
   filterSitesForPerson(prePersonId||ps.value);
   document.getElementById('b-id').value='';
   document.getElementById('b-amount').value='';
-  document.getElementById('b-qty').value='1';
+  setGiftsToModal([{type:'labubu',qty:1}]);
   document.getElementById('b-note').value='';
   var ld=new Date();
   document.getElementById('b-date').value=ld.getFullYear()+'-'+String(ld.getMonth()+1).padStart(2,'0')+'-'+String(ld.getDate()).padStart(2,'0')+'T'+String(ld.getHours()).padStart(2,'0')+':'+String(ld.getMinutes()).padStart(2,'0');
-  document.getElementById('b-gift').value='labubu';
   document.getElementById('b-status').value='pending';
   document.getElementById('bonus-modal-title').textContent='Nový bonus';
 }
@@ -629,10 +682,9 @@ function openEditBonusById(id){
   filterSitesForPerson(b.personId);
   document.getElementById('b-site').value=b.siteId;
   document.getElementById('b-amount').value=b.amount;
-  document.getElementById('b-gift').value=b.gift;
   document.getElementById('b-status').value=b.status;
   document.getElementById('b-date').value=b.date||'';
-  document.getElementById('b-qty').value=b.qty||'1';
+  setGiftsToModal(b.gifts||[{type:b.gift||'labubu',qty:b.qty||1}]);
   document.getElementById('b-note').value=b.note||'';
   document.getElementById('bonus-modal-title').textContent='Upravit bonus';
   document.getElementById('modal-bonus').classList.add('open');
@@ -654,14 +706,16 @@ function saveBonus(){
   var status=document.getElementById('b-status').value;
   var date=document.getElementById('b-date').value;
   var note=document.getElementById('b-note').value;
-  var qty=document.getElementById('b-qty').value||'1';
+  var gifts=getGiftsFromModal();
+  var gift=gifts.length?gifts[0].type:'labubu';
+  var qty=gifts.length?gifts[0].qty:1;
   var editId=document.getElementById('b-id').value;
   if(!personId||!siteId)return alert('Vyber člověka a stránku');
   if(editId){
     var b=data.bonuses.find(function(x){return x.id===editId;});
-    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.qty=qty;b.status=status;b.date=date;b.note=note;}
+    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.qty=qty;b.gifts=gifts;b.status=status;b.date=date;b.note=note;}
   } else {
-    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,qty:qty,status:status,date:date,note:note});
+    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,qty:qty,gifts:gifts,status:status,date:date,note:note});
   }
   save();render();closeModal('modal-bonus');
 }
@@ -1391,33 +1445,25 @@ select.form-control{cursor:pointer;}
         <select class="form-control" id="b-site"></select>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Bonus (Kč)</label>
-        <input class="form-control" id="b-amount" type="number" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Dárek</label>
-        <select class="form-control" id="b-gift">
-          <option value="labubu">🐣 Labubu</option>
-          <option value="dumpling">🥟 Dumpling</option>
-        </select>
-      </div>
+    <div class="form-group">
+      <label class="form-label">Bonus (Kč)</label>
+      <input class="form-control" id="b-amount" type="number" placeholder="0">
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Počet kusů</label>
-        <input class="form-control" id="b-qty" type="number" placeholder="1" min="1" value="1">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Stav dárku</label>
-        <select class="form-control" id="b-status">
-          <option value="pending">⏳ Čeká</option>
-          <option value="ordered">📦 Objednáno</option>
-          <option value="wait">🕐 Na vyzvednutí</option>
-          <option value="done">✅ Předáno</option>
-        </select>
-      </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+        Dárky
+        <button type="button" onclick="addGiftRow()" style="background:var(--or-d);color:var(--or);border:none;border-radius:5px;padding:2px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ Přidat</button>
+      </label>
+      <div id="b-gifts-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Stav dárku</label>
+      <select class="form-control" id="b-status">
+        <option value="pending">⏳ Čeká</option>
+        <option value="ordered">📦 Objednáno</option>
+        <option value="wait">🕐 Na vyzvednutí</option>
+        <option value="done">✅ Předáno</option>
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Datum</label>
