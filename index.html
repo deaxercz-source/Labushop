@@ -165,6 +165,26 @@ function updateBottomNavBadge(){
 }
 
 // ── RENDER ──
+function openPersonDetail(personId){
+  // Přepni na stránku Lidé
+  var peopleBtn = document.querySelector('.nav-item:nth-child(5)');
+  // Najdi správné nav-item pro Lidé
+  var navItems = document.querySelectorAll('.nav-item');
+  var peopleNavBtn = null;
+  navItems.forEach(function(btn){
+    if(btn.textContent.trim().startsWith('Lid')) peopleNavBtn = btn;
+  });
+  if(peopleNavBtn) showPage('people', peopleNavBtn);
+  // Počkej na render a pak otevři kartu
+  setTimeout(function(){
+    var card = document.getElementById('pc-'+personId);
+    if(card){
+      card.classList.add('open');
+      card.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  }, 100);
+}
+
 function render(){
   if(!data.costs) data.costs=[];
   if(!data.expenses) data.expenses=[];
@@ -256,7 +276,7 @@ function renderDashboard(){
     var statusMap={pending:'badge-pending',ordered:'badge-ordered',wait:'badge-wait',done:'badge-done'};
     var statusLabel={pending:'Přidáno',ordered:'Objednáno',wait:'Vyzvednutí',done:'Předáno'};
     var timeStr=b.date?b.date.replace('T',' ').slice(11,16):'';
-    miniHtml+='<div class="recent-row">'+
+    miniHtml+='<div class="recent-row" style="cursor:pointer;" onclick="openPersonDetail(\''+b.personId+'\')">'+
       '<div class="r-avatar '+avc+'">'+initials+'</div>'+
       '<div class="r-info">'+
         '<div class="r-name">'+name+'</div>'+
@@ -283,7 +303,7 @@ function renderDashboard(){
       var statusMap={pending:'badge-pending',ordered:'badge-ordered',wait:'badge-wait',done:'badge-done'};
       var statusLabel={pending:'Přidáno',ordered:'Objednáno',wait:'Vyzvednutí',done:'Předáno'};
       var timeStr=b.date?b.date.replace('T',' ').slice(0,16):'';
-      tableHtml+='<tr>'+
+      tableHtml+='<tr style="cursor:pointer;" onclick="openPersonDetail(\''+b.personId+'\')">'+
         '<td class="col-user">'+(person?person.name:'?')+'</td>'+
         '<td>'+(site?site.name:'?')+'</td>'+
         '<td>Bonus</td>'+
