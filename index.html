@@ -722,7 +722,6 @@ function saveBonus(){
   var personId=document.getElementById('b-person').value;
   var siteId=document.getElementById('b-site').value;
   var amount=document.getElementById('b-amount').value;
-  var gift=document.getElementById('b-gift').value;
   var status=document.getElementById('b-status').value;
   var date=document.getElementById('b-date').value;
   var note=document.getElementById('b-note').value;
@@ -1137,7 +1136,7 @@ option{background:#1A1A1E;}
 .form-control:focus{border-color:var(--or);}
 select.form-control{cursor:pointer;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;position:sticky;bottom:0;background:var(--s1);padding-top:12px;padding-bottom:4px;}
 
 /* SITES GRID */
 .sites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
@@ -1208,7 +1207,7 @@ select.form-control{cursor:pointer;}
   .pc-stat:nth-child(3n){border-right:none;}
   .pc-sites{grid-template-columns:1fr;}
   .modal-overlay{align-items:flex-end !important;padding:0 !important;}
-  .modal{border-radius:16px 16px 0 0 !important;padding:22px 18px 28px !important;max-width:100% !important;max-height:90vh;overflow-y:auto;}
+  .modal{border-radius:16px 16px 0 0 !important;padding:22px 18px 40px !important;max-width:100% !important;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .hide-mobile{display:none !important;}
   .dash-topbar,.page-header{padding-left:16px;padding-right:16px;}
   .dash-content,.page-content{padding-left:16px;padding-right:16px;}
