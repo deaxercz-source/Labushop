@@ -238,8 +238,11 @@ function renderDashboard(){
     ? data.expenses.filter(function(e){return dGte(e.date,periodFrom);})
     : data.expenses;
   var totalExpenses=filteredExp.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  var totalCosts=0; // náklady u lidí se nezapočítávají do dashboardu
-  var netProfit=totalBonus-totalExpenses;
+  var filteredCosts=periodFrom
+    ? data.costs.filter(function(c){return c.date&&new Date(c.date)>=periodFrom;})
+    : data.costs;
+  var totalCosts=filteredCosts.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0);
+  var netProfit=totalBonus-totalExpenses-totalCosts;
 
   var weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   var monthAgo=new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
@@ -261,7 +264,7 @@ function renderDashboard(){
           '<div class="stat-label">Celkový zisk</div>'+
           '<div class="stat-val money">'+netProfit.toLocaleString('cs-CZ')+' Kč</div>'+
           '<div class="stat-change pos"><i class="ti ti-arrow-up" style="font-size:11px"></i> výdělky '+totalBonus.toLocaleString('cs-CZ')+' Kč</div>'+
-      (totalExpenses>0?'<div class="stat-change neg" style="font-size:11px;">výdaje -'+totalExpenses.toLocaleString('cs-CZ')+' Kč</div>':'')+
+      ((totalExpenses+totalCosts)>0?'<div class="stat-change neg" style="font-size:11px;">výdaje -'+(totalExpenses+totalCosts).toLocaleString('cs-CZ')+' Kč</div>':'')+
 
         '</div>'+
       '</div>'+
@@ -820,6 +823,8 @@ function openCostModal(personId){
   document.getElementById('co-gift').value=cost?cost.gift||'':'';
   document.getElementById('co-postage').value=cost?cost.postage||'':'';
   document.getElementById('co-other').value=cost?cost.other||'':'';
+  var cd=new Date();
+  document.getElementById('co-date').value=cost?(cost.date||cd.getFullYear()+'-'+String(cd.getMonth()+1).padStart(2,'0')+'-'+String(cd.getDate()).padStart(2,'0')):cd.getFullYear()+'-'+String(cd.getMonth()+1).padStart(2,'0')+'-'+String(cd.getDate()).padStart(2,'0');
   document.getElementById('co-note').value=cost?cost.note||'':'';
   openModal('modal-cost');
 }
@@ -829,9 +834,10 @@ function saveCost(){
   var postage=document.getElementById('co-postage').value;
   var other=document.getElementById('co-other').value;
   var note=document.getElementById('co-note').value;
+  var codate=document.getElementById('co-date').value;
   var idx=data.costs.findIndex(function(c){return c.personId===personId;});
-  if(idx>=0){data.costs[idx]={personId:personId,gift:gift,postage:postage,other:other,note:note};}
-  else{data.costs.push({personId:personId,gift:gift,postage:postage,other:other,note:note});}
+  if(idx>=0){data.costs[idx]={personId:personId,gift:gift,postage:postage,other:other,note:note,date:codate};}
+  else{data.costs.push({personId:personId,gift:gift,postage:postage,other:other,note:note,date:codate});}
   save();render();closeModal('modal-cost');
 }
 
@@ -1597,9 +1603,15 @@ select.form-control{cursor:pointer;}
       <label class="form-label">💸 Jiné náklady (Kč)</label>
       <input class="form-control" id="co-other" type="number" placeholder="0">
     </div>
-    <div class="form-group">
-      <label class="form-label">Poznámka</label>
-      <input class="form-control" id="co-note" placeholder="volitelná poznámka">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input class="form-control" id="co-date" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Poznámka</label>
+        <input class="form-control" id="co-note" placeholder="volitelná poznámka">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-cost')">Zrušit</button>
