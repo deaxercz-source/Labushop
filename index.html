@@ -208,20 +208,44 @@ function render(){
 }
 
 function renderDashboard(){
-  var activeBonuses=data.bonuses.filter(function(b){return b.date;});
+  var now=new Date();
+  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  function dGte(d,r){return d&&new Date(d)>=r;}
+
+  // Okres podle selectoru nahoře
+  var periodSel=document.getElementById('dash-period-sel');
+  var period=periodSel?periodSel.value:'7';
+  var periodFrom=null;
+  if(period==='today'){
+    periodFrom=new Date(todayStr);
+  } else if(period==='7'){
+    periodFrom=new Date(now); periodFrom.setDate(periodFrom.getDate()-7);
+  } else if(period==='30'){
+    periodFrom=new Date(now); periodFrom.setDate(periodFrom.getDate()-30);
+  }
+  // period==='all' -> periodFrom=null -> žádný filtr
+
+  var allActive=data.bonuses.filter(function(b){return b.date;});
+  var activeBonuses=periodFrom
+    ? allActive.filter(function(b){return dGte(b.date,periodFrom);})
+    : allActive;
+
   var totalBonus=activeBonuses.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
   var totalDone=activeBonuses.filter(function(b){return b.status==='done';}).length;
   var totalPend=activeBonuses.filter(function(b){return b.status!=='done';}).length;
-  var totalExpenses=data.expenses.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
+
+  var expFrom=periodFrom;
+  var filteredExp=expFrom
+    ? data.expenses.filter(function(e){return dGte(e.date,expFrom);})
+    : data.expenses;
+  var totalExpenses=filteredExp.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
   var totalCosts=data.costs.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0);
   var netProfit=totalBonus-totalExpenses-totalCosts;
-  var now=new Date();
-  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
   var weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   var monthAgo=new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
-  function dGte(d,r){return d&&new Date(d)>=r;}
-  var bonusToday=activeBonuses.filter(function(b){return b.date.startsWith(todayStr);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var bonusWeek=activeBonuses.filter(function(b){return dGte(b.date,weekAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var bonusToday=allActive.filter(function(b){return b.date.startsWith(todayStr);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
+  var bonusWeek=allActive.filter(function(b){return dGte(b.date,weekAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
   var expToday=data.expenses.filter(function(e){return e.date&&e.date.startsWith(todayStr);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
   var expWeek=data.expenses.filter(function(e){return dGte(e.date,weekAgo);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
   var netToday=bonusToday-expToday;
