@@ -234,12 +234,14 @@ function renderDashboard(){
   var totalDone=activeBonuses.filter(function(b){return b.status==='done';}).length;
   var totalPend=activeBonuses.filter(function(b){return b.status!=='done';}).length;
 
-  var expFrom=periodFrom;
-  var filteredExp=expFrom
-    ? data.expenses.filter(function(e){return dGte(e.date,expFrom);})
+  var filteredExp=periodFrom
+    ? data.expenses.filter(function(e){return dGte(e.date,periodFrom);})
     : data.expenses;
   var totalExpenses=filteredExp.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  var totalCosts=data.costs.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0);
+  // totalCosts (náklady na dárky u lidí) - počítáme jen pokud zobrazujeme vše, jinak jen výdaje
+  var totalCosts=period==='all'
+    ? data.costs.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0)
+    : 0;
   var netProfit=totalBonus-totalExpenses-totalCosts;
 
   var weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
