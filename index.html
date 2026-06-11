@@ -238,11 +238,11 @@ function renderDashboard(){
     ? data.expenses.filter(function(e){return dGte(e.date,periodFrom);})
     : data.expenses;
   var totalExpenses=filteredExp.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  // totalCosts (náklady na dárky u lidí) - počítáme jen pokud zobrazujeme vše, jinak jen výdaje
-  var totalCosts=period==='all'
-    ? data.costs.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0)
-    : 0;
-  var netProfit=totalBonus-totalExpenses-totalCosts;
+  // totalCosts - náklady na dárky, zobrazíme vždy ale odečítáme jen u "vše"
+  var totalCosts=data.costs.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0);
+  var netProfit=period==='all'
+    ? totalBonus-totalExpenses-totalCosts
+    : totalBonus-totalExpenses;
 
   var weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
   var monthAgo=new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
@@ -264,6 +264,7 @@ function renderDashboard(){
           '<div class="stat-label">Celkový zisk</div>'+
           '<div class="stat-val money">'+netProfit.toLocaleString('cs-CZ')+' Kč</div>'+
           '<div class="stat-change pos"><i class="ti ti-arrow-up" style="font-size:11px"></i> výdělky '+totalBonus.toLocaleString('cs-CZ')+' Kč</div>'+
+      (totalCosts>0?'<div class="stat-change neg" style="font-size:11px;">náklady -'+totalCosts.toLocaleString('cs-CZ')+' Kč</div>':'')+
         '</div>'+
       '</div>'+
     '</div>'+
