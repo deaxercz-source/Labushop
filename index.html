@@ -195,8 +195,8 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
     <section class="section active" id="tab-overview">
       <div class="bar">
         <select class="input grow" id="dash-period" onchange="renderOverview()">
-          <option value="today">Dnes</option>
-          <option value="7" selected>7 dní</option>
+          <option value="today" selected>Dnes</option>
+          <option value="7">7 dní</option>
           <option value="30">30 dní</option>
           <option value="all">Vše</option>
         </select>
@@ -371,6 +371,16 @@ function bonusGifts(b){
   return b.gift?[{type:b.gift,qty:b.qty||1}]:[];
 }
 function bonusAmount(b){return Number(b.amount)||0;}
+// Historie částky: b.log = [{d:datum, a:rozdíl}]. Bez logu (staré bonusy) = jediný záznam k datu bonusu.
+// Díky tomu se dodatečné navýšení započítá do dne, kdy proběhlo, ne zpětně.
+function bonusEntries(b){
+  var amt=bonusAmount(b), base=b.date||'';
+  if(!Array.isArray(b.log)||!b.log.length) return [{d:base,a:amt}];
+  var out=b.log.map(function(e){return {d:e.d||'',a:Number(e.a)||0};});
+  var rest=amt-out.reduce(function(s,e){return s+e.a;},0);
+  if(Math.abs(rest)>0.001) out.push({d:base,a:rest});
+  return out;
+}
 function giftText(b){
   return bonusGifts(b).map(function(g){return (g.type==='dumpling'?'🥟':'🐣')+'×'+(parseInt(g.qty)||1);}).join(' ');
 }
@@ -380,7 +390,7 @@ function todayISO(){return isoDay(new Date());}
 function daysAgoISO(n){var d=new Date(); d.setDate(d.getDate()-n); return isoDay(d);}
 function nowLocal(){var d=new Date(); return isoDay(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes());}
 function toLocalInput(s){
-  if(!s) return nowLocal();
+  if(!s) return '';
   s=String(s).replace(' ','T');
   return s.length===10?s+'T00:00':s.slice(0,16);
 }
@@ -401,13 +411,15 @@ function inPeriod(date,from){
   if(!from) return true;
   return !!date&&String(date).slice(0,10)>=from;
 }
+function entriesIn(b,from){return bonusEntries(b).filter(function(e){return inPeriod(e.d,from);});}
+function periodAmount(b,from){return entriesIn(b,from).reduce(function(s,e){return s+e.a;},0);}
 function filterBonuses(list,f){
   var from=null;
   if(f.range&&f.range!=='all') from=f.range==='month'?todayISO().slice(0,7)+'-01':daysAgoISO(parseInt(f.range));
   return list.filter(function(b){
     if(f.status&&f.status!=='all'&&(b.status||'pending')!==f.status) return false;
     if(f.site&&f.site!=='all'&&bonusSiteId(b)!==f.site) return false;
-    if(from&&!inPeriod(b.date,from)) return false;
+    if(from&&!entriesIn(b,from).length) return false;
     return true;
   });
 }
@@ -431,6 +443,14 @@ function showTab(id){
   window.scrollTo(0,0);
   render();
 }
+var _day=todayISO();
+function checkNewDay(){
+  if(todayISO()===_day) return;
+  _day=todayISO();
+  if(!$('modal-bg').classList.contains('open')) render();   // o půlnoci se statistiky "Dnes" vynulují
+}
+setInterval(checkNewDay,30000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden) checkNewDay();});
 function render(){
   if(currentTab==='overview') renderOverview();
   else if(currentTab==='people') renderPeople();
@@ -446,17 +466,17 @@ function openPerson(id){
 // ── PŘEHLED ──
 function renderOverview(){
   var from=periodFrom($('dash-period').value);
-  var bon=data.bonuses.filter(function(b){return inPeriod(b.date,from);});
+  var bon=data.bonuses.filter(function(b){return !from||entriesIn(b,from).length>0;});
   var exp=data.expenses.filter(function(e){return inPeriod(e.date,from);});
   var costs=data.costs.filter(function(c){return inPeriod(c.date,from);});
-  var tBon=sumAmount(bon);
+  var tBon=bon.reduce(function(s,b){return s+periodAmount(b,from);},0);
   var tExp=exp.reduce(function(s,e){return s+(Number(e.amount)||0);},0)+
     costs.reduce(function(s,c){return s+(parseFloat(c.gift)||0)+(parseFloat(c.postage)||0)+(parseFloat(c.other)||0);},0);
   var profit=tBon-tExp;
   var notDone=bon.filter(function(b){return (b.status||'pending')!=='done';});
-  var pendAmt=sumAmount(bon.filter(function(b){return (b.status||'pending')==='pending';}));
+  var pendAmt=bon.filter(function(b){return (b.status||'pending')==='pending';}).reduce(function(s,b){return s+periodAmount(b,from);},0);
   var done=bon.filter(function(b){return b.status==='done';});
-  var todaySum=sumAmount(data.bonuses.filter(function(b){return b.date&&String(b.date).slice(0,10)===todayISO();}));
+  var todaySum=data.bonuses.reduce(function(s,b){return s+periodAmount(b,todayISO());},0);
 
   $('tiles').innerHTML=
     '<div class="tile"><div class="k">Zisk</div><div class="v '+(profit>=0?'pos':'neg')+'">'+kc(profit)+'</div>'+
@@ -465,14 +485,17 @@ function renderOverview(){
     '<div class="tile"><div class="k">Čekající odměny</div><div class="v">'+notDone.length+'</div><div class="s">'+kc(pendAmt)+' k vyplacení</div></div>'+
     '<div class="tile"><div class="k">Předané</div><div class="v">'+done.length+'</div><div class="s">dnes +'+kc(todaySum)+'</div></div>';
 
-  var recent=bon.filter(function(b){return b.date;}).sort(function(a,b){return String(b.date).localeCompare(String(a.date));}).slice(0,10);
-  $('activity').innerHTML=recent.length?recent.map(function(b){
+  var flat=[];
+  bon.forEach(function(b){entriesIn(b,from).forEach(function(e){if(e.d&&Math.abs(e.a)>0.001) flat.push({b:b,e:e});});});
+  var recent=flat.sort(function(x,y){return String(y.e.d).localeCompare(String(x.e.d));}).slice(0,10);
+  $('activity').innerHTML=recent.length?recent.map(function(r){
+    var b=r.b;
     return '<div class="act" onclick="openPerson(\''+b.personId+'\')">'+
       '<span class="who">'+esc(personName(b.personId)||'?')+'</span>'+
       '<span class="site">'+esc(bonusSite(b))+'</span>'+
-      '<span class="amt">+'+kc(bonusAmount(b))+'</span>'+
+      '<span class="amt '+(r.e.a<0?'neg':'')+'">'+(r.e.a<0?'−':'+')+kc(Math.abs(r.e.a))+'</span>'+
       '<span class="badge '+esc(b.status||'pending')+'">'+(STATUS[b.status||'pending']||'')+'</span>'+
-      '<span class="dt">'+fmtDate(b.date)+'</span></div>';
+      '<span class="dt">'+fmtDate(r.e.d)+'</span></div>';
   }).join(''):'<div class="empty">Zatím žádná aktivita 🐣</div>';
   renderChart();
 }
@@ -482,8 +505,10 @@ function renderChart(){
   var n=parseInt($('chart-period').value)||7, days=[], map={};
   for(var i=n-1;i>=0;i--){var d=daysAgoISO(i); days.push(d); map[d]=0;}
   data.bonuses.forEach(function(b){
-    var k=b.date?String(b.date).slice(0,10):'';
-    if(map[k]!==undefined) map[k]+=bonusAmount(b);
+    bonusEntries(b).forEach(function(e){
+      var k=e.d?String(e.d).slice(0,10):'';
+      if(map[k]!==undefined) map[k]+=e.a;
+    });
   });
   if(_chart){_chart.destroy();_chart=null;}
   var vals=days.map(function(d){return map[d];});
@@ -662,7 +687,7 @@ function openBonusModal(personId,bonusId){
     '<div class="two"><div class="fld"><label>Bonus (Kč)</label><input class="input" id="m-amount" type="number" min="0" value="'+esc(b?b.amount:'')+'"></div>'+
     '<div class="fld"><label>Stav</label><select class="input" id="m-status">'+
       Object.keys(STATUS).map(function(k){return '<option value="'+k+'"'+(((b&&b.status)||'pending')===k?' selected':'')+'>'+STATUS[k]+'</option>';}).join('')+'</select></div></div>'+
-    '<div class="fld"><label>Datum a čas</label><input class="input" id="m-date" type="datetime-local" value="'+esc(toLocalInput(b?b.date:''))+'"></div>'+
+    '<div class="fld"><label>Datum a čas</label><input class="input" id="m-date" type="datetime-local" value="'+esc(b?toLocalInput(b.date):nowLocal())+'"></div>'+
     '<div class="fld"><label>Dárky <button class="icon-btn" onclick="addGiftRow()">＋ přidat</button></label><div id="m-gifts">'+
       gifts.map(function(g){return giftRowHTML(g.type,g.qty);}).join('')+'</div></div>'+
     '<div class="fld"><label>Poznámka</label><input class="input" id="m-note" value="'+esc(b?b.note:'')+'"></div>'+
@@ -679,12 +704,24 @@ function saveBonus(){
   });
   var rec={personId:personId,siteId:siteId,amount:amount,gifts:gifts,
     gift:gifts.length?gifts[0].type:'labubu',qty:gifts.length?gifts[0].qty:1,
-    status:$('m-status').value,date:$('m-date').value||nowLocal(),note:$('m-note').value.trim()};
+    status:$('m-status').value,date:$('m-date').value,note:$('m-note').value.trim()};
   if(id){
     var b=find(data.bonuses,id);
+    var oldAmt=bonusAmount(b), oldDate=b.date||'';
+    var log=bonusEntries(b);                       // materializuje historii i u starých bonusů
+    var dateChanged=rec.date!==toLocalInput(oldDate);
+    if(!dateChanged) rec.date=oldDate;             // nedotčené datum zůstane přesně jak bylo
     Object.keys(rec).forEach(function(k){b[k]=rec[k];});
     delete b.site;
-  } else { rec.id=uid(); data.bonuses.push(rec); }
+    if(dateChanged&&log.length) log[0].d=rec.date; // přesun původního záznamu na nové datum
+    var delta=amount-oldAmt;
+    if(Math.abs(delta)>0.001) log.push({d:nowLocal(),a:delta}); // změna částky = záznam dnes
+    b.log=log;
+  } else {
+    rec.date=rec.date||nowLocal();
+    rec.log=[{d:rec.date,a:amount}];
+    rec.id=uid(); data.bonuses.push(rec);
+  }
   save(); closeModal(); render();
 }
 function deleteBonus(id){
