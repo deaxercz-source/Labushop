@@ -2,36 +2,188 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="theme-color" content="#080809">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Labubu">
-<link rel="manifest" href="data:application/json,{
-  %22name%22:%22Labubu%22,
-  %22short_name%22:%22Labubu%22,
-  %22start_url%22:%22.%22,
-  %22display%22:%22standalone%22,
-  %22background_color%22:%22%23080809%22,
-  %22theme_color%22:%22%23080809%22,
-  %22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%23131316'/%3E%3Ctext x='256' y='340' font-family='system-ui,sans-serif' font-size='300' font-weight='800' fill='%23FF6B2B' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22}]
-}">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%23131316'/><text x='256' y='340' font-family='system-ui,sans-serif' font-size='300' font-weight='800' fill='%23FF6B2B' text-anchor='middle'>L</text></svg>">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%231a9e5c'/><text x='256' y='350' font-family='system-ui,sans-serif' font-size='300' font-weight='800' fill='white' text-anchor='middle'>L</text></svg>">
 <title>🐣 Labubu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-
-
-
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --bg:#f5f6f4; --card:#fff; --line:#e4e7e2; --text:#1c2320; --muted:#6b756f;
+  --green:#1a9e5c; --green-bg:#e6f5ec; --red:#d6453d; --red-bg:#fdecea;
+  --note-bg:#fff7d6; --note-text:#6b5a12; --r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,sans-serif;font-size:15px;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+
+/* login / loading */
+#login-screen,#loading-screen{position:fixed;inset:0;background:var(--bg);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:24px}
+#login-screen{display:flex}
+#loading-screen{display:none;color:var(--muted)}
+.login-box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:28px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
+.login-box h1{font-size:24px;font-weight:700}
+#login-err{color:var(--red);font-size:13px;min-height:16px}
+
+/* controls */
+.input{width:100%;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:10px;outline:none}
+.input:focus{border-color:var(--green)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font-weight:600}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-danger{color:var(--red)}
+.icon-btn{border:none;background:none;color:var(--muted);padding:4px 6px;font-size:15px;border-radius:6px}
+.icon-btn:hover{background:var(--bg)}
+
+/* layout */
+#app{display:none;min-height:100vh;flex-direction:column}
+.top{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.top-in{max-width:760px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.logo{font-weight:700;font-size:19px;margin-right:auto}
+.user{color:var(--muted);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;gap:4px}
+.tab{border:none;background:none;padding:8px 14px;border-radius:10px;font-weight:600;color:var(--muted)}
+.tab.active{background:var(--green-bg);color:var(--green)}
+main{max-width:760px;width:100%;margin:0 auto;padding:16px 16px 90px}
+.section{display:none}.section.active{display:block}
+.bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.bar .grow{flex:1;min-width:150px}
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filters select{flex:1;min-width:110px;width:auto}
+
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.card-h .name{font-weight:700;font-size:17px;margin-right:auto}
+.total{font-weight:700;color:var(--green)}
+.row{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.row .when{color:var(--muted);font-size:13px;min-width:44px}
+.row .where{font-weight:600;flex:1;min-width:80px}
+.row .amt{font-weight:700}
+.row .gifts{font-size:13px}
+.status{border:none;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:600;background:var(--bg)}
+.status.ordered{background:#e3eefc;color:#1d5fb4}
+.status.wait{background:#fff0dc;color:#b45f06}
+.status.done{background:var(--green-bg);color:var(--green)}
+.note{background:var(--note-bg);color:var(--note-text);border-radius:8px;padding:8px 10px;margin-top:8px;display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.note .txt{flex:1;white-space:pre-wrap;word-break:break-word}
+.card-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.card-actions .btn{padding:6px 10px;font-size:13px}
+.empty{text-align:center;color:var(--muted);padding:36px 12px}
+.cat{font-size:12px;color:var(--muted)}
+
+/* overview */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.tile .k{color:var(--muted);font-size:13px}
+.tile .v{font-size:24px;font-weight:700;margin-top:2px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+
+/* modal */
+#modal-bg{position:fixed;inset:0;background:rgba(20,28,24,.45);display:none;align-items:flex-end;justify-content:center;z-index:100}
+#modal-bg.open{display:flex}
+.modal{background:#fff;width:100%;max-width:460px;border-radius:16px 16px 0 0;padding:18px;max-height:92vh;overflow:auto}
+@media(min-width:600px){#modal-bg{align-items:center}.modal{border-radius:16px}}
+.modal h2{font-size:18px;margin-bottom:12px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gift-row{display:flex;gap:8px;margin-bottom:6px}
+.gift-row select{flex:1}.gift-row input{width:72px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+
+/* mobile bottom tabs */
+@media(max-width:600px){
+  .top .tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));justify-content:space-around;z-index:30}
+  .top .tab{flex:1;text-align:center}
+  .user{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h1>🐣 Labubu</h1>
+    <input class="input" id="login-email" type="email" placeholder="E-mail" autocomplete="username">
+    <input class="input" id="login-pass" type="password" placeholder="Heslo" autocomplete="current-password">
+    <div id="login-err"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="window._fbSignIn()">Přihlásit se</button>
+  </div>
+</div>
+
+<div id="loading-screen">Načítám…</div>
+
+<div id="app">
+  <header class="top">
+    <div class="top-in">
+      <div class="logo">🐣 Labubu</div>
+      <div class="user" id="user-email"></div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="people" onclick="showTab('people')">Lidé</button>
+        <button class="tab" data-tab="expenses" onclick="showTab('expenses')">Výdaje</button>
+        <button class="tab" data-tab="overview" onclick="showTab('overview')">Přehled</button>
+      </nav>
+      <button class="icon-btn" onclick="window._fbSignOut()" title="Odhlásit">⎋</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="section active" id="tab-people">
+      <div class="bar">
+        <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
+        <button class="btn" onclick="openPersonModal()">+ Člověk</button>
+        <button class="btn btn-primary" onclick="openBonusModal()">+ Bonus</button>
+      </div>
+      <div class="filters">
+        <select class="input" id="f-status" onchange="renderPeopleList()">
+          <option value="all">Všechny stavy</option>
+          <option value="pending">⏳ Čeká</option>
+          <option value="ordered">📦 Objednáno</option>
+          <option value="wait">🕐 Na vyzvednutí</option>
+          <option value="done">✅ Předáno</option>
+        </select>
+        <select class="input" id="f-range" onchange="renderPeopleList()">
+          <option value="all">Vše</option>
+          <option value="month">Tento měsíc</option>
+          <option value="30">30 dní</option>
+          <option value="7">7 dní</option>
+        </select>
+        <select class="input" id="f-site" onchange="renderPeopleList()"></select>
+      </div>
+      <div id="people-list"></div>
+    </section>
+
+    <section class="section" id="tab-expenses">
+      <div class="bar">
+        <div class="tile grow" style="padding:10px 14px"><span class="k" style="color:var(--muted);font-size:13px">Výdaje celkem</span>
+          <div class="v neg" id="exp-total" style="font-size:22px;font-weight:700"></div></div>
+        <button class="btn btn-primary" onclick="openExpenseModal()">+ Výdaj</button>
+      </div>
+      <div id="expenses-list"></div>
+    </section>
+
+    <section class="section" id="tab-overview">
+      <div class="tiles" id="tiles"></div>
+      <div class="card"><div style="font-weight:600;margin-bottom:8px">Zisk po dnech (30 dní)</div>
+        <div id="chart-wrap"><canvas id="chart" height="200"></canvas></div></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+
 <script>
 // ── DATA & FIREBASE ──
-var data = {people:[],sites:[],bonuses:[],costs:[],expenses:[],notes:[]};
+var data = {people:[],bonuses:[],expenses:[],notes:[]};
 var DB_DOC = 'labubu/main';
 var _saveTimer = null;
 
@@ -45,17 +197,19 @@ var auth = firebase.auth();
 var db = firebase.firestore();
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function save(){
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(function(){
-    db.doc(DB_DOC).set(data).catch(function(e){console.error('Save error:',e);});
-  },500);
+    db.doc(DB_DOC).set(JSON.parse(JSON.stringify(data))).catch(function(e){console.error('Save error:',e);alert('Uložení se nepovedlo.');});
+  },400);
 }
+function showLoading(show){$('loading-screen').style.display=show?'flex':'none';}
 
-function showLoading(show){
-  var el=document.getElementById('loading-screen');
-  if(el) el.style.display=show?'flex':'none';
+function normalize(){
+  ['people','bonuses','expenses','notes','sites','costs'].forEach(function(k){if(!Array.isArray(data[k])) data[k]=[];});
 }
 
 function initData(userId){
@@ -65,1635 +219,368 @@ function initData(userId){
     if(doc.exists){
       data=doc.data();
     } else {
-      var local=JSON.parse(localStorage.getItem('labubu-data')||'null');
-      if(local){ data=local; db.doc(DB_DOC).set(data).then(function(){localStorage.removeItem('labubu-data');}); }
-      else { data={people:[],sites:[],bonuses:[],costs:[],expenses:[],notes:[]}; }
+      var local=null;
+      try{local=JSON.parse(localStorage.getItem('labubu-data')||'null');}catch(e){}
+      data=local||{};
+      normalize();
+      if(local) db.doc(DB_DOC).set(JSON.parse(JSON.stringify(data)));
     }
-    if(!data.costs) data.costs=[];
-    if(!data.expenses) data.expenses=[];
-    if(!data.notes) data.notes=[];
+    normalize();
     showLoading(false);
     render();
-  },function(err){ console.error('Firestore:',err); showLoading(false); });
+  },function(err){console.error('Firestore:',err);showLoading(false);});
 }
 
 // ── AUTH ──
-window._fbSignIn = function(){
-  var email=document.getElementById("login-email").value.trim();
-  var pass=document.getElementById("login-pass").value;
-  var errEl=document.getElementById("login-err");
-  var btn=document.getElementById("login-btn");
-  errEl.textContent=""; btn.textContent="Přihlašuji…"; btn.disabled=true;
-  auth.signInWithEmailAndPassword(email,pass).catch(function(e){
-    errEl.textContent="Špatný email nebo heslo.";
-    btn.textContent="Přihlásit se"; btn.disabled=false;
+window._fbSignIn=function(){
+  var btn=$('login-btn'); $('login-err').textContent='';
+  btn.textContent='Přihlašuji…'; btn.disabled=true;
+  auth.signInWithEmailAndPassword($('login-email').value.trim(),$('login-pass').value).catch(function(){
+    $('login-err').textContent='Špatný e-mail nebo heslo.';
+    btn.textContent='Přihlásit se'; btn.disabled=false;
   });
 };
 window._fbSignOut=function(){auth.signOut();};
-
-document.addEventListener("DOMContentLoaded",function(){
-  document.getElementById("login-pass").addEventListener("keydown",function(e){
-    if(e.key==="Enter") window._fbSignIn();
-  });
+document.addEventListener('DOMContentLoaded',function(){
+  $('login-pass').addEventListener('keydown',function(e){if(e.key==='Enter') window._fbSignIn();});
   auth.onAuthStateChanged(function(user){
     if(user){
-      document.getElementById("login-screen").style.display="none";
-      document.getElementById("app-root").style.display="flex";
-      document.getElementById("user-email").textContent=user.email;
+      $('login-screen').style.display='none';
+      $('app').style.display='flex';
+      $('user-email').textContent=user.email;
       initData(user.uid);
     } else {
-      document.getElementById("login-screen").style.display="flex";
-      document.getElementById("app-root").style.display="none";
+      $('login-screen').style.display='flex';
+      $('app').style.display='none';
+      $('login-btn').textContent='Přihlásit se'; $('login-btn').disabled=false;
     }
-  });
-});
-
-// ── NAVIGATION ──
-function showPage(id,btn){
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
-  document.getElementById('page-'+id).classList.add('active');
-  btn.classList.add('active');
-  render();
-}
-function showPageMobile(id,btn){
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
-  document.querySelectorAll('.bottom-nav-item').forEach(function(n){n.classList.remove('active');});
-  document.getElementById('page-'+id).classList.add('active');
-  if(btn) btn.classList.add('active');
-  render();
-}
-
-// ── MODALS ──
-function openModal(id,personId){
-  if(id==='modal-bonus') populateBonusModal(personId);
-  if(id==='modal-note'&&!document.getElementById('n-id').value) openNoteModal(personId||'');
-  if(id==='modal-expense'){
-    if(!document.getElementById('ex-id').value){
-      document.getElementById('ex-id').value='';
-      document.getElementById('ex-name').value='';
-      document.getElementById('ex-amount').value='';
-      var ed=new Date();
-      document.getElementById('ex-date').value=ed.getFullYear()+'-'+String(ed.getMonth()+1).padStart(2,'0')+'-'+String(ed.getDate()).padStart(2,'0');
-      document.getElementById('ex-category').value='reklama';
-      document.getElementById('ex-note').value='';
-      document.getElementById('expense-modal-title').textContent='Nový výdaj';
-    }
-  }
-  document.getElementById(id).classList.add('open');
-}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('.modal-overlay').forEach(function(m){
-    m.addEventListener('click',function(e){if(e.target===m) m.classList.remove('open');});
   });
 });
 
 // ── HELPERS ──
-function ini(name){return name.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);}
-function giftChip(t){return t==='labubu'?'<span class="chip chip-purple">🐣 Labubu</span>':'<span class="chip chip-amber">🥟 Dumpling</span>';}
-function statusChip(s){
-  var m={pending:['chip-amber','⏳ Čeká'],ordered:['chip-blue','📦 Objednáno'],wait:['chip','🕐 Vyzvednutí'],done:['chip-green','✅ Předáno']};
-  var cl=m[s]||['chip',s];
-  return '<span class="chip '+cl[0]+'">'+cl[1]+'</span>';
-}
-function updateBottomNavBadge(){
-  var pending=data.bonuses.filter(function(b){return b.status!=='done';}).length;
-  var el=document.getElementById('bn-badge-people');
-  if(el){if(pending>0){el.className='bn-badge';el.textContent=pending;}else{el.className='';el.textContent='';}}
-}
+var STATUS={pending:'⏳ Čeká',ordered:'📦 Objednáno',wait:'🕐 Na vyzvednutí',done:'✅ Předáno'};
+var GIFT={labubu:'🐣 Labubu',dumpling:'🥟 Dumpling'};
+var CATS={reklama:'📢 Reklama / spolupráce',material:'📦 Materiál / balení',postovne:'🚚 Poštovné',jine:'💸 Jiné'};
 
-// ── RENDER ──
-function copyName(name, el){
-  navigator.clipboard.writeText(name).then(function(){
-    var orig = el.textContent;
-    el.textContent = '✓ Zkopírováno';
-    el.style.color = 'var(--gr)';
-    setTimeout(function(){ el.textContent = orig; el.style.color = ''; }, 1500);
-  });
+function bonusSite(b){
+  if(b.site) return b.site;
+  if(b.siteId){
+    var s=(data.sites||[]).filter(function(x){return x.id===b.siteId;})[0];
+    if(s&&s.name) return s.name;
+  }
+  return '—';
 }
-
-function openPersonDetail(personId){
-  // Přepni na stránku Lidé
-  var peopleBtn = document.querySelector('.nav-item:nth-child(5)');
-  // Najdi správné nav-item pro Lidé
-  var navItems = document.querySelectorAll('.nav-item');
-  var peopleNavBtn = null;
-  navItems.forEach(function(btn){
-    if(btn.textContent.trim().startsWith('Lid')) peopleNavBtn = btn;
-  });
-  if(peopleNavBtn) showPage('people', peopleNavBtn);
-  // Počkej na render a pak otevři kartu
-  setTimeout(function(){
-    var card = document.getElementById('pc-'+personId);
-    if(card){
-      card.classList.add('open');
-      card.scrollIntoView({behavior:'smooth', block:'center'});
+function bonusGifts(b){
+  if(Array.isArray(b.gifts)&&b.gifts.length) return b.gifts;
+  return b.gift?[{type:b.gift,qty:b.qty||1}]:[];
+}
+function bonusAmount(b){return Number(b.amount)||0;}
+function giftText(b){
+  return bonusGifts(b).map(function(g){return (g.type==='dumpling'?'🥟':'🐣')+'×'+(parseInt(g.qty)||1);}).join(' ');
+}
+function todayISO(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function daysAgoISO(n){
+  var d=new Date(); d.setDate(d.getDate()-n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(iso){
+  var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');
+  return m?(parseInt(m[3])+'. '+parseInt(m[2])+'.'):'—';
+}
+function kc(n){return Math.round(n).toLocaleString('cs-CZ')+' Kč';}
+function personName(id){
+  var p=data.people.filter(function(x){return x.id===id;})[0];
+  return p?p.name:null;
+}
+function filterBonuses(list,f){
+  return list.filter(function(b){
+    if(f.status&&f.status!=='all'&&b.status!==f.status) return false;
+    if(f.site&&f.site!=='all'&&bonusSite(b)!==f.site) return false;
+    if(f.range&&f.range!=='all'){
+      var d=b.date||'';
+      if(!d) return false;
+      if(f.range==='month'){ if(d.slice(0,7)!==todayISO().slice(0,7)) return false; }
+      else if(d<daysAgoISO(parseInt(f.range))) return false;
     }
-  }, 100);
+    if(f.q){
+      var n=(personName(b.personId)||'').toLowerCase();
+      if(n.indexOf(f.q.toLowerCase())<0) return false;
+    }
+    return true;
+  });
+}
+function personTotal(personId){
+  return data.bonuses.filter(function(b){return b.personId===personId;}).reduce(function(s,b){return s+bonusAmount(b);},0);
+}
+function totals(){
+  var bon=data.bonuses.reduce(function(s,b){return s+bonusAmount(b);},0);
+  var exp=data.expenses.reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+  var pend=0;
+  data.bonuses.forEach(function(b){
+    if(b.status==='pending'||b.status==='ordered'){
+      bonusGifts(b).forEach(function(g){pend+=parseInt(g.qty)||1;});
+    }
+  });
+  return {bonuses:bon,expenses:exp,profit:bon-exp,giftsPending:pend};
 }
 
+// ── NAVIGATION / RENDER ──
+var currentTab='people';
+function showTab(id){
+  currentTab=id;
+  document.querySelectorAll('.section').forEach(function(s){s.classList.toggle('active',s.id==='tab-'+id);});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.getAttribute('data-tab')===id);});
+  render();
+}
 function render(){
-  if(!data.costs) data.costs=[];
-  if(!data.expenses) data.expenses=[];
-  if(!data.notes) data.notes=[];
-  updateBottomNavBadge();
-  renderDashboard();
-  renderPeople();
-  renderBonuses();
-  renderSites();
-  renderExpenses();
-  renderNotes();
+  if(currentTab==='people') renderPeople();
+  else if(currentTab==='expenses') renderExpenses();
+  else renderOverview();
 }
 
-function renderDashboard(){
-  var now=new Date();
-  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  function dGte(d,r){return d&&new Date(d)>=r;}
-
-  // Okres podle selectoru nahoře
-  var periodSel=document.getElementById('dash-period-sel');
-  var period=periodSel?periodSel.value:'7';
-  var periodFrom=null;
-  if(period==='today'){
-    periodFrom=new Date(todayStr);
-  } else if(period==='7'){
-    periodFrom=new Date(now); periodFrom.setDate(periodFrom.getDate()-7);
-  } else if(period==='30'){
-    periodFrom=new Date(now); periodFrom.setDate(periodFrom.getDate()-30);
-  }
-  // period==='all' -> periodFrom=null -> žádný filtr
-
-  var allActive=data.bonuses.filter(function(b){return b.date;});
-  var activeBonuses=periodFrom
-    ? allActive.filter(function(b){return dGte(b.date,periodFrom);})
-    : allActive;
-
-  var totalBonus=activeBonuses.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var totalDone=activeBonuses.filter(function(b){return b.status==='done';}).length;
-  var totalPend=activeBonuses.filter(function(b){return b.status!=='done';}).length;
-
-  var filteredExp=periodFrom
-    ? data.expenses.filter(function(e){return dGte(e.date,periodFrom);})
-    : data.expenses;
-  var totalExpenses=filteredExp.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  var filteredCosts=periodFrom
-    ? data.costs.filter(function(c){return c.date&&new Date(c.date)>=periodFrom;})
-    : data.costs;
-  var totalCosts=filteredCosts.reduce(function(s,c){return s+(parseFloat(c.gift||0)+parseFloat(c.postage||0)+parseFloat(c.other||0));},0);
-  var netProfit=totalBonus-totalExpenses-totalCosts;
-
-  var weekAgo=new Date(now); weekAgo.setDate(weekAgo.getDate()-7);
-  var monthAgo=new Date(now); monthAgo.setDate(monthAgo.getDate()-30);
-  var bonusToday=allActive.filter(function(b){return b.date.startsWith(todayStr);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var bonusWeek=allActive.filter(function(b){return dGte(b.date,weekAgo);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-  var expToday=data.expenses.filter(function(e){return e.date&&e.date.startsWith(todayStr);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  var expWeek=data.expenses.filter(function(e){return dGte(e.date,weekAgo);}).reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  var netToday=bonusToday-expToday;
-  var netWeek=bonusWeek-expWeek;
-
-  var avatarColors=['av-or','av-gr','av-bl','av-pu','av-am','av-re'];
-  function avClass(name){ return avatarColors[(name||'').charCodeAt(0)%avatarColors.length]; }
-
-  document.getElementById('stats-row').innerHTML=
-    '<div class="stat-card">'+
-      '<div class="stat-card-inner">'+
-        '<div class="stat-icon" style="background:var(--gr-d)"><i class="ti ti-trending-up" style="color:var(--gr)"></i></div>'+
-        '<div class="stat-body">'+
-          '<div class="stat-label">Celkový zisk</div>'+
-          '<div class="stat-val money">'+netProfit.toLocaleString('cs-CZ')+' Kč</div>'+
-          '<div class="stat-change pos"><i class="ti ti-arrow-up" style="font-size:11px"></i> výdělky '+totalBonus.toLocaleString('cs-CZ')+' Kč</div>'+
-      ((totalExpenses+totalCosts)>0?'<div class="stat-change neg" style="font-size:11px;">výdaje -'+(totalExpenses+totalCosts).toLocaleString('cs-CZ')+' Kč</div>':'')+
-
-        '</div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="stat-card">'+
-      '<div class="stat-card-inner">'+
-        '<div class="stat-icon" style="background:var(--pu-d)"><i class="ti ti-users" style="color:var(--pu)"></i></div>'+
-        '<div class="stat-body">'+
-          '<div class="stat-label">Celkem lidí</div>'+
-          '<div class="stat-val">'+data.people.length+'</div>'+
-          '<div class="stat-change info">'+activeBonuses.length+' bonusů celkem</div>'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="stat-card">'+
-      '<div class="stat-card-inner">'+
-        '<div class="stat-icon" style="background:var(--am-d)"><i class="ti ti-clock" style="color:var(--am)"></i></div>'+
-        '<div class="stat-body">'+
-          '<div class="stat-label">Čekající odměny</div>'+
-          '<div class="stat-val">'+totalPend+'</div>'+
-          '<div class="stat-change warn">'+activeBonuses.filter(function(b){return b.status==='pending';}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0).toLocaleString('cs-CZ')+' Kč k vyplacení</div>'+
-        '</div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="stat-card">'+
-      '<div class="stat-card-inner">'+
-        '<div class="stat-icon" style="background:var(--bl-d)"><i class="ti ti-gift" style="color:var(--bl)"></i></div>'+
-        '<div class="stat-body">'+
-          '<div class="stat-label">Vyplacené bonusy</div>'+
-          '<div class="stat-val">'+totalDone+'</div>'+
-          '<div class="stat-change info">dnes +'+bonusToday.toLocaleString('cs-CZ')+' Kč</div>'+
-        '</div>'+
-      '</div>'+
-    '</div>';
-
-  var sorted=activeBonuses.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
-
-  var mini=sorted.slice(0,5);
-  var miniHtml='';
-  mini.forEach(function(b){
-    var person=data.people.find(function(p){return p.id===b.personId;});
-    var site=data.sites.find(function(s){return s.id===b.siteId;});
-    var name=person?person.name:'?';
-    var initials=ini(name);
-    var avc=avClass(name);
-    var statusMap={pending:'badge-pending',ordered:'badge-ordered',wait:'badge-wait',done:'badge-done'};
-    var statusLabel={pending:'Přidáno',ordered:'Objednáno',wait:'Vyzvednutí',done:'Předáno'};
-    var timeStr=b.date?b.date.replace('T',' ').slice(11,16):'';
-    miniHtml+='<div class="recent-row" style="cursor:pointer;" onclick="openPersonDetail(\''+b.personId+'\')">'+
-      '<div class="r-avatar '+avc+'">'+initials+'</div>'+
-      '<div class="r-info">'+
-        '<div class="r-name">'+name+'</div>'+
-        '<div class="r-site">'+(site?site.name:'?')+'</div>'+
-      '</div>'+
-      '<div class="r-right">'+
-        '<div class="r-amount">+'+parseFloat(b.amount||0).toLocaleString('cs-CZ')+' Kč</div>'+
-        '<div style="margin-top:3px;"><span class="badge '+(statusMap[b.status]||'badge-wait')+'">'+( statusLabel[b.status]||b.status)+'</span></div>'+
-      '</div>'+
-      '<div style="margin-left:8px;text-align:right;flex-shrink:0;"><div class="r-time">'+timeStr+'</div></div>'+
-    '</div>';
-  });
-  if(!miniHtml) miniHtml='<div style="text-align:center;color:var(--t3);padding:28px;font-size:13px;">Žádné bonusy</div>';
-  document.getElementById('dash-recent-mini').innerHTML=miniHtml;
-
-  var tableRows=sorted.slice(0,10);
-  var tableHtml='';
-  if(tableRows.length){
-    tableHtml='<table class="activity-table">'+
-      '<thead><tr><th>Uživatel</th><th>Aplikace</th><th>Typ</th><th class="hide-mobile">Částka</th><th>Stav</th><th class="hide-mobile">Čas</th></tr></thead><tbody>';
-    tableRows.forEach(function(b){
-      var person=data.people.find(function(p){return p.id===b.personId;});
-      var site=data.sites.find(function(s){return s.id===b.siteId;});
-      var statusMap={pending:'badge-pending',ordered:'badge-ordered',wait:'badge-wait',done:'badge-done'};
-      var statusLabel={pending:'Přidáno',ordered:'Objednáno',wait:'Vyzvednutí',done:'Předáno'};
-      var timeStr=b.date?b.date.replace('T',' ').slice(0,16):'';
-      tableHtml+='<tr style="cursor:pointer;" onclick="openPersonDetail(\''+b.personId+'\')">'+
-        '<td class="col-user">'+(person?person.name:'?')+'</td>'+
-        '<td>'+(site?site.name:'?')+'</td>'+
-        '<td>Bonus</td>'+
-        '<td class="col-amount hide-mobile">+'+parseFloat(b.amount||0).toLocaleString('cs-CZ')+' Kč</td>'+
-        '<td><span class="badge '+(statusMap[b.status]||'badge-wait')+'">'+( statusLabel[b.status]||b.status)+'</span></td>'+
-        '<td class="col-time hide-mobile">'+timeStr+'</td>'+
-      '</tr>';
-    });
-    tableHtml+='</tbody></table>';
-  } else {
-    tableHtml='<div style="text-align:center;color:var(--t3);padding:32px;font-size:13px;">Zatím žádná aktivita 🐣</div>';
-  }
-  document.getElementById('dash-activity-table').innerHTML=tableHtml;
-
-  renderChart();
+// ── LIDÉ ──
+function refreshSiteFilter(){
+  var sel=$('f-site'), cur=sel.value||'all', seen={}, names=[];
+  data.bonuses.forEach(function(b){var s=bonusSite(b); if(s!=='—'&&!seen[s]){seen[s]=1;names.push(s);}});
+  names.sort();
+  sel.innerHTML='<option value="all">Všude</option>'+names.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('');
+  sel.value=names.indexOf(cur)>=0?cur:'all';
 }
+function renderPeople(){ refreshSiteFilter(); renderPeopleList(); }
 
-function renderChart(){
-  var days=parseInt((document.getElementById('chart-period')||{value:'7'}).value)||7;
-  var now=new Date();
-  var labels=[];
-  var values=[];
-  for(var i=days-1;i>=0;i--){
-    var d=new Date(now);
-    d.setDate(d.getDate()-i);
-    var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    var dayLabel=(d.getDate()+'.'+(d.getMonth()+1)+'.');
-    labels.push(dayLabel);
-    var daySum=data.bonuses.filter(function(b){return b.date&&b.date.startsWith(ds);}).reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-    values.push(daySum);
-  }
-  var canvas=document.getElementById('profit-chart');
-  if(!canvas) return;
-  if(window._profitChart) window._profitChart.destroy();
-  window._profitChart=new Chart(canvas,{
-    type:'line',
-    data:{
-      labels:labels,
-      datasets:[{
-        label:'Bonus (Kč)',
-        data:values,
-        borderColor:'#22C984',
-        backgroundColor:'rgba(34,201,132,0.08)',
-        borderWidth:2,
-        pointBackgroundColor:'#22C984',
-        pointRadius:3,
-        pointHoverRadius:5,
-        fill:true,
-        tension:0.4
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.parsed.y.toLocaleString('cs-CZ')+' Kč';}}}},
-      scales:{
-        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4E4A60',font:{size:11},maxTicksLimit:8}},
-        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4E4A60',font:{size:11},callback:function(v){return v.toLocaleString('cs-CZ')+' Kč';}}}
-      }
-    }
-  });
-}
-
-
-function renderPeople(){
-  var searchEl=document.getElementById('people-search');
-  var q=searchEl?searchEl.value.trim().toLowerCase():'';
-  var filtered=data.people.filter(function(p){return p.name.toLowerCase().includes(q);});
-  var c=document.getElementById('people-cards');
-  if(!data.people.length){
-    c.innerHTML='<div style="text-align:center;color:var(--t3);padding:48px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Zatím nikdo 🐣</div>';
-    return;
-  }
-  if(!filtered.length){
-    c.innerHTML='<div style="text-align:center;color:var(--t3);padding:48px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Nikdo nenalezen 🔍</div>';
-    return;
-  }
+function renderPeopleList(){
+  var f={q:$('f-q').value.trim(),status:$('f-status').value,range:$('f-range').value,site:$('f-site').value};
+  var anyBonusFilter=f.status!=='all'||f.range!=='all'||f.site!=='all';
   var html='';
-  filtered.forEach(function(p){
-    var mb=data.bonuses.filter(function(b){return b.personId===p.id;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
-    var activeMb=mb.filter(function(b){return b.date;});
-    var total=activeMb.reduce(function(s,b){return s+(parseFloat(b.amount)||0);},0);
-    var labC=mb.filter(function(b){return b.gift==='labubu';}).length;
-    var dumC=mb.filter(function(b){return b.gift==='dumpling';}).length;
-    var doneC=mb.filter(function(b){return b.status==='done';}).length;
-    var cost=data.costs?data.costs.find(function(c){return c.personId===p.id;}):null;
-    var totalCost=cost?(parseFloat(cost.gift||0)+parseFloat(cost.postage||0)+parseFloat(cost.other||0)):0;
-    var profit=total-totalCost;
-    var usedIds=new Set(mb.map(function(b){return b.siteId;}));
-    var doneSites=data.sites.filter(function(s){return usedIds.has(s.id);});
-    var remSites=data.sites.filter(function(s){return !usedIds.has(s.id);});
-    var av=ini(p.name);
-    var subRight=remSites.length
-      ?'<span style="color:var(--am);font-size:11px;font-weight:600;">'+remSites.length+' stránek zbývá</span>'
-      :'<span style="color:var(--gr);font-size:11px;font-weight:600;">✓ vše hotovo</span>';
+  var people=data.people.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'cs');});
+  var known={}; data.people.forEach(function(p){known[p.id]=1;});
 
-    // Bonus rows
-    var rows='';
-    if(mb.length){
-      mb.forEach(function(b){
-        var site=data.sites.find(function(s){return s.id===b.siteId;});
-        rows+='<tr>'+
-          '<td><span style="font-size:11px;color:var(--t3);font-family:monospace;">'+(b.date?b.date.replace('T',' ').slice(0,16):'—')+'</span></td>'+
-          '<td>'+(site?'<span class="chip chip-blue">'+site.name+'</span>':'<span style="color:var(--t3)">?</span>')+'</td>'+
-          '<td><span class="chip chip-green chip-mono">+'+parseFloat(b.amount||0).toLocaleString('cs-CZ')+' Kč</span></td>'+
-          '<td>'+giftChip(b.gift)+'</td>'+
-          '<td><select class="status-sel" onchange="updateStatus(\''+b.id+'\',this.value)">'+
-            '<option value="pending"'+(b.status==='pending'?' selected':'')+'>⏳ Čeká</option>'+
-            '<option value="ordered"'+(b.status==='ordered'?' selected':'')+'>📦 Objednáno</option>'+
-            '<option value="wait"'+(b.status==='wait'?' selected':'')+'>🕐 Vyzvednutí</option>'+
-            '<option value="done"'+(b.status==='done'?' selected':'')+'>✅ Předáno</option>'+
-          '</select></td>'+
-          '<td style="white-space:nowrap;">'+
-            '<button class="btn btn-ghost btn-sm" onclick="openEditBonusById(\''+b.id+'\');event.stopPropagation()"><i class="ti ti-edit"></i></button>'+
-            '<button class="btn btn-danger btn-sm" onclick="deleteBonus(\''+b.id+'\');event.stopPropagation()"><i class="ti ti-trash"></i></button>'+
-          '</td>'+
-        '</tr>'+
-        (b.note?'<tr><td colspan="6" style="padding:4px 10px 10px;font-size:12px;color:var(--t2);"><i class="ti ti-notes" style="font-size:12px;margin-right:4px;"></i>'+b.note+'</td></tr>':'');
-      });
-    } else {
-      rows='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px;font-size:12px;">Žádné bonusy</td></tr>';
-    }
-
-    // Person notes
-    var pNotes=(data.notes||[]).filter(function(n){return n.personId===p.id;});
-    var notesHtml='';
-    if(pNotes.length){
-      notesHtml='<div class="person-notes">'+
-        '<div class="person-notes-title">'+
-          '<span><i class="ti ti-notebook" style="font-size:12px;margin-right:4px;"></i> Poznámky ('+pNotes.length+')</span>'+
-          '<button class="btn btn-ghost btn-sm" onclick="openNoteModal(\''+p.id+'\');event.stopPropagation()" style="padding:2px 8px;font-size:11px;">+ Přidat</button>'+
-        '</div>';
-      pNotes.forEach(function(n){
-        var bc=n.color==='orange'?'var(--or)':n.color==='green'?'var(--gr)':n.color==='blue'?'var(--bl)':n.color==='purple'?'var(--pu)':n.color==='red'?'var(--re)':'var(--b2)';
-        notesHtml+='<div class="person-note-item" style="border-left:2px solid '+bc+';">'+
-          (n.title?'<div class="person-note-item-title">'+n.title+'</div>':'')+
-          (n.text?'<div class="person-note-item-text">'+n.text+'</div>':'')+
-          '<div style="font-size:10px;color:var(--t3);margin-top:4px;display:flex;justify-content:space-between;">'+
-            '<span>'+(n.date||'')+'</span>'+
-            '<span style="display:flex;gap:4px;">'+
-              '<button class="btn btn-ghost btn-sm" onclick="editNote(\''+n.id+'\');event.stopPropagation()" style="padding:1px 6px;font-size:11px;"><i class="ti ti-edit"></i></button>'+
-              '<button class="btn btn-danger btn-sm" onclick="deleteNote(\''+n.id+'\');event.stopPropagation()" style="padding:1px 6px;font-size:11px;"><i class="ti ti-trash"></i></button>'+
-            '</span>'+
-          '</div>'+
-        '</div>';
-      });
-      notesHtml+='</div>';
-    }
-
-    html+='<div class="pc" id="pc-'+p.id+'">'+
-      '<div class="pc-header" onclick="togglePc(\''+p.id+'\')">'+
-        '<div class="avatar avatar-lg">'+av+'</div>'+
-        '<div class="pc-info">'+
-          '<div class="pc-name" onclick="copyName(\''+p.name+'\',this);event.stopPropagation()" style="cursor:pointer;" title="Klikni pro kopírování">'+p.name+'</div>'+
-          '<div class="pc-sub">'+
-            '<span>'+mb.length+' bonus'+(mb.length===1?'':'ů')+'</span>'+
-            '<span class="pc-sub-dot">·</span>'+
-            '<span>'+doneC+' předáno</span>'+
-            '<span class="pc-sub-dot">·</span>'+
-            subRight+
-          '</div>'+
-        '</div>'+
-        '<div class="pc-right">'+
-          '<span class="pc-total">'+total.toLocaleString('cs-CZ')+' Kč</span>'+
-          '<i class="ti ti-chevron-down pc-chevron"></i>'+
-        '</div>'+
-      '</div>'+
-      '<div class="pc-body">'+
-        '<div class="pc-stats">'+
-          '<div class="pc-stat"><div class="pc-stat-lbl">Bonus</div><div class="pc-stat-val money">'+total.toLocaleString('cs-CZ')+' Kč</div></div>'+
-          '<div class="pc-stat"><div class="pc-stat-lbl">Náklady</div><div class="pc-stat-val" style="font-family:monospace;font-size:14px;color:var(--re);">'+totalCost.toLocaleString('cs-CZ')+' Kč</div></div>'+
-          '<div class="pc-stat"><div class="pc-stat-lbl">Zisk</div><div class="pc-stat-val" style="font-family:monospace;font-size:14px;color:'+(profit>=0?'var(--gr)':'var(--re)')+';">'+profit.toLocaleString('cs-CZ')+' Kč</div></div>'+
-          '<div class="pc-stat"><div class="pc-stat-lbl">🐣 Labubu</div><div class="pc-stat-val">'+labC+'</div></div>'+
-          '<div class="pc-stat"><div class="pc-stat-lbl">🥟 Dumpling</div><div class="pc-stat-val">'+dumC+'</div></div>'+
-          '<div class="pc-stat"><div class="pc-stat-lbl">Předáno</div><div class="pc-stat-val">'+doneC+'<span style="font-size:12px;color:var(--t3);font-weight:500;"> / '+mb.length+'</span></div></div>'+
-        '</div>'+
-        '<div class="pc-sites">'+
-          '<div>'+
-            '<div class="pc-sites-col-title" style="color:var(--gr);"><i class="ti ti-circle-check"></i> Hotové stránky</div>'+
-            '<div class="pc-sites-pills">'+
-              (doneSites.length?doneSites.map(function(s){return '<span class="pc-site-pill pc-site-pill-done">'+s.name+'</span>';}).join(''):'<span style="color:var(--t3);font-size:12px;">žádné</span>')+
-            '</div>'+
-          '</div>'+
-          '<div>'+
-            '<div class="pc-sites-col-title" style="color:var(--am);"><i class="ti ti-clock"></i> Zbývá udělat</div>'+
-            '<div class="pc-sites-pills">'+
-              (remSites.length?remSites.map(function(s){return '<span class="pc-site-pill pc-site-pill-rem">'+s.name+'</span>';}).join(''):'<span style="color:var(--gr);font-size:12px;font-weight:600;">🎉 Vše hotovo!</span>')+
-            '</div>'+
-          '</div>'+
-        '</div>'+
-        notesHtml+
-        '<table><thead><tr><th>Datum</th><th>Stránka</th><th>Bonus</th><th>Dárek</th><th>Stav</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'+
-        '<div class="pc-actions">'+
-          '<button class="btn btn-primary btn-sm" onclick="openEditBonus(\''+p.id+'\');event.stopPropagation()"><i class="ti ti-plus"></i> Přidat bonus</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="openCostModal(\''+p.id+'\');event.stopPropagation()"><i class="ti ti-wallet"></i> Náklady</button>'+
-          '<button class="btn btn-ghost btn-sm" onclick="openNoteModal(\''+p.id+'\');event.stopPropagation()"><i class="ti ti-notebook"></i> Poznámka</button>'+
-          '<button class="btn btn-danger btn-sm" onclick="deletePerson(\''+p.id+'\')"><i class="ti ti-trash"></i> Smazat</button>'+
-        '</div>'+
-      '</div>'+
-    '</div>';
-  });
-  c.innerHTML=html;
-}
-
-function togglePc(id){document.getElementById('pc-'+id).classList.toggle('open');}
-
-function renderBonuses(){
-  var tbody=document.getElementById('bonuses-list');
-  var sorted=data.bonuses.filter(function(b){return b.date;}).slice().sort(function(a,b){return b.date.localeCompare(a.date);});
-  if(!sorted.length){tbody.innerHTML='<tr class="empty-row"><td colspan="7">Zatím žádné bonusy</td></tr>';return;}
-  var html='';
-  sorted.forEach(function(b){
-    var person=data.people.find(function(p){return p.id===b.personId;});
-    var site=data.sites.find(function(s){return s.id===b.siteId;});
-    html+='<tr>'+
-      '<td><strong>'+(person?person.name:'?')+'</strong></td>'+
-      '<td>'+(site?'<span class="chip chip-blue">'+site.name+'</span>':'?')+'</td>'+
-      '<td><span class="chip chip-green chip-mono">+'+parseFloat(b.amount||0).toLocaleString('cs-CZ')+' Kč</span></td>'+
-      '<td>'+giftChip(b.gift)+'</td>'+
-      '<td><select class="status-sel" onchange="updateStatus(\''+b.id+'\',this.value)">'+
-        '<option value="pending"'+(b.status==='pending'?' selected':'')+'>⏳ Čeká</option>'+
-        '<option value="ordered"'+(b.status==='ordered'?' selected':'')+'>📦 Objednáno</option>'+
-        '<option value="wait"'+(b.status==='wait'?' selected':'')+'>🕐 Vyzvednutí</option>'+
-        '<option value="done"'+(b.status==='done'?' selected':'')+'>✅ Předáno</option>'+
-      '</select></td>'+
-      '<td class="hide-mobile" style="font-size:12px;color:var(--t3);font-family:monospace;">'+(b.date?b.date.replace('T',' ').slice(0,16):'—')+'</td>'+
-      '<td style="white-space:nowrap;">'+
-        '<button class="btn btn-ghost btn-sm" onclick="openEditBonusById(\''+b.id+'\')"><i class="ti ti-edit"></i></button>'+
-        '<button class="btn btn-danger btn-sm" onclick="deleteBonus(\''+b.id+'\')"><i class="ti ti-trash"></i></button>'+
-      '</td>'+
-    '</tr>'+
-    (b.note?'<tr><td colspan="7" style="padding:4px 16px 10px;font-size:12px;color:var(--t2);"><i class="ti ti-notes" style="font-size:12px;margin-right:4px;"></i>'+b.note+'</td></tr>':'');
-  });
-  tbody.innerHTML=html;
-}
-
-function renderSites(){
-  var grid=document.getElementById('sites-grid');
-  if(!data.sites.length){grid.innerHTML='<p style="color:var(--t3);font-size:13px;grid-column:1/-1;">Zatím žádné stránky</p>';return;}
-  var html='';
-  data.sites.forEach(function(s){
-    var cnt=data.bonuses.filter(function(b){return b.siteId===s.id;}).length;
-    var tot=data.bonuses.filter(function(b){return b.siteId===s.id;}).reduce(function(a,b){return a+(parseFloat(b.amount)||0);},0);
-    html+='<div class="site-card">'+
-      '<button class="site-card-del" onclick="deleteSite(\''+s.id+'\')"><i class="ti ti-x"></i></button>'+
-      '<div class="site-icon"><i class="ti ti-world"></i></div>'+
-      '<div class="site-name">'+s.name+'</div>'+
-      '<div class="site-meta">'+cnt+' bonus'+(cnt===1?'':'ů')+' · <span style="color:var(--gr);font-family:monospace;">'+tot.toLocaleString('cs-CZ')+' Kč</span></div>'+
-    '</div>';
-  });
-  grid.innerHTML=html;
-}
-
-function renderExpenses(){
-  var list=document.getElementById('expenses-list');
-  var summary=document.getElementById('expense-summary');
-  if(!list)return;
-  var catLabels={reklama:'📢 Reklama',material:'📦 Materiál',postovne:'🚚 Poštovné',jine:'💸 Jiné'};
-  var total=data.expenses.reduce(function(s,e){return s+(parseFloat(e.amount)||0);},0);
-  summary.innerHTML='<div class="expense-summary">'+
-    '<div class="expense-sum-item"><div class="expense-sum-label">Celkem výdaje</div><div class="expense-sum-val" style="color:var(--re);">-'+total.toLocaleString('cs-CZ')+' Kč</div></div>'+
-    '<div class="expense-sum-item"><div class="expense-sum-label">Počet záznamů</div><div class="expense-sum-val">'+data.expenses.length+'</div></div>'+
-  '</div>';
-  if(!data.expenses.length){list.innerHTML='<div style="text-align:center;color:var(--t3);padding:40px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Zatím žádné výdaje</div>';return;}
-  var sorted=data.expenses.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
-  var html='';
-  sorted.forEach(function(e){
-    html+='<div class="expense-card">'+
-      '<div class="expense-header">'+
-        '<div><div class="expense-name">'+e.name+'</div>'+
-        '<div class="expense-meta">'+(catLabels[e.category]||e.category)+(e.date?' · '+e.date:'')+(e.note?' · '+e.note:'')+'</div></div>'+
-        '<div style="display:flex;align-items:center;gap:8px;">'+
-          '<div class="expense-amount">-'+parseFloat(e.amount||0).toLocaleString('cs-CZ')+' Kč</div>'+
-          '<button class="btn btn-ghost btn-sm" onclick="editExpense(\''+e.id+'\')"><i class="ti ti-edit"></i></button>'+
-          '<button class="btn btn-danger btn-sm" onclick="deleteExpense(\''+e.id+'\')"><i class="ti ti-trash"></i></button>'+
-        '</div>'+
-      '</div>'+
-    '</div>';
-  });
-  list.innerHTML=html;
-}
-
-function renderNotes(){
-  var list=document.getElementById('notes-list');
-  if(!list)return;
-  if(!data.notes||!data.notes.length){
-    list.innerHTML='<div style="text-align:center;color:var(--t3);padding:48px;font-size:13px;background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);">Zatím žádné poznámky 📝</div>';
-    return;
+  // obecné poznámky (bez existujícího člověka)
+  var general=data.notes.filter(function(n){return !n.personId||!known[n.personId];});
+  if(general.length&&!f.q&&!anyBonusFilter){
+    html+='<div class="card"><div class="card-h"><span class="name">Obecné poznámky</span>'+
+      '<button class="icon-btn" onclick="openNoteModal()">＋</button></div>'+general.map(noteHTML).join('')+'</div>';
   }
-  var sorted=data.notes.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
-  var html='<div class="notes-grid">';
-  sorted.forEach(function(n){
-    var person=n.personId?data.people.find(function(p){return p.id===n.personId;}):null;
-    var colorClass=n.color&&n.color!=='default'?' color-'+n.color:'';
-    html+='<div class="note-card'+colorClass+'">'+
-      '<div class="note-card-actions">'+
-        '<button class="btn btn-ghost btn-sm" onclick="editNote(\''+n.id+'\')"><i class="ti ti-edit"></i></button>'+
-        '<button class="btn btn-danger btn-sm" onclick="deleteNote(\''+n.id+'\')"><i class="ti ti-trash"></i></button>'+
-      '</div>'+
-      (n.title?'<div class="note-card-title">'+n.title+'</div>':'')+
-      (n.text?'<div class="note-card-text">'+n.text+'</div>':'')+
-      '<div class="note-card-meta">'+
-        (person?'<span class="note-card-person">'+person.name+'</span>':'')+
-        '<span>'+(n.date||'')+'</span>'+
-      '</div>'+
-    '</div>';
+
+  var shown=0;
+  people.forEach(function(p){
+    if(f.q&&String(p.name).toLowerCase().indexOf(f.q.toLowerCase())<0) return;
+    var all=data.bonuses.filter(function(b){return b.personId===p.id;});
+    var bon=filterBonuses(all,{status:f.status,range:f.range,site:f.site}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+    if(anyBonusFilter&&!bon.length) return;
+    shown++;
+    var sum=bon.reduce(function(s,b){return s+bonusAmount(b);},0);
+    var notes=data.notes.filter(function(n){return n.personId===p.id;});
+    html+='<div class="card"><div class="card-h"><span class="name">'+esc(p.name)+'</span><span class="total">'+kc(sum)+'</span></div>';
+    html+=bon.map(function(b){
+      return '<div class="row">'+
+        '<span class="when">'+fmtDate(b.date)+'</span>'+
+        '<span class="where">'+esc(bonusSite(b))+'</span>'+
+        '<span class="amt">'+kc(bonusAmount(b))+'</span>'+
+        (giftText(b)?'<span class="gifts">'+giftText(b)+'</span>':'')+
+        '<select class="status '+esc(b.status||'pending')+'" onchange="setBonusStatus(\''+b.id+'\',this.value)">'+
+          Object.keys(STATUS).map(function(k){return '<option value="'+k+'"'+((b.status||'pending')===k?' selected':'')+'>'+STATUS[k]+'</option>';}).join('')+
+        '</select>'+
+        '<button class="icon-btn" onclick="openBonusModal(\'\',\''+b.id+'\')" title="Upravit">✎</button>'+
+        '<button class="icon-btn" onclick="deleteBonus(\''+b.id+'\')" title="Smazat">✕</button>'+
+      '</div>';
+    }).join('');
+    if(!bon.length) html+='<div class="cat" style="padding:6px 0">Zatím žádný bonus</div>';
+    html+=notes.map(noteHTML).join('');
+    html+='<div class="card-actions">'+
+      '<button class="btn" onclick="openBonusModal(\''+p.id+'\')">+ Bonus</button>'+
+      '<button class="btn" onclick="openNoteModal(\''+p.id+'\')">+ Poznámka</button>'+
+      '<button class="btn" onclick="openPersonModal(\''+p.id+'\')">Přejmenovat</button>'+
+      '<button class="btn btn-danger" onclick="deletePerson(\''+p.id+'\')">Smazat</button>'+
+    '</div></div>';
   });
-  html+='</div>';
-  list.innerHTML=html;
+  if(!shown&&!html) html='<div class="empty">'+(data.people.length?'Nic nevyhovuje filtru.':'Zatím tu nikdo není. Přidej prvního člověka.')+'</div>';
+  $('people-list').innerHTML=html;
+}
+function noteHTML(n){
+  return '<div class="note"><div class="txt">'+(n.title?'<b>'+esc(n.title)+'</b> ':'')+esc(n.text)+'</div>'+
+    '<button class="icon-btn" onclick="openNoteModal(\'\',\''+n.id+'\')" title="Upravit">✎</button>'+
+    '<button class="icon-btn" onclick="deleteNote(\''+n.id+'\')" title="Smazat">✕</button></div>';
+}
+function setBonusStatus(id,status){
+  var b=data.bonuses.filter(function(x){return x.id===id;})[0];
+  if(!b) return;
+  b.status=status; save(); renderPeopleList();
 }
 
-// ── BONUS MODAL ──
-function filterSitesForPerson(personId){
-  var editId=document.getElementById('b-id').value;
-  var usedIds=new Set(data.bonuses.filter(function(b){return b.personId===personId&&b.id!==editId;}).map(function(b){return b.siteId;}));
-  var available=data.sites.filter(function(s){return !usedIds.has(s.id);});
-  var ss=document.getElementById('b-site');
-  ss.innerHTML=available.map(function(s){return '<option value="'+s.id+'">'+s.name+'</option>';}).join('');
-  if(!available.length) ss.innerHTML='<option value="">— všechny stránky hotovy —</option>';
-}
-function addGiftRow(type, qty){
-  var list = document.getElementById('b-gifts-list');
-  var row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
-  row.innerHTML =
-    '<select class="form-control" style="flex:1;" onchange="">' +
-      '<option value="labubu"'+(type==='labubu'?' selected':'')+'>🐣 Labubu</option>' +
-      '<option value="dumpling"'+(type==='dumpling'?' selected':'')+'>🥟 Dumpling</option>' +
-    '</select>' +
-    '<input class="form-control" type="number" min="1" value="'+(qty||1)+'" placeholder="ks" style="width:70px;" title="Počet kusů">' +
-    '<button type="button" onclick="this.parentElement.remove()" style="background:var(--re-d);color:var(--re);border:none;border-radius:5px;width:30px;height:36px;cursor:pointer;font-size:16px;flex-shrink:0;">×</button>';
-  list.appendChild(row);
-}
+// ── MODAL ──
+function openModal(html){$('modal').innerHTML=html;$('modal-bg').classList.add('open');}
+function closeModal(){$('modal-bg').classList.remove('open');}
 
-function getGiftsFromModal(){
-  var rows = document.getElementById('b-gifts-list').querySelectorAll('div');
-  var gifts = [];
-  rows.forEach(function(row){
-    var sel = row.querySelector('select');
-    var inp = row.querySelector('input');
-    if(sel && inp){
-      gifts.push({type: sel.value, qty: parseInt(inp.value)||1});
-    }
-  });
-  return gifts;
+function openPersonModal(id){
+  var p=id?data.people.filter(function(x){return x.id===id;})[0]:null;
+  openModal('<h2>'+(p?'Přejmenovat':'Nový člověk')+'</h2>'+
+    '<div class="fld"><label>Jméno</label><input class="input" id="m-name" value="'+esc(p?p.name:'')+'" placeholder="např. Pepa"></div>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" onclick="savePerson(\''+(p?p.id:'')+'\')">Uložit</button></div>');
+  $('m-name').focus();
 }
-
-function setGiftsToModal(gifts){
-  var list = document.getElementById('b-gifts-list');
-  list.innerHTML = '';
-  if(!gifts || !gifts.length){
-    addGiftRow('labubu', 1);
-  } else {
-    gifts.forEach(function(g){ addGiftRow(g.type, g.qty); });
-  }
-}
-
-function giftsToDisplay(gifts){
-  if(!gifts || !gifts.length) return '';
-  return gifts.map(function(g){
-    return (g.qty>1?g.qty+'× ':'')+( g.type==='labubu'?'🐣 Labubu':'🥟 Dumpling');
-  }).join(', ');
-}
-
-function giftChips(gifts){
-  if(!gifts||!gifts.length) return '<span class="chip chip-purple">🐣 Labubu</span>';
-  return gifts.map(function(g){
-    var chip = g.type==='labubu'
-      ? '<span class="chip chip-purple">🐣 Labubu</span>'
-      : '<span class="chip chip-amber">🥟 Dumpling</span>';
-    return (g.qty>1?'<span style="font-size:11px;color:var(--t3);margin-right:2px;">'+g.qty+'×</span>':'')+chip;
-  }).join(' ');
-}
-
-function populateBonusModal(prePersonId){
-  var ps=document.getElementById('b-person');
-  ps.innerHTML=data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===prePersonId?' selected':'')+'>'+p.name+'</option>';}).join('');
-  if(!data.people.length) ps.innerHTML='<option value="">— nejdřív přidej lidi —</option>';
-  filterSitesForPerson(prePersonId||ps.value);
-  document.getElementById('b-id').value='';
-  document.getElementById('b-amount').value='';
-  setGiftsToModal([{type:'labubu',qty:1}]);
-  document.getElementById('b-note').value='';
-  var ld=new Date();
-  document.getElementById('b-date').value=ld.getFullYear()+'-'+String(ld.getMonth()+1).padStart(2,'0')+'-'+String(ld.getDate()).padStart(2,'0')+'T'+String(ld.getHours()).padStart(2,'0')+':'+String(ld.getMinutes()).padStart(2,'0');
-  document.getElementById('b-status').value='pending';
-  document.getElementById('bonus-modal-title').textContent='Nový bonus';
-}
-function openEditBonus(personId){openModal('modal-bonus',personId);}
-function openEditBonusById(id){
-  var b=data.bonuses.find(function(x){return x.id===id;});
-  if(!b)return;
-  populateBonusModal(b.personId);
-  document.getElementById('b-id').value=b.id;
-  document.getElementById('b-person').value=b.personId;
-  filterSitesForPerson(b.personId);
-  document.getElementById('b-site').value=b.siteId;
-  document.getElementById('b-amount').value=b.amount;
-  document.getElementById('b-status').value=b.status;
-  document.getElementById('b-date').value=b.date||'';
-  setGiftsToModal(b.gifts||[{type:b.gift||'labubu',qty:b.qty||1}]);
-  document.getElementById('b-note').value=b.note||'';
-  document.getElementById('bonus-modal-title').textContent='Upravit bonus';
-  document.getElementById('modal-bonus').classList.add('open');
-}
-
-// ── SAVE FUNCTIONS ──
-function savePerson(){
-  var name=document.getElementById('p-name').value.trim();
-  if(!name)return alert('Zadej jméno');
-  data.people.push({id:uid(),name:name});
-  save();render();closeModal('modal-person');
-  document.getElementById('p-name').value='';
-}
-function saveBonus(){
-  var personId=document.getElementById('b-person').value;
-  var siteId=document.getElementById('b-site').value;
-  var amount=document.getElementById('b-amount').value;
-  var status=document.getElementById('b-status').value;
-  var date=document.getElementById('b-date').value;
-  var note=document.getElementById('b-note').value;
-  var gifts=getGiftsFromModal();
-  var gift=gifts.length?gifts[0].type:'labubu';
-  var qty=gifts.length?gifts[0].qty:1;
-  var editId=document.getElementById('b-id').value;
-  if(!personId||!siteId)return alert('Vyber člověka a stránku');
-  if(editId){
-    var b=data.bonuses.find(function(x){return x.id===editId;});
-    if(b){b.personId=personId;b.siteId=siteId;b.amount=amount;b.gift=gift;b.qty=qty;b.gifts=gifts;b.status=status;b.date=date;b.note=note;}
-  } else {
-    data.bonuses.push({id:uid(),personId:personId,siteId:siteId,amount:amount,gift:gift,qty:qty,gifts:gifts,status:status,date:date,note:note});
-  }
-  save();render();closeModal('modal-bonus');
-}
-function saveSite(){
-  var name=document.getElementById('s-name').value.trim();
-  if(!name)return alert('Zadej název');
-  data.sites.push({id:uid(),name:name});
-  save();render();closeModal('modal-site');
-  document.getElementById('s-name').value='';
-}
-function saveExpense(){
-  var name=document.getElementById('ex-name').value.trim();
-  var amount=document.getElementById('ex-amount').value;
-  var date=document.getElementById('ex-date').value;
-  var category=document.getElementById('ex-category').value;
-  var note=document.getElementById('ex-note').value;
-  var editId=document.getElementById('ex-id').value;
-  if(!name)return alert('Zadej název');
-  if(editId){
-    var e=data.expenses.find(function(x){return x.id===editId;});
-    if(e){e.name=name;e.amount=amount;e.date=date;e.category=category;e.note=note;}
-  } else {
-    data.expenses.push({id:uid(),name:name,amount:amount,date:date,category:category,note:note});
-  }
-  save();render();closeModal('modal-expense');
-}
-function editExpense(id){
-  var e=data.expenses.find(function(x){return x.id===id;});
-  if(!e)return;
-  document.getElementById('ex-id').value=e.id;
-  document.getElementById('ex-name').value=e.name;
-  document.getElementById('ex-amount').value=e.amount;
-  document.getElementById('ex-date').value=e.date||'';
-  document.getElementById('ex-category').value=e.category;
-  document.getElementById('ex-note').value=e.note||'';
-  document.getElementById('expense-modal-title').textContent='Upravit výdaj';
-  openModal('modal-expense');
-}
-function deleteExpense(id){
-  if(!confirm('Smazat?'))return;
-  data.expenses=data.expenses.filter(function(e){return e.id!==id;});
-  save();render();
-}
-function openCostModal(personId){
-  var person=data.people.find(function(p){return p.id===personId;});
-  document.getElementById('co-person-id').value=personId;
-  document.getElementById('cost-modal-title').textContent='Náklady — '+(person?person.name:'');
-  var cost=data.costs.find(function(c){return c.personId===personId;});
-  document.getElementById('co-gift').value=cost?cost.gift||'':'';
-  document.getElementById('co-postage').value=cost?cost.postage||'':'';
-  document.getElementById('co-other').value=cost?cost.other||'':'';
-  var cd=new Date();
-  document.getElementById('co-date').value=cost?(cost.date||cd.getFullYear()+'-'+String(cd.getMonth()+1).padStart(2,'0')+'-'+String(cd.getDate()).padStart(2,'0')):cd.getFullYear()+'-'+String(cd.getMonth()+1).padStart(2,'0')+'-'+String(cd.getDate()).padStart(2,'0');
-  document.getElementById('co-note').value=cost?cost.note||'':'';
-  openModal('modal-cost');
-}
-function saveCost(){
-  var personId=document.getElementById('co-person-id').value;
-  var gift=document.getElementById('co-gift').value;
-  var postage=document.getElementById('co-postage').value;
-  var other=document.getElementById('co-other').value;
-  var note=document.getElementById('co-note').value;
-  var codate=document.getElementById('co-date').value;
-  var idx=data.costs.findIndex(function(c){return c.personId===personId;});
-  if(idx>=0){data.costs[idx]={personId:personId,gift:gift,postage:postage,other:other,note:note,date:codate};}
-  else{data.costs.push({personId:personId,gift:gift,postage:postage,other:other,note:note,date:codate});}
-  save();render();closeModal('modal-cost');
-}
-
-// ── NOTES ──
-function selectNoteColor(color){
-  document.getElementById('n-color').value=color;
-  document.querySelectorAll('.note-color-btn').forEach(function(b){
-    b.classList.toggle('active',b.dataset.color===color);
-  });
-}
-function openNoteModal(personId){
-  document.getElementById('n-id').value='';
-  document.getElementById('n-title').value='';
-  document.getElementById('n-text').value='';
-  document.getElementById('n-color').value='default';
-  document.querySelectorAll('.note-color-btn').forEach(function(b){
-    b.classList.toggle('active',b.dataset.color==='default');
-  });
-  var sel=document.getElementById('n-person');
-  sel.innerHTML='<option value="">— obecná poznámka —</option>'+
-    data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===personId?' selected':'')+'>'+p.name+'</option>';}).join('');
-  document.getElementById('note-modal-title').textContent='Nová poznámka';
-  document.getElementById('modal-note').classList.add('open');
-}
-function editNote(id){
-  var n=data.notes.find(function(x){return x.id===id;});
-  if(!n)return;
-  document.getElementById('n-id').value=n.id;
-  document.getElementById('n-title').value=n.title||'';
-  document.getElementById('n-text').value=n.text||'';
-  document.getElementById('n-color').value=n.color||'default';
-  document.querySelectorAll('.note-color-btn').forEach(function(b){
-    b.classList.toggle('active',b.dataset.color===(n.color||'default'));
-  });
-  var sel=document.getElementById('n-person');
-  sel.innerHTML='<option value="">— obecná poznámka —</option>'+
-    data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===n.personId?' selected':'')+'>'+p.name+'</option>';}).join('');
-  document.getElementById('note-modal-title').textContent='Upravit poznámku';
-  document.getElementById('modal-note').classList.add('open');
-}
-function saveNote(){
-  var title=document.getElementById('n-title').value.trim();
-  var text=document.getElementById('n-text').value.trim();
-  var personId=document.getElementById('n-person').value;
-  var color=document.getElementById('n-color').value;
-  var editId=document.getElementById('n-id').value;
-  if(!title&&!text)return alert('Zadej název nebo text');
-  var now=new Date();
-  var dateStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  if(!data.notes)data.notes=[];
-  if(editId){
-    var n=data.notes.find(function(x){return x.id===editId;});
-    if(n){n.title=title;n.text=text;n.personId=personId;n.color=color;}
-  } else {
-    data.notes.push({id:uid(),title:title,text:text,personId:personId,color:color,date:dateStr});
-  }
-  save();render();closeModal('modal-note');
-}
-function deleteNote(id){
-  if(!confirm('Smazat poznámku?'))return;
-  data.notes=data.notes.filter(function(n){return n.id!==id;});
-  save();render();
-}
-
-// ── DELETE / UPDATE ──
-function updateStatus(id,status){
-  var b=data.bonuses.find(function(x){return x.id===id;});
-  if(b){b.status=status;save();render();}
+function savePerson(id){
+  var name=$('m-name').value.trim();
+  if(!name) return;
+  if(id){ data.people.filter(function(x){return x.id===id;})[0].name=name; }
+  else data.people.push({id:uid(),name:name});
+  save(); closeModal(); render();
 }
 function deletePerson(id){
-  if(!confirm('Smazat tohoto člověka i jeho bonusy?'))return;
+  var nb=data.bonuses.filter(function(b){return b.personId===id;}).length;
+  var nn=data.notes.filter(function(n){return n.personId===id;}).length;
+  if(!confirm('Smazat '+personName(id)+' včetně '+nb+' bonusů a '+nn+' poznámek?')) return;
   data.people=data.people.filter(function(p){return p.id!==id;});
   data.bonuses=data.bonuses.filter(function(b){return b.personId!==id;});
-  data.costs=data.costs.filter(function(c){return c.personId!==id;});
-  data.notes=(data.notes||[]).filter(function(n){return n.personId!==id;});
-  save();render();
+  data.notes=data.notes.filter(function(n){return n.personId!==id;});
+  save(); render();
+}
+
+function giftRowHTML(type,qty){
+  return '<div class="gift-row"><select class="input g-type">'+
+    Object.keys(GIFT).map(function(k){return '<option value="'+k+'"'+(type===k?' selected':'')+'>'+GIFT[k]+'</option>';}).join('')+
+    '</select><input class="input g-qty" type="number" min="1" value="'+esc(qty||1)+'">'+
+    '<button class="icon-btn" onclick="this.parentNode.remove()">✕</button></div>';
+}
+function addGiftRow(){ $('m-gifts').insertAdjacentHTML('beforeend',giftRowHTML('labubu',1)); }
+
+function openBonusModal(personId,bonusId){
+  if(!data.people.length){ alert('Nejdřív přidej člověka.'); return; }
+  var b=bonusId?data.bonuses.filter(function(x){return x.id===bonusId;})[0]:null;
+  var pid=b?b.personId:(personId||'');
+  var sites={}; data.bonuses.forEach(function(x){var s=bonusSite(x); if(s!=='—') sites[s]=1;});
+  var gifts=b?bonusGifts(b):[];
+  openModal('<h2>'+(b?'Upravit bonus':'Nový bonus')+'</h2>'+
+    '<div class="fld"><label>Člověk</label><select class="input" id="m-person">'+
+      data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===pid?' selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="two"><div class="fld"><label>Kde</label><input class="input" id="m-site" list="m-sites" value="'+esc(b&&bonusSite(b)!=='—'?bonusSite(b):'')+'" placeholder="např. Alza">'+
+      '<datalist id="m-sites">'+Object.keys(sites).map(function(s){return '<option value="'+esc(s)+'">';}).join('')+'</datalist></div>'+
+    '<div class="fld"><label>Bonus (Kč)</label><input class="input" id="m-amount" type="number" min="0" value="'+esc(b?bonusAmount(b):'')+'"></div></div>'+
+    '<div class="two"><div class="fld"><label>Datum</label><input class="input" id="m-date" type="date" value="'+esc(b&&b.date?b.date:todayISO())+'"></div>'+
+    '<div class="fld"><label>Stav</label><select class="input" id="m-status">'+
+      Object.keys(STATUS).map(function(k){return '<option value="'+k+'"'+(((b&&b.status)||'pending')===k?' selected':'')+'>'+STATUS[k]+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="fld"><label>Dárky <button class="icon-btn" onclick="addGiftRow()">＋ přidat</button></label><div id="m-gifts">'+
+      gifts.map(function(g){return giftRowHTML(g.type,g.qty);}).join('')+'</div></div>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" onclick="saveBonus(\''+(b?b.id:'')+'\')">Uložit</button></div>');
+}
+function saveBonus(id){
+  var amount=parseFloat($('m-amount').value);
+  if(isNaN(amount)||amount<0){ $('m-amount').focus(); return; }
+  var gifts=[].slice.call($('m-gifts').querySelectorAll('.gift-row')).map(function(r){
+    return {type:r.querySelector('.g-type').value,qty:Math.max(1,parseInt(r.querySelector('.g-qty').value)||1)};
+  });
+  var rec={personId:$('m-person').value,site:$('m-site').value.trim(),amount:amount,gifts:gifts,
+    status:$('m-status').value,date:$('m-date').value||todayISO()};
+  if(id){
+    var b=data.bonuses.filter(function(x){return x.id===id;})[0];
+    Object.keys(rec).forEach(function(k){b[k]=rec[k];});
+    delete b.gift; delete b.qty; // staré pole nahrazuje gifts
+  } else { rec.id=uid(); rec.note=''; data.bonuses.push(rec); }
+  save(); closeModal(); render();
 }
 function deleteBonus(id){
-  if(!confirm('Smazat?'))return;
+  if(!confirm('Smazat tento bonus?')) return;
   data.bonuses=data.bonuses.filter(function(b){return b.id!==id;});
-  save();render();
-}
-function deleteSite(id){
-  if(!confirm('Smazat?'))return;
-  data.sites=data.sites.filter(function(s){return s.id!==id;});
-  save();render();
+  save(); render();
 }
 
+function openNoteModal(personId,noteId){
+  var n=noteId?data.notes.filter(function(x){return x.id===noteId;})[0]:null;
+  var pid=n?(n.personId||''):(personId||'');
+  openModal('<h2>'+(n?'Upravit poznámku':'Nová poznámka')+'</h2>'+
+    '<div class="fld"><label>Člověk</label><select class="input" id="m-person"><option value="">— obecná poznámka —</option>'+
+      data.people.map(function(p){return '<option value="'+p.id+'"'+(p.id===pid?' selected':'')+'>'+esc(p.name)+'</option>';}).join('')+'</select></div>'+
+    '<div class="fld"><label>Text</label><textarea class="input" id="m-text" rows="4">'+esc(n?n.text:'')+'</textarea></div>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" onclick="saveNote(\''+(n?n.id:'')+'\')">Uložit</button></div>');
+  $('m-text').focus();
+}
+function saveNote(id){
+  var text=$('m-text').value.trim();
+  if(!text) return;
+  var pid=$('m-person').value;
+  if(id){
+    var n=data.notes.filter(function(x){return x.id===id;})[0];
+    n.text=text; n.personId=pid;
+  } else data.notes.push({id:uid(),title:'',text:text,personId:pid,color:'',date:todayISO()});
+  save(); closeModal(); render();
+}
+function deleteNote(id){
+  if(!confirm('Smazat poznámku?')) return;
+  data.notes=data.notes.filter(function(n){return n.id!==id;});
+  save(); render();
+}
+
+// ── VÝDAJE ──
+function renderExpenses(){
+  var list=data.expenses.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  $('exp-total').textContent=kc(totals().expenses);
+  $('expenses-list').innerHTML=list.length?list.map(function(e){
+    return '<div class="card"><div class="card-h"><span class="name" style="font-size:15px">'+esc(e.name)+'</span>'+
+      '<span class="neg" style="font-weight:700">'+kc(Number(e.amount)||0)+'</span>'+
+      '<button class="icon-btn" onclick="openExpenseModal(\''+e.id+'\')">✎</button>'+
+      '<button class="icon-btn" onclick="deleteExpense(\''+e.id+'\')">✕</button></div>'+
+      '<div class="cat">'+fmtDate(e.date)+' · '+esc(CATS[e.category]||CATS.jine)+(e.note?' · '+esc(e.note):'')+'</div></div>';
+  }).join(''):'<div class="empty">Zatím žádné výdaje.</div>';
+}
+function openExpenseModal(id){
+  var e=id?data.expenses.filter(function(x){return x.id===id;})[0]:null;
+  openModal('<h2>'+(e?'Upravit výdaj':'Nový výdaj')+'</h2>'+
+    '<div class="fld"><label>Název</label><input class="input" id="m-name" value="'+esc(e?e.name:'')+'"></div>'+
+    '<div class="two"><div class="fld"><label>Částka (Kč)</label><input class="input" id="m-amount" type="number" min="0" value="'+esc(e?e.amount:'')+'"></div>'+
+    '<div class="fld"><label>Datum</label><input class="input" id="m-date" type="date" value="'+esc(e&&e.date?e.date:todayISO())+'"></div></div>'+
+    '<div class="fld"><label>Kategorie</label><select class="input" id="m-cat">'+
+      Object.keys(CATS).map(function(k){return '<option value="'+k+'"'+(((e&&e.category)||'reklama')===k?' selected':'')+'>'+CATS[k]+'</option>';}).join('')+'</select></div>'+
+    '<div class="fld"><label>Poznámka</label><input class="input" id="m-note" value="'+esc(e?e.note:'')+'"></div>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" onclick="saveExpense(\''+(e?e.id:'')+'\')">Uložit</button></div>');
+}
+function saveExpense(id){
+  var name=$('m-name').value.trim(), amount=parseFloat($('m-amount').value);
+  if(!name||isNaN(amount)) return;
+  var rec={name:name,amount:amount,date:$('m-date').value||todayISO(),category:$('m-cat').value,note:$('m-note').value.trim()};
+  if(id){ var e=data.expenses.filter(function(x){return x.id===id;})[0]; Object.keys(rec).forEach(function(k){e[k]=rec[k];}); }
+  else { rec.id=uid(); data.expenses.push(rec); }
+  save(); closeModal(); render();
+}
+function deleteExpense(id){
+  if(!confirm('Smazat výdaj?')) return;
+  data.expenses=data.expenses.filter(function(e){return e.id!==id;});
+  save(); render();
+}
+
+// ── PŘEHLED ──
+var _chart=null;
+function renderOverview(){
+  var t=totals();
+  $('tiles').innerHTML=
+    '<div class="tile"><div class="k">Bonusy</div><div class="v">'+kc(t.bonuses)+'</div></div>'+
+    '<div class="tile"><div class="k">Výdaje</div><div class="v neg">'+kc(t.expenses)+'</div></div>'+
+    '<div class="tile"><div class="k">Zisk</div><div class="v '+(t.profit>=0?'pos':'neg')+'">'+kc(t.profit)+'</div></div>'+
+    '<div class="tile"><div class="k">Dárků k odeslání</div><div class="v">'+t.giftsPending+'</div></div>';
+
+  var days=[], map={};
+  for(var i=29;i>=0;i--){var d=daysAgoISO(i); days.push(d); map[d]=0;}
+  var has=false;
+  data.bonuses.forEach(function(b){if(b.date&&map[b.date]!==undefined){map[b.date]+=bonusAmount(b);has=true;}});
+  data.expenses.forEach(function(e){if(e.date&&map[e.date]!==undefined){map[e.date]-=Number(e.amount)||0;has=true;}});
+  if(_chart){_chart.destroy();_chart=null;}
+  var wrap=$('chart-wrap');
+  if(!has){ wrap.innerHTML='<div class="empty">Zatím žádná data za posledních 30 dní.</div>'; return; }
+  if(!$('chart')) wrap.innerHTML='<canvas id="chart" height="200"></canvas>';
+  var vals=days.map(function(d){return map[d];});
+  _chart=new Chart($('chart'),{
+    type:'bar',
+    data:{labels:days.map(fmtDate),datasets:[{data:vals,
+      backgroundColor:vals.map(function(v){return v>=0?'#1a9e5c':'#d6453d';}),borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{ticks:{callback:function(v){return v+' Kč';}}}}}
+  });
+}
 </script>
 </body>
-</html
-</script>
-<style>
-:root {
-  --bg:       #0D0D0F;
-  --s1:       #141416;
-  --s2:       #1A1A1E;
-  --s3:       #222228;
-  --s4:       #2C2C34;
-  --b1:       rgba(255,255,255,0.06);
-  --b2:       rgba(255,255,255,0.10);
-  --b3:       rgba(255,255,255,0.16);
-  --t1:       #F2F0FA;
-  --t2:       #8B8799;
-  --t3:       #4E4A60;
-  --or:       #FF6B2B;
-  --or-d:     rgba(255,107,43,0.12);
-  --or-d2:    rgba(255,107,43,0.20);
-  --gr:       #22C984;
-  --gr-d:     rgba(34,201,132,0.12);
-  --am:       #F5A623;
-  --am-d:     rgba(245,166,35,0.12);
-  --pu:       #9D87F5;
-  --pu-d:     rgba(157,135,245,0.12);
-  --bl:       #4FA8F7;
-  --bl-d:     rgba(79,168,247,0.12);
-  --re:       #F87171;
-  --re-d:     rgba(248,113,113,0.12);
-  --r:        12px;
-  --r2:       9px;
-  --r3:       6px;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;}
-
-/* LOGIN */
-#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px;}
-.login-box{background:var(--s1);border:1px solid var(--b2);border-radius:18px;padding:36px 32px;width:100%;max-width:360px;}
-.login-logo{text-align:center;margin-bottom:28px;}
-.login-logo-emoji{font-size:40px;margin-bottom:10px;}
-.login-logo-title{font-size:20px;font-weight:700;letter-spacing:-0.3px;}
-.login-logo-title span{color:var(--or);}
-.login-logo-sub{font-size:13px;color:var(--t3);margin-top:4px;}
-.login-label{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:0.6px;display:block;margin-bottom:6px;}
-.login-input{width:100%;padding:11px 14px;border:1px solid var(--b2);border-radius:var(--r3);background:var(--s2);color:var(--t1);font-family:inherit;font-size:14px;outline:none;transition:border-color 0.15s;margin-bottom:14px;}
-.login-input:focus{border-color:var(--or);}
-.login-btn{width:100%;padding:12px;background:var(--or);color:#fff;border:none;border-radius:var(--r3);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;}
-.login-btn:hover{opacity:0.88;}
-#login-err{text-align:center;color:var(--re);font-size:13px;margin-top:10px;min-height:16px;}
-
-/* APP SHELL */
-.app{display:flex;min-height:100vh;}
-
-/* SIDEBAR */
-.sidebar{width:220px;background:var(--s1);border-right:1px solid var(--b1);padding:20px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;flex-shrink:0;overflow-y:auto;}
-.logo{display:flex;align-items:center;gap:10px;padding:4px 8px 20px;color:var(--t1);}
-.logo-icon{width:32px;height:32px;background:var(--or);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-.logo-text{font-size:16px;font-weight:700;letter-spacing:-0.3px;}
-.logo-text em{color:var(--or);font-style:normal;}
-.nav-section{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:1px;padding:10px 10px 4px;}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r2);cursor:pointer;color:var(--t2);font-weight:500;font-size:13px;transition:all 0.12s;border:none;background:none;width:100%;text-align:left;position:relative;}
-.nav-item:hover{background:var(--s2);color:var(--t1);}
-.nav-item.active{background:var(--or-d2);color:var(--or);}
-.nav-item i{font-size:16px;flex-shrink:0;}
-.nav-badge{margin-left:auto;background:var(--re-d);color:var(--re);border-radius:99px;font-size:10px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center;}
-.sidebar-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--b1);}
-.sidebar-user{font-size:11px;color:var(--t3);padding:2px 10px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.sidebar-profile{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r2);}
-.sidebar-avatar{width:30px;height:30px;border-radius:50%;background:var(--or-d2);color:var(--or);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.sidebar-profile-info{flex:1;min-width:0;}
-.sidebar-profile-name{font-size:13px;font-weight:600;color:var(--t1);}
-.sidebar-profile-role{font-size:11px;color:var(--t3);}
-
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-.page{display:none;flex:1;overflow-y:auto;}
-.page.active{display:flex;flex-direction:column;}
-
-/* DASHBOARD TOP BAR */
-.dash-topbar{padding:28px 28px 0;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
-.dash-greeting{font-size:22px;font-weight:700;letter-spacing:-0.4px;margin-bottom:4px;}
-.dash-subtitle{font-size:13px;color:var(--t2);}
-.dash-period-sel{background:var(--s2);border:1px solid var(--b2);color:var(--t1);border-radius:var(--r2);padding:8px 12px 8px 10px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;outline:none;display:flex;align-items:center;gap:6px;}
-
-/* PAGE HEADER (non-dashboard) */
-.page-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px 0;flex-shrink:0;}
-.page-title{font-size:20px;font-weight:700;letter-spacing:-0.4px;}
-
-/* DASHBOARD CONTENT */
-.dash-content{padding:20px 28px 28px;flex:1;display:flex;flex-direction:column;gap:16px;}
-
-/* STAT CARDS */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
-.stat-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:border-color 0.15s;}
-.stat-card:hover{border-color:var(--b2);}
-.stat-card-inner{display:flex;align-items:flex-start;gap:14px;}
-.stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.stat-icon i{font-size:20px;}
-.stat-body{flex:1;min-width:0;}
-.stat-label{font-size:11px;color:var(--t3);font-weight:500;margin-bottom:5px;}
-.stat-val{font-size:22px;font-weight:700;color:var(--t1);letter-spacing:-0.5px;line-height:1;}
-.stat-val.money{font-family:'DM Mono',monospace;font-size:19px;}
-.stat-change{font-size:12px;margin-top:5px;font-weight:500;}
-.stat-change.pos{color:var(--gr);}
-.stat-change.neg{color:var(--re);}
-.stat-change.info{color:var(--bl);}
-.stat-change.warn{color:var(--am);}
-
-/* DASHBOARD GRID */
-.dash-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;}
-
-/* CHART CARD */
-.chart-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:20px;position:relative;}
-.chart-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-.chart-card-title{font-size:15px;font-weight:600;}
-.chart-period{background:var(--s2);border:1px solid var(--b2);color:var(--t2);border-radius:var(--r3);padding:5px 10px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;outline:none;}
-#profit-chart-wrap{height:180px;position:relative;}
-
-/* RECENT BONUSES CARD */
-.recent-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;}
-.recent-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--b1);}
-.recent-card-title{font-size:15px;font-weight:600;}
-.recent-card-link{font-size:12px;color:var(--or);font-weight:500;background:none;border:none;cursor:pointer;font-family:inherit;}
-.recent-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--b1);transition:background 0.1s;}
-.recent-row:last-child{border-bottom:none;}
-.recent-row:hover{background:var(--s2);}
-.r-avatar{width:34px;height:34px;border-radius:9px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.r-info{flex:1;min-width:0;}
-.r-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.r-site{font-size:11px;color:var(--t3);margin-top:1px;}
-.r-right{text-align:right;flex-shrink:0;}
-.r-amount{font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--gr);}
-.r-time{font-size:11px;color:var(--t3);margin-top:2px;}
-
-/* ACTIVITY TABLE CARD */
-.activity-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;}
-.activity-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--b1);}
-.activity-card-title{font-size:15px;font-weight:600;}
-.activity-table{width:100%;border-collapse:collapse;}
-.activity-table th{padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.7px;background:var(--s2);border-bottom:1px solid var(--b1);}
-.activity-table td{padding:12px 20px;border-bottom:1px solid var(--b1);font-size:13px;color:var(--t1);}
-.activity-table tr:last-child td{border-bottom:none;}
-.activity-table tr:hover td{background:var(--s2);}
-.activity-table .col-user{font-weight:600;}
-.activity-table .col-amount{font-family:'DM Mono',monospace;color:var(--gr);font-weight:600;}
-.activity-table .col-time{color:var(--t3);}
-
-/* STATUS BADGES */
-.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;letter-spacing:0.1px;}
-.badge-pending{background:var(--am-d);color:var(--am);}
-.badge-ordered{background:var(--bl-d);color:var(--bl);}
-.badge-wait{background:rgba(255,255,255,0.06);color:var(--t2);}
-.badge-done{background:var(--gr-d);color:var(--gr);}
-.badge-labubu{background:var(--pu-d);color:var(--pu);}
-.badge-dumpling{background:var(--am-d);color:var(--am);}
-
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all 0.12s;white-space:nowrap;}
-.btn-primary{background:var(--or);color:#fff;border-color:var(--or);}
-.btn-primary:hover{opacity:0.85;}
-.btn-ghost{background:transparent;color:var(--t2);border-color:var(--b2);}
-.btn-ghost:hover{background:var(--s2);color:var(--t1);}
-.btn-sm{padding:4px 10px;font-size:12px;gap:4px;border-radius:5px;}
-.btn-danger{background:transparent;color:var(--re);border-color:rgba(248,113,113,0.18);}
-.btn-danger:hover{background:var(--re-d);}
-
-/* TABLE (general) */
-.table-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;}
-table{width:100%;border-collapse:collapse;}
-th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.7px;background:var(--s2);border-bottom:1px solid var(--b1);}
-td{padding:11px 16px;border-bottom:1px solid var(--b1);font-size:13px;vertical-align:middle;color:var(--t1);}
-tr:last-child td{border-bottom:none;}
-tr:hover td{background:var(--s2);}
-.empty-row td{text-align:center;color:var(--t3);padding:36px;}
-
-/* CHIPS */
-.chip{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:600;}
-.chip-green{background:var(--gr-d);color:var(--gr);}
-.chip-amber{background:var(--am-d);color:var(--am);}
-.chip-blue{background:var(--bl-d);color:var(--bl);}
-.chip-purple{background:var(--pu-d);color:var(--pu);}
-.chip-mono{font-family:'DM Mono',monospace;}
-
-/* STATUS SELECT */
-.status-sel{background:var(--s3);border:1px solid var(--b1);color:var(--t2);border-radius:5px;padding:3px 7px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;outline:none;}
-option{background:#1A1A1E;}
-
-/* PERSON CARDS */
-.pc{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color 0.15s;}
-.pc:hover{border-color:var(--b2);}
-.pc.open{border-color:rgba(255,107,43,0.3);}
-.pc-header{display:flex;align-items:center;padding:14px 18px;cursor:pointer;gap:13px;user-select:none;}
-.pc-info{flex:1;min-width:0;}
-.pc-name{font-size:14px;font-weight:700;}
-.pc-sub{font-size:12px;color:var(--t3);margin-top:3px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
-.pc-sub-dot{color:var(--t3);opacity:0.4;}
-.pc-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.pc-total{font-family:'DM Mono',monospace;font-weight:500;font-size:14px;color:var(--gr);}
-.pc-chevron{color:var(--t3);font-size:15px;transition:transform 0.2s;}
-.pc.open .pc-chevron{transform:rotate(180deg);}
-.pc-body{display:none;border-top:1px solid var(--b1);}
-.pc.open .pc-body{display:block;}
-.pc-stats{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--b1);}
-.pc-stat{padding:12px 14px;text-align:center;border-right:1px solid var(--b1);}
-.pc-stat:last-child{border-right:none;}
-.pc-stat-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;margin-bottom:4px;}
-.pc-stat-val{font-size:17px;font-weight:700;}
-.pc-stat-val.money{font-family:'DM Mono',monospace;font-size:13px;color:var(--gr);}
-.pc-sites{padding:14px 18px;border-bottom:1px solid var(--b1);display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.pc-sites-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;display:flex;align-items:center;gap:4px;}
-.pc-sites-col-title i{font-size:12px;}
-.pc-sites-pills{display:flex;flex-wrap:wrap;gap:5px;}
-.pc-site-pill{padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600;}
-.pc-site-pill-done{background:var(--gr-d);color:var(--gr);}
-.pc-site-pill-rem{background:var(--am-d);color:var(--am);}
-.pc-actions{padding:10px 14px;display:flex;gap:6px;border-top:1px solid var(--b1);background:var(--s2);flex-wrap:wrap;}
-.person-notes{padding:12px 16px;border-bottom:1px solid var(--b1);}
-.person-notes-title{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
-.person-note-item{background:var(--s2);border-radius:var(--r3);padding:8px 12px;margin-bottom:6px;font-size:12px;}
-.person-note-item:last-child{margin-bottom:0;}
-.person-note-item-title{font-weight:700;color:var(--t1);margin-bottom:2px;}
-.person-note-item-text{color:var(--t2);line-height:1.4;white-space:pre-wrap;}
-
-/* AVATARS */
-.avatar{border-radius:9px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:-0.5px;}
-.avatar-lg{width:38px;height:38px;}
-.avatar-sm{width:30px;height:30px;font-size:11px;border-radius:7px;}
-.av-or{background:var(--or-d2);color:var(--or);}
-.av-gr{background:var(--gr-d);color:var(--gr);}
-.av-bl{background:var(--bl-d);color:var(--bl);}
-.av-pu{background:var(--pu-d);color:var(--pu);}
-.av-am{background:var(--am-d);color:var(--am);}
-.av-re{background:var(--re-d);color:var(--re);}
-
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--s1);border:1px solid var(--b2);border-radius:16px;padding:26px;width:100%;max-width:450px;}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-.modal-title{font-size:16px;font-weight:700;}
-.modal-close{background:none;border:none;cursor:pointer;color:var(--t3);font-size:18px;padding:2px;transition:color 0.12s;}
-.modal-close:hover{color:var(--t1);}
-.form-group{margin-bottom:14px;}
-.form-label{font-size:11px;font-weight:600;color:var(--t2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.5px;}
-.form-control{width:100%;padding:10px 12px;border:1px solid var(--b2);border-radius:var(--r3);font-family:inherit;font-size:14px;background:var(--s2);color:var(--t1);outline:none;transition:border-color 0.12s;}
-.form-control:focus{border-color:var(--or);}
-select.form-control{cursor:pointer;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;position:sticky;bottom:0;background:var(--s1);padding-top:12px;padding-bottom:4px;}
-
-/* SITES GRID */
-.sites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
-.site-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px 18px;position:relative;transition:border-color 0.15s;}
-.site-card:hover{border-color:var(--b2);}
-.site-card-del{position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;color:var(--t3);font-size:14px;transition:color 0.12s;}
-.site-card-del:hover{color:var(--re);}
-.site-icon{width:32px;height:32px;background:var(--bl-d);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
-.site-icon i{font-size:16px;color:var(--bl);}
-.site-name{font-size:14px;font-weight:700;margin-bottom:3px;}
-.site-meta{font-size:12px;color:var(--t3);}
-
-/* EXPENSE CARDS */
-.expense-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px 18px;margin-bottom:10px;transition:border-color 0.15s;}
-.expense-card:hover{border-color:var(--b2);}
-.expense-header{display:flex;align-items:center;justify-content:space-between;}
-.expense-name{font-size:14px;font-weight:600;}
-.expense-amount{font-family:'DM Mono',monospace;font-size:14px;color:var(--re);font-weight:600;}
-.expense-meta{font-size:12px;color:var(--t3);margin-top:3px;}
-.expense-summary{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px 20px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;}
-.expense-sum-item{display:flex;flex-direction:column;gap:3px;}
-.expense-sum-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;}
-.expense-sum-val{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;}
-
-/* NOTES */
-.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
-.note-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:16px 18px;position:relative;transition:border-color 0.15s;}
-.note-card:hover{border-color:var(--b2);}
-.note-card.color-orange{border-left:3px solid var(--or);border-radius:0 var(--r) var(--r) 0;}
-.note-card.color-green{border-left:3px solid var(--gr);border-radius:0 var(--r) var(--r) 0;}
-.note-card.color-blue{border-left:3px solid var(--bl);border-radius:0 var(--r) var(--r) 0;}
-.note-card.color-purple{border-left:3px solid var(--pu);border-radius:0 var(--r) var(--r) 0;}
-.note-card.color-red{border-left:3px solid var(--re);border-radius:0 var(--r) var(--r) 0;}
-.note-card-title{font-size:14px;font-weight:700;margin-bottom:6px;padding-right:50px;}
-.note-card-text{font-size:13px;color:var(--t2);line-height:1.5;white-space:pre-wrap;word-break:break-word;}
-.note-card-meta{font-size:11px;color:var(--t3);margin-top:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.note-card-person{background:var(--or-d);color:var(--or);border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;}
-.note-card-actions{position:absolute;top:10px;right:10px;display:flex;gap:3px;}
-.note-color-btn.active{border-color:var(--t1) !important;}
-
-/* PEOPLE SEARCH */
-#people-search{font-size:14px;}
-
-/* SEC LABEL */
-.sec-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
-
-/* SCROLLABLE PAGE CONTENT */
-.page-content{padding:16px 28px 28px;flex:1;overflow-y:auto;}
-
-/* BOTTOM NAV */
-.bottom-nav{display:none;}
-
-/* MOBILE */
-@media(max-width:768px){
-  .sidebar{display:none !important;}
-  .app{display:block !important;}
-  .main{padding-bottom:70px;}
-  .page.active{display:flex;}
-  .bottom-nav{display:flex !important;position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--b2);z-index:999;padding-bottom:env(safe-area-inset-bottom,0px);}
-  .bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 2px;cursor:pointer;border:none;background:none;color:var(--t3);font-family:inherit;font-size:10px;font-weight:600;gap:3px;transition:color 0.12s;position:relative;}
-  .bottom-nav-item i{font-size:20px;}
-  .bottom-nav-item.active{color:var(--or);}
-  .bn-badge{position:absolute;top:4px;right:calc(50% - 18px);background:var(--re);color:#fff;border-radius:99px;font-size:9px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;line-height:14px;}
-  .stats-row{grid-template-columns:1fr 1fr;gap:8px;}
-  .dash-grid{grid-template-columns:1fr;}
-  .form-row{grid-template-columns:1fr !important;}
-  .pc-stats{grid-template-columns:repeat(3,1fr);}
-  .pc-stat:nth-child(3n){border-right:none;}
-  .pc-sites{grid-template-columns:1fr;}
-  .modal-overlay{align-items:flex-end !important;padding:0 !important;}
-  .modal{border-radius:16px 16px 0 0 !important;padding:22px 18px 40px !important;max-width:100% !important;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-  .hide-mobile{display:none !important;}
-  .dash-topbar,.page-header{padding-left:16px;padding-right:16px;}
-  .dash-content,.page-content{padding-left:16px;padding-right:16px;}
-  .activity-table th,.activity-table td{padding:10px 12px;}
-}
-
-</style>
-</head>
-<body>
-
-<!-- ── LOGIN ── -->
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="login-logo-emoji">🐣</div>
-      <div class="login-logo-title">Labubu<span>.</span></div>
-      <div class="login-logo-sub">Přihlaš se pro přístup</div>
-    </div>
-    <label class="login-label">Email</label>
-    <input id="login-email" type="email" class="login-input" placeholder="tvuj@email.cz">
-    <label class="login-label">Heslo</label>
-    <input id="login-pass" type="password" class="login-input" placeholder="••••••••">
-    <button id="login-btn" class="login-btn" onclick="window._fbSignIn()">Přihlásit se</button>
-    <div id="login-err"></div>
-  </div>
-</div>
-
-<!-- ── LOADING ── -->
-<div id="loading-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
-  <div style="font-size:48px;">🐣</div>
-  <div style="color:var(--t2);font-size:14px;font-weight:600;">Načítám data...</div>
-  <div style="width:40px;height:3px;background:var(--or);border-radius:3px;animation:loadbar 1s ease-in-out infinite alternate;"></div>
-</div>
-<style>
-@keyframes loadbar{from{transform:scaleX(0.3);}to{transform:scaleX(1);}}
-</style>
-
-<!-- ── APP ── -->
-<div id="app-root" class="app" style="display:none;">
-
-  <nav class="sidebar">
-    <div class="logo" onclick="showPage('dashboard', document.querySelector('.nav-item'))" style="cursor:pointer;">
-      <div class="logo-icon">🐣</div>
-      <div class="logo-text">Labubu<em>.</em></div>
-    </div>
-    <div class="nav-section">Hlavní</div>
-    <button class="nav-item active" onclick="showPage('dashboard',this)">
-      <i class="ti ti-layout-dashboard"></i><span>Přehled</span>
-    </button>
-    <button class="nav-item" onclick="showPage('people',this)">
-      <i class="ti ti-users"></i><span>Lidé</span>
-      <span class="nav-badge" id="nav-badge-people" style="display:none"></span>
-    </button>
-    <button class="nav-item" onclick="showPage('bonuses',this)">
-      <i class="ti ti-coin"></i><span>Bonusy</span>
-    </button>
-    <div class="nav-section">Finance</div>
-    <button class="nav-item" onclick="showPage('expenses',this)">
-      <i class="ti ti-receipt"></i><span>Výdaje</span>
-    </button>
-    <button class="nav-item" onclick="showPage('notes',this)">
-      <i class="ti ti-notebook"></i><span>Poznámky</span>
-    </button>
-    <div class="nav-section">Nastavení</div>
-    <button class="nav-item" onclick="showPage('sites',this)">
-      <i class="ti ti-world"></i><span>Stránky</span>
-    </button>
-    <div class="sidebar-footer">
-      <div class="sidebar-profile">
-        <div class="sidebar-avatar" id="sidebar-avatar">J</div>
-        <div class="sidebar-profile-info">
-          <div class="sidebar-profile-name">Jozef</div>
-          <div class="sidebar-profile-role" id="user-email"></div>
-        </div>
-        <button onclick="window._fbSignOut()" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:15px;padding:4px;" title="Odhlásit">
-          <i class="ti ti-logout"></i>
-        </button>
-      </div>
-    </div>
-  </nav>
-
-  <!-- BOTTOM NAV (mobile only) -->
-  <nav class="bottom-nav" id="bottom-nav">
-    <button class="bottom-nav-item active" onclick="showPageMobile('dashboard',this)">
-      <i class="ti ti-layout-dashboard"></i>
-      <span>Přehled</span>
-    </button>
-    <button class="bottom-nav-item" onclick="showPageMobile('people',this)">
-      <i class="ti ti-users"></i>
-      <span id="bn-badge-people"></span>
-      <span>Lidé</span>
-    </button>
-    <button class="bottom-nav-item" onclick="showPageMobile('bonuses',this)">
-      <i class="ti ti-coin"></i>
-      <span>Bonusy</span>
-    </button>
-    <button class="bottom-nav-item" onclick="showPageMobile('expenses',this)">
-      <i class="ti ti-receipt"></i>
-      <span>Výdaje</span>
-    </button>
-    <button class="bottom-nav-item" onclick="showPageMobile('notes',this)">
-      <i class="ti ti-notebook"></i>
-      <span>Poznámky</span>
-    </button>
-  </nav>
-
-  <main class="main">
-
-    <!-- DASHBOARD -->
-    <div id="page-dashboard" class="page active">
-      <div class="dash-topbar">
-        <div>
-          <div class="dash-greeting" id="dash-greeting">Dobrý den, Jozefe! 👋</div>
-          <div class="dash-subtitle">Tady je přehled vašeho podnikání za dnešní den.</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <select class="chart-period" id="dash-period-sel" onchange="renderDashboard()">
-            <option value="today">Dnes</option>
-            <option value="7" selected>7 dní</option>
-            <option value="30">30 dní</option>
-            <option value="all">Vše</option>
-          </select>
-          <button class="btn btn-primary" onclick="openModal('modal-bonus')"><i class="ti ti-plus"></i> Nový bonus</button>
-        </div>
-      </div>
-      <div class="dash-content">
-        <div class="stats-row" id="stats-row"></div>
-        <div class="dash-grid">
-          <div class="chart-card">
-            <div class="chart-card-header">
-              <span class="chart-card-title">Přehled zisku</span>
-              <select class="chart-period" id="chart-period" onchange="renderChart()">
-                <option value="7" selected>7 dní</option>
-                <option value="30">30 dní</option>
-                <option value="90">90 dní</option>
-              </select>
-            </div>
-            <div id="profit-chart-wrap">
-              <canvas id="profit-chart"></canvas>
-            </div>
-          </div>
-          <div class="recent-card">
-            <div class="recent-card-header">
-              <span class="recent-card-title">Poslední bonusy</span>
-              <button class="recent-card-link" onclick="showPage('bonuses', document.querySelector('.nav-item:nth-child(4)'))">Zobrazit vše</button>
-            </div>
-            <div id="dash-recent-mini"></div>
-          </div>
-        </div>
-        <div class="activity-card">
-          <div class="activity-card-header">
-            <span class="activity-card-title">Poslední aktivita</span>
-            <button class="recent-card-link" onclick="showPage('bonuses', document.querySelector('.nav-item:nth-child(4)'))">Zobrazit vše</button>
-          </div>
-          <div id="dash-activity-table"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PEOPLE -->
-    <div id="page-people" class="page">
-      <div class="page-header">
-        <h1 class="page-title">Lidé</h1>
-        <button class="btn btn-primary" onclick="openModal('modal-person')"><i class="ti ti-user-plus"></i> Přidat</button>
-      </div>
-      <div style="position:relative;margin-bottom:16px;">
-        <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--t3);pointer-events:none;"></i>
-        <input id="people-search" type="text" placeholder="Hledat jméno..." oninput="renderPeople()"
-          style="width:100%;padding:10px 14px 10px 38px;background:var(--s1);border:1px solid var(--b2);border-radius:var(--r3);color:var(--t1);font-family:inherit;font-size:14px;outline:none;transition:border-color 0.15s;"
-          onfocus="this.style.borderColor='var(--or)'" onblur="this.style.borderColor='var(--b2)'">
-      </div>
-      <div id="people-cards"></div>
-    </div>
-
-    <!-- BONUSES -->
-    <div id="page-bonuses" class="page">
-      <div class="page-header">
-        <h1 class="page-title">Bonusy</h1>
-        <button class="btn btn-primary" onclick="openModal('modal-bonus')"><i class="ti ti-plus"></i> Přidat bonus</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Člověk</th><th>Stránka</th><th>Bonus</th><th>Dárek</th><th>Stav</th><th>Datum</th><th></th></tr></thead>
-          <tbody id="bonuses-list"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- EXPENSES -->
-    <div id="page-expenses" class="page">
-      <div class="page-header">
-        <h1 class="page-title">Výdaje</h1>
-        <button class="btn btn-primary" onclick="openModal('modal-expense')"><i class="ti ti-plus"></i> Přidat výdaj</button>
-      </div>
-      <div id="expense-summary"></div>
-      <p class="sec-label">Záznamy</p>
-      <div id="expenses-list"></div>
-    </div>
-
-    <!-- NOTES -->
-    <div id="page-notes" class="page">
-      <div class="page-header">
-        <h1 class="page-title">Poznámky</h1>
-        <button class="btn btn-primary" onclick="openModal('modal-note')"><i class="ti ti-plus"></i> Přidat</button>
-      </div>
-      <div id="notes-list"></div>
-    </div>
-
-    <!-- SITES -->
-    <div id="page-sites" class="page">
-      <div class="page-header">
-        <h1 class="page-title">Stránky</h1>
-        <button class="btn btn-primary" onclick="openModal('modal-site')"><i class="ti ti-plus"></i> Přidat</button>
-      </div>
-      <div class="sites-grid" id="sites-grid"></div>
-    </div>
-
-  </main>
-</div>
-
-<!-- MODAL: person -->
-<div class="modal-overlay" id="modal-person">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">Nový člověk</h2>
-      <button class="modal-close" onclick="closeModal('modal-person')"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Jméno</label>
-      <input class="form-control" id="p-name" placeholder="např. Pepa">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-person')">Zrušit</button>
-      <button class="btn btn-primary" onclick="savePerson()"><i class="ti ti-check"></i> Uložit</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: bonus -->
-<div class="modal-overlay" id="modal-bonus">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title" id="bonus-modal-title">Nový bonus</h2>
-      <button class="modal-close" onclick="closeModal('modal-bonus')"><i class="ti ti-x"></i></button>
-    </div>
-    <input type="hidden" id="b-id">
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Člověk</label>
-        <select class="form-control" id="b-person" onchange="filterSitesForPerson(this.value)"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Stránka</label>
-        <select class="form-control" id="b-site"></select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Bonus (Kč)</label>
-      <input class="form-control" id="b-amount" type="number" placeholder="0">
-    </div>
-    <div class="form-group">
-      <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
-        Dárky
-        <button type="button" onclick="addGiftRow()" style="background:var(--or-d);color:var(--or);border:none;border-radius:5px;padding:2px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">+ Přidat</button>
-      </label>
-      <div id="b-gifts-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Stav dárku</label>
-      <select class="form-control" id="b-status">
-        <option value="pending">⏳ Čeká</option>
-        <option value="ordered">📦 Objednáno</option>
-        <option value="wait">🕐 Na vyzvednutí</option>
-        <option value="done">✅ Předáno</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Datum</label>
-      <input class="form-control" id="b-date" type="datetime-local">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Poznámka</label>
-      <input class="form-control" id="b-note" placeholder="např. čekám na výběr, ověření, dodělá zítra...">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-bonus')">Zrušit</button>
-      <button class="btn btn-primary" onclick="saveBonus()"><i class="ti ti-check"></i> Uložit</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: expense -->
-<div class="modal-overlay" id="modal-expense">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title" id="expense-modal-title">Nový výdaj</h2>
-      <button class="modal-close" onclick="closeModal('modal-expense')"><i class="ti ti-x"></i></button>
-    </div>
-    <input type="hidden" id="ex-id">
-    <div class="form-group">
-      <label class="form-label">Název</label>
-      <input class="form-control" id="ex-name" placeholder="např. Reklama Instagram, Spolupráce s...">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Částka (Kč)</label>
-        <input class="form-control" id="ex-amount" type="number" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Datum</label>
-        <input class="form-control" id="ex-date" type="date">
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Kategorie</label>
-      <select class="form-control" id="ex-category">
-        <option value="reklama">📢 Reklama / spolupráce</option>
-        <option value="material">📦 Materiál / balení</option>
-        <option value="postovne">🚚 Poštovné</option>
-        <option value="jine">💸 Jiné</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Poznámka</label>
-      <input class="form-control" id="ex-note" placeholder="volitelná poznámka">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-expense')">Zrušit</button>
-      <button class="btn btn-primary" onclick="saveExpense()"><i class="ti ti-check"></i> Uložit</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: person cost -->
-<div class="modal-overlay" id="modal-cost">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title" id="cost-modal-title">Náklady</h2>
-      <button class="modal-close" onclick="closeModal('modal-cost')"><i class="ti ti-x"></i></button>
-    </div>
-    <input type="hidden" id="co-person-id">
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">🐣 Cena dárku (Kč)</label>
-        <input class="form-control" id="co-gift" type="number" placeholder="0">
-      </div>
-      <div class="form-group">
-        <label class="form-label">🚚 Poštovné (Kč)</label>
-        <input class="form-control" id="co-postage" type="number" placeholder="0">
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">💸 Jiné náklady (Kč)</label>
-      <input class="form-control" id="co-other" type="number" placeholder="0">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Datum</label>
-        <input class="form-control" id="co-date" type="date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Poznámka</label>
-        <input class="form-control" id="co-note" placeholder="volitelná poznámka">
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-cost')">Zrušit</button>
-      <button class="btn btn-primary" onclick="saveCost()"><i class="ti ti-check"></i> Uložit</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: note -->
-<div class="modal-overlay" id="modal-note">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title" id="note-modal-title">Nová poznámka</h2>
-      <button class="modal-close" onclick="closeModal('modal-note')"><i class="ti ti-x"></i></button>
-    </div>
-    <input type="hidden" id="n-id">
-    <div class="form-group">
-      <label class="form-label">Název</label>
-      <input class="form-control" id="n-title" placeholder="např. Čekám na výběr od Tipsportu...">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Text</label>
-      <textarea class="form-control" id="n-text" rows="4" placeholder="Piš sem cokoliv..." style="resize:vertical;"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Přiřadit k osobě (volitelné)</label>
-      <select class="form-control" id="n-person">
-        <option value="">— obecná poznámka —</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Barva</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="n-color-picker">
-        <button type="button" onclick="selectNoteColor('default')" class="note-color-btn active" data-color="default" style="width:28px;height:28px;border-radius:8px;border:2px solid var(--b2);background:var(--s2);cursor:pointer;"></button>
-        <button type="button" onclick="selectNoteColor('orange')" class="note-color-btn" data-color="orange" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(255,107,43,0.25);cursor:pointer;"></button>
-        <button type="button" onclick="selectNoteColor('green')" class="note-color-btn" data-color="green" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(46,204,143,0.25);cursor:pointer;"></button>
-        <button type="button" onclick="selectNoteColor('blue')" class="note-color-btn" data-color="blue" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(91,164,245,0.25);cursor:pointer;"></button>
-        <button type="button" onclick="selectNoteColor('purple')" class="note-color-btn" data-color="purple" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(167,139,250,0.25);cursor:pointer;"></button>
-        <button type="button" onclick="selectNoteColor('red')" class="note-color-btn" data-color="red" style="width:28px;height:28px;border-radius:8px;border:2px solid transparent;background:rgba(248,113,113,0.25);cursor:pointer;"></button>
-      </div>
-      <input type="hidden" id="n-color" value="default">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-note')">Zrušit</button>
-      <button class="btn btn-primary" onclick="saveNote()"><i class="ti ti-check"></i> Uložit</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: site -->
-<div class="modal-overlay" id="modal-site">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">Nová stránka</h2>
-      <button class="modal-close" onclick="closeModal('modal-site')"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Název</label>
-      <input class="form-control" id="s-name" placeholder="např. Alza, Mall, Temu...">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-site')">Zrušit</button>
-      <button class="btn btn-primary" onclick="saveSite()"><i class="ti ti-check"></i> Uložit</button>
-    </div>
-  </div>
-</div>
-
-<script>
-var data = {people:[],sites:[],bonuses:[],costs:[],expenses:[]};
-var DB_DOC = 'labubu/main';
-var _saveTimer = null;
-
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-
-// Save to Firestore with debounce (500ms)
-function save(){
-  if(_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(function(){
-    db.doc(DB_DOC).set(data).catch(function(e){
-      console.error('Save error:', e);
-    });
-  }, 500);
-}
-
-// Load from Firestore and subscribe to real-time updates>
+</html>
