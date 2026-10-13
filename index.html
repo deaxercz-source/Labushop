@@ -327,6 +327,7 @@ function save(){
   if(!profile) return;
   var body={};
   KEYS.forEach(function(k){body[k]=data[k]||[];});
+  if(data.sitesSeeded) body.sitesSeeded=true;
   body=JSON.parse(JSON.stringify(body));
   _pending=profile==='tomas'?{profiles:{tomas:body}}:body;
   if(_saveTimer) clearTimeout(_saveTimer);
@@ -344,6 +345,19 @@ function bindProfile(){
     data=root.profiles.tomas;
   } else data=root;
   normalize();
+  seedSites();
+}
+// Jednorázově: Tomáš dostane stejný seznam stránek jako Pepa (doplní jen chybějící podle názvu).
+function seedSites(){
+  if(profile!=='tomas'||data.sitesSeeded||!Array.isArray(root.sites)||!root.sites.length) return;
+  var names={}, ids={};
+  data.sites.forEach(function(s){names[String(s.name).toLowerCase()]=1; ids[s.id]=1;});
+  root.sites.forEach(function(s){
+    if(names[String(s.name).toLowerCase()]) return;
+    data.sites.push({id:ids[s.id]?uid():s.id,name:s.name});
+  });
+  data.sitesSeeded=true;
+  save();
 }
 
 function initData(userId){
