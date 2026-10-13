@@ -26,8 +26,15 @@ html,body{background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 button{cursor:pointer}
 
-#login-screen,#loading-screen{position:fixed;inset:0;background:var(--bg);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:24px}
+#login-screen,#loading-screen,#profile-screen{position:fixed;inset:0;background:var(--bg);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:24px}
 #login-screen{display:flex}
+#profile-screen{display:none}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.profile-btn{border:2px solid var(--line);background:#fff;border-radius:var(--r);padding:26px 10px;font-size:20px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:8px}
+.profile-btn:hover{border-color:var(--green)}
+.profile-btn.last{border-color:var(--green);background:var(--green-bg)}
+.profile-btn small{font-size:12px;font-weight:500;color:var(--muted)}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font-weight:600;font-size:13px}
 #loading-screen{display:none;color:var(--muted)}
 .login-box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:28px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
 .login-box h1{font-size:24px;font-weight:700}
@@ -172,12 +179,20 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
   </div>
 </div>
 
+<div id="profile-screen">
+  <div class="login-box" style="max-width:380px">
+    <h1>Kdo pracuje?</h1>
+    <div class="profile-grid" id="profile-buttons"></div>
+  </div>
+</div>
+
 <div id="loading-screen">Načítám…</div>
 
 <div id="app">
   <header class="top">
     <div class="top-in">
       <div class="logo">🐣 Labubu</div>
+      <button class="chip" id="profile-chip" onclick="showProfilePicker()" title="Přepnout profil"></button>
       <div class="user" id="user-email"></div>
       <nav class="tabs">
         <button class="tab active" data-tab="overview" onclick="showTab('overview')">Přehled</button>
@@ -292,35 +307,95 @@ function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function find(list,id){return list.filter(function(x){return x.id===id;})[0];}
 
+var PROFILES=[{id:'pepa',name:'Pepa'},{id:'tomas',name:'Tomáš'}];
+var KEYS=['people','sites','bonuses','costs','expenses','notes'];
+var profile=null;     // aktivní profil (pepa | tomas)
+var root={};          // celý Firestore dokument; Pepa = původní pole, Tomáš = root.profiles.tomas
+var _pending=null, _unsub=null;
+
+function profileName(id){var p=PROFILES.filter(function(x){return x.id===id;})[0]; return p?p.name:id;}
+function lastProfile(){try{return localStorage.getItem('labubu-profile')||'';}catch(e){return '';}}
+
+// Zapisuje se jen aktivní profil (merge), druhý profil se tak nikdy nepřepíše.
+function flushSave(){
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
+  if(!_pending) return;
+  var p=_pending; _pending=null;
+  db.doc(DB_DOC).set(p,{merge:true}).catch(function(e){console.error('Save error:',e);alert('Uložení se nepovedlo.');});
+}
 function save(){
+  if(!profile) return;
+  var body={};
+  KEYS.forEach(function(k){body[k]=data[k]||[];});
+  body=JSON.parse(JSON.stringify(body));
+  _pending=profile==='tomas'?{profiles:{tomas:body}}:body;
   if(_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(function(){
-    db.doc(DB_DOC).set(JSON.parse(JSON.stringify(data))).catch(function(e){console.error('Save error:',e);alert('Uložení se nepovedlo.');});
-  },400);
+  _saveTimer=setTimeout(flushSave,400);
 }
 function showLoading(show){$('loading-screen').style.display=show?'flex':'none';}
 
 function normalize(){
-  ['people','sites','bonuses','costs','expenses','notes'].forEach(function(k){if(!Array.isArray(data[k])) data[k]=[];});
+  KEYS.forEach(function(k){if(!Array.isArray(data[k])) data[k]=[];});
+}
+function bindProfile(){
+  if(profile==='tomas'){
+    if(!root.profiles||typeof root.profiles!=='object') root.profiles={};
+    if(!root.profiles.tomas||typeof root.profiles.tomas!=='object') root.profiles.tomas={};
+    data=root.profiles.tomas;
+  } else data=root;
+  normalize();
 }
 
 function initData(userId){
   DB_DOC='labubu/'+userId;
   showLoading(true);
-  db.doc(DB_DOC).onSnapshot(function(doc){
+  if(_unsub){_unsub();_unsub=null;}
+  _unsub=db.doc(DB_DOC).onSnapshot(function(doc){
     if(doc.exists){
-      data=doc.data();
+      root=doc.data();
     } else {
       var local=null;
       try{local=JSON.parse(localStorage.getItem('labubu-data')||'null');}catch(e){}
-      data=local||{};
-      normalize();
-      if(local) db.doc(DB_DOC).set(JSON.parse(JSON.stringify(data)));
+      root=local||{};
+      if(local){
+        var body={}; KEYS.forEach(function(k){body[k]=Array.isArray(local[k])?local[k]:[];});
+        db.doc(DB_DOC).set(JSON.parse(JSON.stringify(body)),{merge:true});
+      }
     }
-    normalize();
     showLoading(false);
-    render();
+    if(profile){bindProfile(); render();}
   },function(err){console.error('Firestore:',err);showLoading(false);});
+}
+
+// ── PROFILY ──
+function renderPicker(){
+  var last=lastProfile();
+  $('profile-buttons').innerHTML=PROFILES.map(function(p){
+    return '<button class="profile-btn'+(p.id===last?' last':'')+'" onclick="selectProfile(\''+p.id+'\')">'+
+      '<span style="font-size:34px">'+(p.id==='pepa'?'🧑':'👨')+'</span>'+p.name+
+      (p.id===last?'<small>naposledy</small>':'')+'</button>';
+  }).join('');
+}
+function selectProfile(id){
+  flushSave();
+  profile=id;
+  try{localStorage.setItem('labubu-profile',id);}catch(e){}
+  $('profile-screen').style.display='none';
+  $('app').style.display='flex';
+  $('profile-chip').textContent='👤 '+profileName(id)+' ⇄';
+  // čistý stav pro nový profil
+  openP={};
+  $('f-q').value=''; $('f-status').value='all'; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all';
+  $('dash-period').value='today';
+  bindProfile();
+  showTab('overview');
+}
+function showProfilePicker(){
+  flushSave();
+  closeModal();
+  $('app').style.display='none';
+  renderPicker();
+  $('profile-screen').style.display='flex';
 }
 
 // ── AUTH ──
@@ -332,18 +407,24 @@ window._fbSignIn=function(){
     btn.textContent='Přihlásit se'; btn.disabled=false;
   });
 };
-window._fbSignOut=function(){auth.signOut();};
+window._fbSignOut=function(){flushSave(); auth.signOut();};
 document.addEventListener('DOMContentLoaded',function(){
   $('login-pass').addEventListener('keydown',function(e){if(e.key==='Enter') window._fbSignIn();});
   auth.onAuthStateChanged(function(user){
     if(user){
       $('login-screen').style.display='none';
-      $('app').style.display='flex';
+      $('app').style.display='none';
       $('user-email').textContent=user.email;
+      profile=null;
+      renderPicker();
+      $('profile-screen').style.display='flex';
       initData(user.uid);
     } else {
+      if(_unsub){_unsub();_unsub=null;}
+      profile=null; root={};
       $('login-screen').style.display='flex';
       $('app').style.display='none';
+      $('profile-screen').style.display='none';
       $('login-btn').textContent='Přihlásit se'; $('login-btn').disabled=false;
     }
   });
