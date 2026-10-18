@@ -289,6 +289,11 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
         <button class="btn btn-primary" onclick="openBonusModal()">+ Bonus</button>
       </div>
       <div class="filters">
+        <select class="input" id="f-sort" onchange="setSort()">
+          <option value="change">Řadit: poslední změna</option>
+          <option value="todo">Řadit: 📦 k odeslání nahoře</option>
+          <option value="az">Řadit: A–Z</option>
+        </select>
         <select class="input" id="f-rem" onchange="renderPeopleList()">
           <option value="all">Všichni lidé</option>
           <option value="rem">Zbývá udělat stránky</option>
@@ -723,6 +728,13 @@ function lastChange(p){
   up(p.shipAt);
   return best;
 }
+function setSort(){
+  try{localStorage.setItem('labubu-sort',$('f-sort').value);}catch(e){}
+  renderPeopleList();
+}
+(function(){
+  try{var v=localStorage.getItem('labubu-sort'); if(v&&['change','todo','az'].indexOf(v)>=0) $('f-sort').value=v;}catch(e){}
+})();
 function setShipFilter(m){shipFilter=m; renderPeopleList();}
 function shipOf(p){return p.ship==='todo'||p.ship==='done'?p.ship:'';}
 function renderShipSeg(){
@@ -773,9 +785,21 @@ function renderPeopleList(){
   renderShipSeg();
   var f={q:$('f-q').value.trim().toLowerCase(),status:$('f-status').value,range:$('f-range').value,site:$('f-site').value,rem:$('f-rem').value};
   var bonusFilter=f.status!=='all'||f.range!=='all'||f.site!=='all';
+  var sortMode=$('f-sort').value, RANK={todo:0,'':1,done:2};
   var people=data.people.map(function(p){return {p:p,t:lastChange(p)};}).sort(function(a,b){
-    if(a.t!==b.t) return a.t<b.t?1:-1;                       // nejnověji změněný nahoře
-    return String(a.p.name).localeCompare(String(b.p.name),'cs');
+    var byName=String(a.p.name).localeCompare(String(b.p.name),'cs');
+    if(sortMode==='az') return byName;
+    if(sortMode==='todo'){
+      var sa=shipOf(a.p), sb=shipOf(b.p);
+      if(sa!==sb) return RANK[sa]-RANK[sb];                  // k odeslání, pak bez stavu, pak odesláno
+      if(sa==='todo'){                                       // mezi čekajícími: nejdéle čekající první
+        var wa=stampOf(a.p.shipAt), wb=stampOf(b.p.shipAt);
+        if(wa!==wb) return wa<wb?-1:1;
+        return byName;
+      }
+    }
+    if(a.t!==b.t) return a.t<b.t?1:-1;                       // jinak nejnověji změněný nahoře
+    return byName;
   }).map(function(x){return x.p;});
   var html='', shown=0;
   people.forEach(function(p){
