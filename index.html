@@ -125,6 +125,15 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
 .seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .work-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
 .work-item:first-child{border-top:none}
+.warn{background:var(--amber-bg);color:#7a4a00;border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:10px}
+.warn .chip{margin:2px 4px 2px 0}
+.sr{display:block;width:100%;text-align:left;border:none;background:none;padding:9px 6px;border-top:1px solid var(--line);border-radius:0}
+.sr:hover{background:var(--bg)}
+.srs{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.sg{font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 2px}
+mark{background:#fff2a8;border-radius:3px;color:inherit}
+.flash{animation:fl 1.6s}
+@keyframes fl{0%,60%{background:#fff2a8}100%{background:transparent}}
 .work-item .wt{flex:1;white-space:pre-wrap;word-break:break-word}
 .work-item .wd{font-size:11px;color:var(--muted);margin-top:2px}
 .cdot{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer}
@@ -199,6 +208,7 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
   <header class="top">
     <div class="top-in">
       <div class="logo">🐣 Labubu</div>
+      <button class="icon-btn" onclick="openSearch()" title="Hledat (/)">🔍</button>
       <button class="chip" id="profile-chip" onclick="showProfilePicker()" title="Přepnout profil"></button>
       <div class="user" id="user-email"></div>
       <nav class="tabs">
@@ -574,7 +584,9 @@ function render(){
   else renderSites();
 }
 function openPerson(id){
-  openP[id]=true; showTab('people');
+  openP[id]=true;
+  $('f-q').value=''; $('f-status').value='all'; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all';
+  showTab('people');
   var el=$('pc-'+id); if(el) el.scrollIntoView({block:'center'});
 }
 
@@ -746,17 +758,63 @@ function foot(saveCall){
     '<button class="btn btn-primary" onclick="'+saveCall+'">Uložit</button></div>';
 }
 
+var _personEditId='', _nameConfirmed=false;
+function fold(s){
+  var FROM='áčďéěíňóřšťúůýž', TO='acdeeinorstuuyz', out='';
+  s=String(s==null?'':s).toLowerCase();
+  for(var i=0;i<s.length;i++){var k=FROM.indexOf(s.charAt(i)); out+=k>=0?TO.charAt(k):s.charAt(i);}
+  return out;
+}
+function normName(s){return fold(s).replace(/[^a-z0-9]/g,'');}
+function lev(a,b){
+  var prev=[],i,j;
+  for(j=0;j<=b.length;j++) prev[j]=j;
+  for(i=1;i<=a.length;i++){
+    var cur=[i];
+    for(j=1;j<=b.length;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a.charAt(i-1)===b.charAt(j-1)?0:1));
+    prev=cur;
+  }
+  return prev[b.length];
+}
+// Podobné jméno: stejné po vynechání teček/podtržítek/diakritiky, nebo 1–2 překlepy (podle délky).
+function similarPeople(name,exceptId){
+  var n=normName(name); if(!n) return [];
+  return data.people.filter(function(p){
+    if(p.id===exceptId) return false;
+    var m=normName(p.name); if(!m) return false;
+    if(m===n) return true;
+    var max=Math.max(n.length,m.length), lim=max<5?0:(max<9?1:2);
+    return lim>0&&Math.abs(n.length-m.length)<=lim&&lev(n,m)<=lim;
+  }).slice(0,5);
+}
+function renderNameWarn(){
+  var sim=similarPeople($('m-name').value,_personEditId);
+  $('m-warn').innerHTML=sim.length?'<div class="warn">⚠️ Podobné jméno už existuje: '+
+    sim.map(function(p){return '<button class="chip" data-id="'+esc(p.id)+'" onclick="goPerson(this.dataset.id)">'+esc(p.name)+'</button>';}).join('')+'</div>':'';
+}
+function checkSimilarName(){
+  _nameConfirmed=false;
+  $('m-save').textContent='Uložit';
+  renderNameWarn();
+}
+function goPerson(id){closeModal(); openPerson(id);}
 function openPersonModal(id){
   var p=id?find(data.people,id):null;
+  _personEditId=p?p.id:''; _nameConfirmed=false;
   openModal('<h2>'+(p?'Přejmenovat':'Nový člověk')+'</h2>'+
-    '<div class="fld"><label>Jméno</label><input class="input" id="m-name" value="'+esc(p?p.name:'')+'" placeholder="např. jmeno.prijmeni"></div>'+
-    foot('savePerson(\''+(p?p.id:'')+'\')'));
+    '<div class="fld"><label>Jméno</label><input class="input" id="m-name" value="'+esc(p?p.name:'')+'" placeholder="např. jmeno.prijmeni" oninput="checkSimilarName()" onkeydown="if(event.keyCode===13)savePerson()"></div>'+
+    '<div id="m-warn"></div>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" id="m-save" onclick="savePerson()">Uložit</button></div>');
   $('m-name').focus();
 }
-function savePerson(id){
+function savePerson(){
   var name=$('m-name').value.trim();
   if(!name) return;
-  if(id) find(data.people,id).name=name; else data.people.push({id:uid(),name:name});
+  if(!_nameConfirmed&&similarPeople(name,_personEditId).length){
+    _nameConfirmed=true; renderNameWarn(); $('m-save').textContent='Přesto uložit'; return;
+  }
+  if(_personEditId) find(data.people,_personEditId).name=name; else data.people.push({id:uid(),name:name});
   save(); closeModal(); render();
 }
 function deletePerson(id){
@@ -922,7 +980,7 @@ function delWork(id){
 function renderWorkNotes(){
   var list=data.workNotes;
   $('work-list').innerHTML=list.length?list.map(function(n){
-    return '<div class="work-item"><div class="wt">'+esc(n.text)+'<div class="wd">'+fmtDate(n.date)+'</div></div>'+
+    return '<div class="work-item" id="w-'+esc(n.id)+'"><div class="wt">'+esc(n.text)+'<div class="wd">'+fmtDate(n.date)+'</div></div>'+
       '<button class="icon-btn" data-id="'+esc(n.id)+'" onclick="delWork(this.dataset.id)" title="Smazat">✕</button></div>';
   }).join(''):'<div class="empty" style="padding:20px">Zatím nic. Piš nahoře a Enter přidá.</div>';
 }
@@ -944,6 +1002,69 @@ function renderNotes(){
       '<button class="icon-btn" onclick="deleteNote(\''+n.id+'\')">✕</button></div>';
   }).join(''):'<div class="empty">Zatím žádné poznámky 📝</div>';
 }
+
+// ── HLEDÁNÍ ──
+function openSearch(){
+  openModal('<h2>Hledat</h2><input class="input" id="s-q" placeholder="Jméno, poznámka, prac. poznámka…" oninput="runSearch()" autocomplete="off">'+
+    '<div id="s-res" style="margin-top:6px"></div>');
+  $('s-q').focus(); runSearch();
+}
+function snippet(text,q){
+  text=String(text==null?'':text);
+  var i=fold(text).indexOf(q);
+  if(i<0) return esc(text.slice(0,90));
+  var a=Math.max(0,i-25), z=Math.min(text.length,i+q.length+55);
+  return (a>0?'…':'')+esc(text.slice(a,i))+'<mark>'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length,z))+(z<text.length?'…':'');
+}
+function runSearch(){
+  var q=fold($('s-q').value.trim()), out=$('s-res');
+  if(q.length<2){ out.innerHTML='<div class="cat" style="padding:8px 0">Napiš aspoň 2 znaky.</div>'; return; }
+  function has(t){return fold(t).indexOf(q)>=0;}
+  var groups=[];
+  groups.push({t:'Lidé',items:data.people.filter(function(p){return has(p.name);}).map(function(p){
+    var n=data.bonuses.filter(function(b){return b.personId===p.id;}).length;
+    return {k:'p',id:p.id,html:snippet(p.name,q),sub:n+' bonus'+(n===1?'':'ů')};})});
+  groups.push({t:'Poznámky',items:data.notes.filter(function(n){return has((n.title||'')+' '+(n.text||''));}).map(function(n){
+    var who=n.personId?personName(n.personId):null;
+    return {k:'n',id:n.id,html:snippet((n.title?n.title+' — ':'')+(n.text||''),q),sub:who||'obecná poznámka'};})});
+  groups.push({t:'Poznámky u bonusů',items:data.bonuses.filter(function(b){return b.note&&has(b.note);}).map(function(b){
+    return {k:'b',id:b.id,html:snippet(b.note,q),sub:(personName(b.personId)||'?')+' · '+bonusSite(b)};})});
+  groups.push({t:'Prac. poznámky',items:data.workNotes.filter(function(n){return has(n.text);}).map(function(n){
+    return {k:'w',id:n.id,html:snippet(n.text,q),sub:fmtDate(n.date)};})});
+  var html='', total=0;
+  groups.forEach(function(g){
+    if(!g.items.length) return;
+    total+=g.items.length;
+    html+='<div class="sg">'+g.t+' ('+g.items.length+')</div>'+g.items.slice(0,15).map(function(it){
+      return '<button class="sr" data-k="'+it.k+'" data-id="'+esc(it.id)+'" onclick="goResult(this.dataset.k,this.dataset.id)">'+it.html+
+        '<span class="srs">'+esc(it.sub)+'</span></button>';
+    }).join('')+(g.items.length>15?'<div class="cat" style="padding:4px 6px">+ '+(g.items.length-15)+' dalších, zpřesni hledání</div>':'');
+  });
+  out.innerHTML=total?html:'<div class="empty" style="padding:20px">Nic nenalezeno.</div>';
+}
+function goResult(k,id){
+  closeModal();
+  if(k==='p') openPerson(id);
+  else if(k==='b'){var b=find(data.bonuses,id); if(b) openPerson(b.personId);}
+  else if(k==='n'){
+    var n=find(data.notes,id);
+    if(n&&n.personId&&find(data.people,n.personId)) openPerson(n.personId);
+    else {showTab('notes'); setNotesMode('notes');}
+  } else {
+    showTab('notes'); setNotesMode('work');
+    var el=$('w-'+id);
+    if(el){el.scrollIntoView({block:'center'}); el.classList.add('flash'); setTimeout(function(){el.classList.remove('flash');},1700);}
+  }
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){closeModal(); return;}
+  if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    var t=e.target&&e.target.tagName;
+    if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return;
+    if($('app').style.display==='none'||$('modal-bg').classList.contains('open')) return;
+    e.preventDefault(); openSearch();
+  }
+});
 
 // ── VÝDAJE ──
 function renderExpenses(){
