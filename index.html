@@ -1306,6 +1306,13 @@ function siteBonuses(siteId){
     return !!b.date&&String(b.date).slice(0,10)>=from;
   });
 }
+function plBonus(n){return n+' bonus'+(n===1?'':(n>=2&&n<=4?'y':'ů'));}
+// Bonusy z posledních 7 dní (podle data bonusu) a text s jejich průměrem.
+function weekText(list){
+  var from=daysAgoISO(7);
+  var wk=list.filter(function(b){return b.date&&String(b.date).slice(0,10)>=from;});
+  return wk.length?'průměr <b>'+kc(avgAmount(wk))+'</b> ('+plBonus(wk.length)+')':'žádné nové bonusy';
+}
 function avgAmount(list){return list.length?sumAmount(list)/list.length:0;}
 function renderSites(){
   $('sites-grid').innerHTML=data.sites.length?data.sites.map(function(s){
@@ -1313,7 +1320,8 @@ function renderSites(){
     return '<div class="site-card click" data-id="'+esc(s.id)+'" onclick="openSite(this.dataset.id)"><button class="icon-btn x" data-id="'+esc(s.id)+'" onclick="event.stopPropagation();deleteSite(this.dataset.id)" title="Smazat">✕</button>'+
       '<div class="n">'+esc(s.name)+'</div>'+
       '<div class="m">'+bs.length+' bonus'+(bs.length===1?'':'ů')+' · <b>'+kc(sumAmount(bs))+'</b></div>'+
-      '<div class="m">průměr <b>'+kc(avgAmount(bs))+'</b></div></div>';
+      '<div class="m">průměr <b>'+kc(avgAmount(bs))+'</b></div>'+
+      '<div class="m">týden: '+weekText(bs)+'</div></div>';
   }).join(''):'<div class="empty" style="grid-column:1/-1">Zatím žádné stránky.</div>';
 }
 function openSite(id){
@@ -1323,6 +1331,7 @@ function openSite(id){
   });
   openModal('<h2>'+esc(st.name)+'</h2>'+
     '<div class="cat" style="margin-bottom:6px">'+bs.length+' bonus'+(bs.length===1?'':'ů')+' · celkem <b class="pos">'+kc(sumAmount(bs))+'</b> · průměr <b class="pos">'+kc(avgAmount(bs))+'</b></div>'+
+    '<div class="cat" style="margin-bottom:8px">poslední týden: '+weekText(bs)+'</div>'+
     (bs.length?bs.map(function(b){
       return '<button class="sr siterow" data-id="'+esc(b.personId)+'" onclick="goPerson(this.dataset.id)">'+
         '<span class="sd">'+fmtDate(b.date)+'</span><span class="sn">'+esc(personName(b.personId)||'?')+'</span>'+
