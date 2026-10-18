@@ -120,6 +120,13 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
 .notes-grid .note{margin-top:0;margin-bottom:10px;font-size:15px}
 .notes-grid .note .t{font-weight:700}
 .colors{display:flex;gap:8px}
+.seg{display:flex;background:#e8ebe6;border-radius:10px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:none;background:none;padding:8px;border-radius:8px;font-weight:600;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.work-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.work-item:first-child{border-top:none}
+.work-item .wt{flex:1;white-space:pre-wrap;word-break:break-word}
+.work-item .wd{font-size:11px;color:var(--muted);margin-top:2px}
 .cdot{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer}
 .cdot.sel{border-color:var(--text)}
 
@@ -273,8 +280,21 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
 
     <!-- POZNÁMKY -->
     <section class="section" id="tab-notes">
-      <div class="bar"><span class="grow"></span><button class="btn btn-primary" onclick="openNoteModal()">+ Poznámka</button></div>
-      <div class="notes-grid" id="notes-list"></div>
+      <div class="seg">
+        <button id="seg-notes" class="on" onclick="setNotesMode('notes')">Poznámky</button>
+        <button id="seg-work" onclick="setNotesMode('work')">Prac. poznámky</button>
+      </div>
+      <div id="pane-notes">
+        <div class="bar"><span class="grow"></span><button class="btn btn-primary" onclick="openNoteModal()">+ Poznámka</button></div>
+        <div class="notes-grid" id="notes-list"></div>
+      </div>
+      <div id="pane-work" style="display:none">
+        <div class="bar">
+          <input class="input grow" id="w-in" placeholder="Napiš poznámku a stiskni Enter…" onkeydown="if(event.key==='Enter')addWork()">
+          <button class="btn btn-primary" onclick="addWork()">Přidat</button>
+        </div>
+        <div class="card" id="work-list"></div>
+      </div>
     </section>
 
     <!-- STRÁNKY -->
@@ -308,7 +328,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function find(list,id){return list.filter(function(x){return x.id===id;})[0];}
 
 var PROFILES=[{id:'pepa',name:'Pepa'},{id:'tomas',name:'Tomáš'}];
-var KEYS=['people','sites','bonuses','costs','expenses','notes'];
+var KEYS=['people','sites','bonuses','costs','expenses','notes','workNotes'];
 var profile=null;     // aktivní profil (pepa | tomas)
 var root={};          // celý Firestore dokument; Pepa = původní pole, Tomáš = root.profiles.tomas
 var _pending=null, _unsub=null;
@@ -880,7 +900,40 @@ function deleteNote(id){
   data.notes=data.notes.filter(function(n){return n.id!==id;});
   save(); render();
 }
+var notesMode='notes';
+function setNotesMode(m){
+  notesMode=m;
+  renderNotes();
+  if(m==='work') $('w-in').focus();
+}
+function addWork(){
+  var inp=$('w-in'), text=inp.value.trim();
+  if(!text) return;
+  var d=new Date();
+  data.workNotes.unshift({id:uid(),text:text,date:isoDay(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes())});
+  inp.value='';
+  save(); renderNotes();
+  inp.focus();
+}
+function delWork(id){
+  data.workNotes=data.workNotes.filter(function(n){return n.id!==id;});
+  save(); renderNotes();
+}
+function renderWorkNotes(){
+  var list=data.workNotes;
+  $('work-list').innerHTML=list.length?list.map(function(n){
+    return '<div class="work-item"><div class="wt">'+esc(n.text)+'<div class="wd">'+fmtDate(n.date)+'</div></div>'+
+      '<button class="icon-btn" data-id="'+esc(n.id)+'" onclick="delWork(this.dataset.id)" title="Smazat">✕</button></div>';
+  }).join(''):'<div class="empty" style="padding:20px">Zatím nic. Piš nahoře a Enter přidá.</div>';
+}
 function renderNotes(){
+  var work=notesMode==='work';
+  $('pane-notes').style.display=work?'none':'block';
+  $('pane-work').style.display=work?'block':'none';
+  $('seg-notes').classList.toggle('on',!work);
+  $('seg-work').classList.toggle('on',work);
+  $('seg-work').textContent='Prac. poznámky'+(data.workNotes.length?' ('+data.workNotes.length+')':'');
+  renderWorkNotes();
   var list=data.notes.slice().sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));});
   $('notes-list').innerHTML=list.length?list.map(function(n){
     var who=n.personId?personName(n.personId):null;
