@@ -143,6 +143,9 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ship{border:none;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;white-space:nowrap}
 .ship.todo{background:var(--amber-bg);color:var(--amber)}
 .ship.done{background:var(--green-bg);color:var(--green)}
+.shipq{display:flex;gap:6px}
+.shipq button{border:1px solid var(--line);background:#fff;border-radius:999px;width:38px;height:30px;font-size:15px;padding:0}
+.shipq button:hover{background:var(--bg)}
 .seg button.todo.on{color:var(--amber)}
 .seg button.done.on{color:var(--green)}
 .toast-undo{margin-left:12px;border:none;background:#fff;color:#1c2320;border-radius:999px;padding:3px 10px;font-weight:700;font-size:13px}
@@ -278,6 +281,7 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
         <button id="sg-all" class="on" onclick="setShipFilter('all')"></button>
         <button id="sg-todo" class="todo" onclick="setShipFilter('todo')"></button>
         <button id="sg-done" class="done" onclick="setShipFilter('done')"></button>
+        <button id="sg-none" onclick="setShipFilter('none')"></button>
       </div>
       <div class="bar">
         <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
@@ -657,7 +661,7 @@ function renderOverview(){
   $('tiles').innerHTML=
     '<div class="tile"><div class="k">Zisk</div><div class="v '+(profit>=0?'pos':'neg')+'">'+kc(profit)+'</div>'+
       '<div class="s">bonusy '+kc(tBon)+(tExp?' · výdaje −'+kc(tExp):'')+'</div></div>'+
-    '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div><div class="s">📦 '+data.people.filter(function(p){return !p.shipped;}).length+' k odeslání · '+bon.length+' bonusů</div></div>'+
+    '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div><div class="s">📦 '+data.people.filter(function(p){return shipOf(p)==='todo';}).length+' k odeslání · '+bon.length+' bonusů</div></div>'+
     '<div class="tile"><div class="k">Čekající odměny</div><div class="v">'+notDone.length+'</div><div class="s">'+kc(pendAmt)+' k vyplacení</div></div>'+
     '<div class="tile"><div class="k">Předané</div><div class="v">'+done.length+'</div><div class="s">dnes +'+kc(todaySum)+'</div></div>';
 
@@ -716,27 +720,34 @@ function lastChange(p){
   data.bonuses.forEach(function(b){if(b.personId===p.id) bonusEntries(b).forEach(function(e){up(e.d);});});
   data.notes.forEach(function(n){if(n.personId===p.id) up(n.date);});
   data.costs.forEach(function(c){if(c.personId===p.id) up(c.date);});
-  up(p.shippedAt);
+  up(p.shipAt);
   return best;
 }
 function setShipFilter(m){shipFilter=m; renderPeopleList();}
+function shipOf(p){return p.ship==='todo'||p.ship==='done'?p.ship:'';}
 function renderShipSeg(){
-  var todo=data.people.filter(function(p){return !p.shipped;}).length, done=data.people.length-todo;
-  var L={all:'Všichni ('+data.people.length+')',todo:'📦 Odeslat ('+todo+')',done:'✅ Odesláno ('+done+')'};
-  ['all','todo','done'].forEach(function(k){
+  var c={todo:0,done:0,none:0};
+  data.people.forEach(function(p){c[shipOf(p)||'none']++;});
+  var L={all:'Vše ('+data.people.length+')',todo:'📦 Odeslat ('+c.todo+')',done:'✅ Odesláno ('+c.done+')',none:'Bez stavu ('+c.none+')'};
+  ['all','todo','done','none'].forEach(function(k){
     var b=$('sg-'+k); b.textContent=L[k]; b.classList.toggle('on',shipFilter===k);
   });
 }
-function toggleShipped(id,ev){
+function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
   var p=find(data.people,id); if(!p) return;
-  var prev=!!p.shipped, prevAt=p.shippedAt||'', prevUpd=p.updated;
-  p.shipped=!prev; p.shippedAt=p.shipped?nowLocal():'';
+  var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated;
+  p.ship=state; p.shipAt=state?nowLocal():'';
   touchPerson(id);
   save(); render();
-  toast(p.name+' → '+(p.shipped?'Odesláno':'Odeslat'),function(){
-    p.shipped=prev; p.shippedAt=prevAt; p.updated=prevUpd; save(); render();
+  var label={todo:'Odeslat',done:'Odesláno'}[state]||'bez stavu';
+  toast(p.name+' → '+label,function(){
+    p.ship=prev; p.shipAt=prevAt; p.updated=prevUpd; save(); render();
   });
+}
+function cycleShip(id,ev){
+  var p=find(data.people,id); if(!p) return;
+  setShip(id,shipOf(p)==='todo'?'done':'todo',ev);
 }
 function goToSend(){shipFilter='todo'; showTab('people');}
 function refreshSiteFilter(){
@@ -769,8 +780,7 @@ function renderPeopleList(){
   var html='', shown=0;
   people.forEach(function(p){
     if(f.q&&String(p.name).toLowerCase().indexOf(f.q)<0) return;
-    if(shipFilter==='todo'&&p.shipped) return;
-    if(shipFilter==='done'&&!p.shipped) return;
+    if(shipFilter!=='all'&&(shipOf(p)||'none')!==shipFilter) return;
     var all=data.bonuses.filter(function(b){return b.personId===p.id;});
     var rem=remainingSites(p.id);
     if(f.rem==='rem'&&!rem.length) return;
@@ -793,10 +803,13 @@ function renderPeopleList(){
         '<div class="pc-sub">'+all.length+' bonus'+(all.length===1?'':'ů')+' · '+doneC+' předáno · '+
           (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+'</div></div>'+
         '<div class="pc-right"><span class="total">'+kc(total)+'</span>'+
-          '<button class="ship '+(p.shipped?'done':'todo')+'" data-id="'+esc(p.id)+'" onclick="toggleShipped(this.dataset.id,event)" title="Klikni pro přepnutí">'+(p.shipped?'✅ Odesláno':'📦 Odeslat')+'</button></div><span class="chev">▾</span>'+
+          (shipOf(p)?'<button class="ship '+shipOf(p)+'" data-id="'+esc(p.id)+'" onclick="cycleShip(this.dataset.id,event)" title="Klikni pro přepnutí Odeslat / Odesláno">'+(shipOf(p)==='done'?'✅ Odesláno':'📦 Odeslat')+'</button>':
+            '<span class="shipq"><button data-id="'+esc(p.id)+'" data-s="todo" onclick="setShip(this.dataset.id,this.dataset.s,event)" title="Odeslat">📦</button>'+
+            '<button data-id="'+esc(p.id)+'" data-s="done" onclick="setShip(this.dataset.id,this.dataset.s,event)" title="Odesláno">✅</button></span>')+
+        '</div><span class="chev">▾</span>'+
       '</div>'+
       '<div class="pc-body">'+
-        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(p.shipped&&p.shippedAt?'<span>Odesláno <b>'+fmtDate(p.shippedAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
+        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
           (cost?'<span>Náklady <b class="neg">'+kc(cost)+'</b></span><span>Zisk <b class="'+(allTotal-cost>=0?'pos':'neg')+'">'+kc(allTotal-cost)+'</b></span>':'')+
           '<span>🐣 <b>'+lab+'</b></span><span>🥟 <b>'+dum+'</b></span></div>'+
         '<div class="sites">'+
@@ -811,6 +824,7 @@ function renderPeopleList(){
           '<button class="btn btn-sm btn-primary" onclick="openBonusModal(\''+p.id+'\')">+ Bonus</button>'+
           '<button class="btn btn-sm" onclick="openNoteModal(\''+p.id+'\')">+ Poznámka</button>'+
           '<button class="btn btn-sm" onclick="openCostModal(\''+p.id+'\')">Náklady</button>'+
+          (shipOf(p)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" data-s="" onclick="setShip(this.dataset.id,this.dataset.s,event)">Zrušit označení</button>':'')+
           '<button class="btn btn-sm" onclick="openPersonModal(\''+p.id+'\')">Přejmenovat</button>'+
           '<button class="btn btn-sm btn-danger" onclick="deletePerson(\''+p.id+'\')">Smazat</button>'+
         '</div>'+
@@ -1203,7 +1217,7 @@ function runSearch(){
   var groups=[];
   groups.push({t:'Lidé',items:data.people.filter(function(p){return has(p.name);}).map(function(p){
     var n=data.bonuses.filter(function(b){return b.personId===p.id;}).length;
-    return {k:'p',id:p.id,html:snippet(p.name,q),sub:n+' bonus'+(n===1?'':'ů')+' · '+(p.shipped?'odesláno':'odeslat')};})});
+    return {k:'p',id:p.id,html:snippet(p.name,q),sub:n+' bonus'+(n===1?'':'ů')+(shipOf(p)?' · '+(shipOf(p)==='done'?'odesláno':'odeslat'):'')};})});
   groups.push({t:'Poznámky',items:data.notes.filter(function(n){return has((n.title||'')+' '+(n.text||''));}).map(function(n){
     var who=n.personId?personName(n.personId):null;
     return {k:'n',id:n.id,html:snippet((n.title?n.title+' — ':'')+(n.text||''),q),sub:who||'obecná poznámka'};})});
