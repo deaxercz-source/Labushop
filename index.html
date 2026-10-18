@@ -560,6 +560,7 @@ function pad(n){return String(n).padStart(2,'0');}
 function isoDay(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function todayISO(){return isoDay(new Date());}
 function daysAgoISO(n){var d=new Date(); d.setDate(d.getDate()-n); return isoDay(d);}
+function nowStamp(){var d=new Date(); return isoDay(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())+'.'+String(d.getMilliseconds()).padStart(3,'0');}
 function nowLocal(){var d=new Date(); return isoDay(d)+'T'+pad(d.getHours())+':'+pad(d.getMinutes());}
 function toLocalInput(s){
   if(!s) return '';
@@ -700,6 +701,24 @@ function renderChart(){
 // ── LIDÉ ──
 var openP={};
 var shipFilter='all';   // all | todo | done
+var _focusPerson='';
+// Poslední změna člověka (bonus, stav, poznámka, náklady, odesláno, jméno) -> řazení v Lidech.
+function touchPerson(id){
+  var p=id&&find(data.people,id); if(!p) return;
+  p.updated=nowStamp();
+  if(currentTab==='people') _focusPerson=id;
+}
+function stampOf(d){return d?String(d).replace(' ','T').slice(0,23):'';}
+function lastChange(p){
+  if(p.updated) return stampOf(p.updated);
+  var best='';   // staří lidé bez značky: nejnovější záznam, který k nim existuje
+  function up(d){d=stampOf(d); if(d>best) best=d;}
+  data.bonuses.forEach(function(b){if(b.personId===p.id) bonusEntries(b).forEach(function(e){up(e.d);});});
+  data.notes.forEach(function(n){if(n.personId===p.id) up(n.date);});
+  data.costs.forEach(function(c){if(c.personId===p.id) up(c.date);});
+  up(p.shippedAt);
+  return best;
+}
 function setShipFilter(m){shipFilter=m; renderPeopleList();}
 function renderShipSeg(){
   var todo=data.people.filter(function(p){return !p.shipped;}).length, done=data.people.length-todo;
@@ -711,11 +730,12 @@ function renderShipSeg(){
 function toggleShipped(id,ev){
   if(ev) ev.stopPropagation();
   var p=find(data.people,id); if(!p) return;
-  var prev=!!p.shipped, prevAt=p.shippedAt||'';
+  var prev=!!p.shipped, prevAt=p.shippedAt||'', prevUpd=p.updated;
   p.shipped=!prev; p.shippedAt=p.shipped?nowLocal():'';
+  touchPerson(id);
   save(); render();
   toast(p.name+' → '+(p.shipped?'Odesláno':'Odeslat'),function(){
-    p.shipped=prev; p.shippedAt=prevAt; save(); render();
+    p.shipped=prev; p.shippedAt=prevAt; p.updated=prevUpd; save(); render();
   });
 }
 function goToSend(){shipFilter='todo'; showTab('people');}
@@ -742,7 +762,10 @@ function renderPeopleList(){
   renderShipSeg();
   var f={q:$('f-q').value.trim().toLowerCase(),status:$('f-status').value,range:$('f-range').value,site:$('f-site').value,rem:$('f-rem').value};
   var bonusFilter=f.status!=='all'||f.range!=='all'||f.site!=='all';
-  var people=data.people.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'cs');});
+  var people=data.people.map(function(p){return {p:p,t:lastChange(p)};}).sort(function(a,b){
+    if(a.t!==b.t) return a.t<b.t?1:-1;                       // nejnověji změněný nahoře
+    return String(a.p.name).localeCompare(String(b.p.name),'cs');
+  }).map(function(x){return x.p;});
   var html='', shown=0;
   people.forEach(function(p){
     if(f.q&&String(p.name).toLowerCase().indexOf(f.q)<0) return;
@@ -762,6 +785,7 @@ function renderPeopleList(){
     var doneSites=data.sites.filter(function(s){return rem.indexOf(s)<0;});
     var isOpen=bonusFilter||openP[p.id];
     var notes=data.notes.filter(function(n){return n.personId===p.id;});
+    var lc=lastChange(p);
 
     html+='<div class="pc'+(isOpen?' open':'')+'" id="pc-'+p.id+'">'+
       '<div class="pc-h" onclick="togglePc(\''+p.id+'\')">'+
@@ -772,7 +796,7 @@ function renderPeopleList(){
           '<button class="ship '+(p.shipped?'done':'todo')+'" data-id="'+esc(p.id)+'" onclick="toggleShipped(this.dataset.id,event)" title="Klikni pro přepnutí">'+(p.shipped?'✅ Odesláno':'📦 Odeslat')+'</button></div><span class="chev">▾</span>'+
       '</div>'+
       '<div class="pc-body">'+
-        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(p.shipped&&p.shippedAt?'<span>Odesláno <b>'+fmtDate(p.shippedAt)+'</b></span>':'')+
+        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(p.shipped&&p.shippedAt?'<span>Odesláno <b>'+fmtDate(p.shippedAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
           (cost?'<span>Náklady <b class="neg">'+kc(cost)+'</b></span><span>Zisk <b class="'+(allTotal-cost>=0?'pos':'neg')+'">'+kc(allTotal-cost)+'</b></span>':'')+
           '<span>🐣 <b>'+lab+'</b></span><span>🥟 <b>'+dum+'</b></span></div>'+
         '<div class="sites">'+
@@ -795,6 +819,7 @@ function renderPeopleList(){
   $('people-count').textContent=data.people.length?(shown+' z '+data.people.length+' lidí'):'';
   if(!shown) html='<div class="empty">'+(data.people.length?'Nikdo nevyhovuje filtru.':'Zatím tu nikdo není. Přidej prvního člověka.')+'</div>';
   $('people-list').innerHTML=html;
+  if(_focusPerson){var fe=$('pc-'+_focusPerson); _focusPerson=''; if(fe) fe.scrollIntoView({block:'nearest'});}
 }
 function bonusRowHTML(b){
   return '<div class="row">'+
@@ -819,7 +844,7 @@ function noteHTML(n){
 }
 function setBonusStatus(id,status){
   var b=find(data.bonuses,id); if(!b) return;
-  b.status=status; save(); render();
+  b.status=status; touchPerson(b.personId); save(); render();
 }
 
 // ── MODAL ──
@@ -886,7 +911,9 @@ function savePerson(){
   if(!_nameConfirmed&&similarPeople(name,_personEditId).length){
     _nameConfirmed=true; renderNameWarn(); $('m-save').textContent='Přesto uložit'; return;
   }
-  if(_personEditId) find(data.people,_personEditId).name=name; else data.people.push({id:uid(),name:name});
+  var pid=_personEditId;
+  if(pid) find(data.people,pid).name=name; else {pid=uid(); data.people.push({id:pid,name:name});}
+  touchPerson(pid);
   save(); closeModal(); render();
 }
 function deletePerson(id){
@@ -952,6 +979,7 @@ function saveBonus(){
     status:$('m-status').value,date:$('m-date').value,note:$('m-note').value.trim()};
   if(id){
     var b=find(data.bonuses,id);
+    touchPerson(b.personId);                       // původní majitel (kdyby se bonus přesunul jinam)
     var oldAmt=bonusAmount(b), oldDate=b.date||'';
     var log=bonusEntries(b);                       // materializuje historii i u starých bonusů
     var dateChanged=rec.date!==toLocalInput(oldDate);
@@ -967,11 +995,14 @@ function saveBonus(){
     rec.log=[{d:rec.date,a:amount}];
     rec.id=uid(); data.bonuses.push(rec);
   }
+  touchPerson(personId);
   save(); closeModal(); render();
 }
 function deleteBonus(id){
   if(!confirm('Smazat tento bonus?')) return;
+  var gone=find(data.bonuses,id);
   data.bonuses=data.bonuses.filter(function(b){return b.id!==id;});
+  if(gone) touchPerson(gone.personId);
   save(); render();
 }
 
@@ -989,6 +1020,7 @@ function saveCost(personId){
   var rec={personId:personId,gift:$('m-gift').value,postage:$('m-post').value,other:$('m-other').value,note:$('m-note').value.trim(),date:$('m-date').value||todayISO()};
   var i=data.costs.findIndex(function(c){return c.personId===personId;});
   if(i>=0) data.costs[i]=rec; else data.costs.push(rec);
+  touchPerson(personId);
   save(); closeModal(); render();
 }
 
@@ -1018,16 +1050,20 @@ function saveNote(id){
   if(!title&&!text) return;
   if(id){
     var n=find(data.notes,id);
+    touchPerson(n.personId);
     n.title=title; n.text=text; n.personId=pid; n.color=_noteColor;
   } else {
     var d=new Date();
     data.notes.push({id:uid(),title:title,text:text,personId:pid,color:_noteColor,date:isoDay(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes())});
   }
+  touchPerson(pid);
   save(); closeModal(); render();
 }
 function deleteNote(id){
   if(!confirm('Smazat poznámku?')) return;
+  var gone=find(data.notes,id);
   data.notes=data.notes.filter(function(n){return n.id!==id;});
+  if(gone) touchPerson(gone.personId);
   save(); render();
 }
 var notesMode='notes';
