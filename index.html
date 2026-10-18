@@ -1297,9 +1297,18 @@ function deleteExpense(id){
 }
 
 // ── STRÁNKY ──
+// Staré nulové bonusy (import, bez data nebo starší než 7 dní) se u stránek nezobrazují; čerstvé nuly ano.
+function siteBonuses(siteId){
+  var from=daysAgoISO(7);
+  return data.bonuses.filter(function(b){
+    if(bonusSiteId(b)!==siteId) return false;
+    if(bonusAmount(b)!==0) return true;
+    return !!b.date&&String(b.date).slice(0,10)>=from;
+  });
+}
 function renderSites(){
   $('sites-grid').innerHTML=data.sites.length?data.sites.map(function(s){
-    var bs=data.bonuses.filter(function(b){return bonusSiteId(b)===s.id;});
+    var bs=siteBonuses(s.id);
     return '<div class="site-card click" data-id="'+esc(s.id)+'" onclick="openSite(this.dataset.id)"><button class="icon-btn x" data-id="'+esc(s.id)+'" onclick="event.stopPropagation();deleteSite(this.dataset.id)" title="Smazat">✕</button>'+
       '<div class="n">'+esc(s.name)+'</div>'+
       '<div class="m">'+bs.length+' bonus'+(bs.length===1?'':'ů')+' · <b>'+kc(sumAmount(bs))+'</b></div></div>';
@@ -1307,7 +1316,7 @@ function renderSites(){
 }
 function openSite(id){
   var st=find(data.sites,id); if(!st) return;
-  var bs=data.bonuses.filter(function(b){return bonusSiteId(b)===id;}).sort(function(a,b){
+  var bs=siteBonuses(id).sort(function(a,b){
     return String(b.date||'').localeCompare(String(a.date||''));
   });
   openModal('<h2>'+esc(st.name)+'</h2>'+
