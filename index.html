@@ -178,6 +178,12 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .site-card .m{font-size:13px;color:var(--muted);margin-top:4px}
 .site-card .m b{color:var(--green)}
 .site-card .x{position:absolute;top:8px;right:8px}
+.site-card.click{cursor:pointer}
+.site-card.click:hover{border-color:var(--green)}
+.siterow{display:flex;align-items:center;gap:10px}
+.siterow .sd{color:var(--muted);font-size:12px;min-width:84px}
+.siterow .sn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.siterow .sa{font-weight:700;color:var(--green);white-space:nowrap}
 
 /* modal */
 #modal-bg{position:fixed;inset:0;background:rgba(20,28,24,.45);display:none;align-items:flex-end;justify-content:center;z-index:100}
@@ -1294,10 +1300,24 @@ function deleteExpense(id){
 function renderSites(){
   $('sites-grid').innerHTML=data.sites.length?data.sites.map(function(s){
     var bs=data.bonuses.filter(function(b){return bonusSiteId(b)===s.id;});
-    return '<div class="site-card"><button class="icon-btn x" onclick="deleteSite(\''+s.id+'\')" title="Smazat">✕</button>'+
+    return '<div class="site-card click" data-id="'+esc(s.id)+'" onclick="openSite(this.dataset.id)"><button class="icon-btn x" data-id="'+esc(s.id)+'" onclick="event.stopPropagation();deleteSite(this.dataset.id)" title="Smazat">✕</button>'+
       '<div class="n">'+esc(s.name)+'</div>'+
       '<div class="m">'+bs.length+' bonus'+(bs.length===1?'':'ů')+' · <b>'+kc(sumAmount(bs))+'</b></div></div>';
   }).join(''):'<div class="empty" style="grid-column:1/-1">Zatím žádné stránky.</div>';
+}
+function openSite(id){
+  var st=find(data.sites,id); if(!st) return;
+  var bs=data.bonuses.filter(function(b){return bonusSiteId(b)===id;}).sort(function(a,b){
+    return String(b.date||'').localeCompare(String(a.date||''));
+  });
+  openModal('<h2>'+esc(st.name)+'</h2>'+
+    '<div class="cat" style="margin-bottom:6px">'+bs.length+' bonus'+(bs.length===1?'':'ů')+' · celkem <b class="pos">'+kc(sumAmount(bs))+'</b></div>'+
+    (bs.length?bs.map(function(b){
+      return '<button class="sr siterow" data-id="'+esc(b.personId)+'" onclick="goPerson(this.dataset.id)">'+
+        '<span class="sd">'+fmtDate(b.date)+'</span><span class="sn">'+esc(personName(b.personId)||'?')+'</span>'+
+        '<span class="sa">'+kc(bonusAmount(b))+'</span></button>';
+    }).join(''):'<div class="empty" style="padding:20px">U této stránky zatím nejsou žádné bonusy.</div>')+
+    '<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button></div>');
 }
 function openSiteModal(){
   openModal('<h2>Nová stránka</h2><div class="fld"><label>Název</label><input class="input" id="m-name" placeholder="např. Fortuna"></div>'+foot('saveSite()'));
