@@ -132,6 +132,13 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
 .srs{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .sg{font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 2px}
 mark{background:#fff2a8;border-radius:3px;color:inherit}
+.tpl-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:12px}
+.tpl-card .tt{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px}
+.tpl-chips{display:flex;gap:8px;flex-wrap:wrap}
+.tpl-chip{border:1px solid var(--green);background:var(--green-bg);color:var(--green);border-radius:999px;padding:8px 15px;font-weight:600;font-size:14px}
+.tpl-chip:hover{background:#d6eedf}
+.tpl-chip:active{background:var(--green);color:#fff}
+.tpl-edit{border:1px dashed var(--line);background:none;color:var(--muted);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600}
 .tpl-row{display:flex;align-items:center;gap:4px;border-top:1px solid var(--line)}
 .tpl{flex:1;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;border:none;background:none;padding:14px 6px;font-weight:600;font-size:16px;border-radius:8px}
 .tpl:hover{background:var(--bg)}
@@ -242,6 +249,7 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
         </select>
         <button class="btn btn-primary" onclick="openBonusModal()">+ Nový bonus</button>
       </div>
+      <div id="tpl-bar-overview"></div>
       <div class="tiles" id="tiles"></div>
       <div class="card">
         <div class="card-h"><span class="name" style="font-size:15px">Bonusy po dnech</span>
@@ -256,6 +264,7 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 
     <!-- LIDÉ -->
     <section class="section" id="tab-people">
+      <div id="tpl-bar-people"></div>
       <div class="bar">
         <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
         <button class="btn" onclick="openPersonModal()">+ Člověk</button>
@@ -601,6 +610,7 @@ function checkNewDay(){
 setInterval(checkNewDay,30000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden) checkNewDay();});
 function render(){
+  renderTplBars();
   if(currentTab==='overview') renderOverview();
   else if(currentTab==='people') renderPeople();
   else if(currentTab==='expenses') renderExpenses();
@@ -1028,6 +1038,16 @@ function renderNotes(){
 }
 
 // ── ŠABLONY ZPRÁV ──
+function renderTplBars(){
+  var list=data.templates||[];
+  var html='<div class="tpl-card"><div class="tt">Rychlé zprávy · klikni a zkopíruje se</div><div class="tpl-chips">'+
+    list.map(function(t){
+      return '<button class="tpl-chip" data-id="'+esc(t.id)+'" onclick="copyTpl(this.dataset.id)">'+esc(t.name)+'</button>';
+    }).join('')+
+    '<button class="tpl-edit" onclick="openTemplates()">'+(list.length?'✎ Upravit':'+ Přidat šablonu')+'</button></div></div>';
+  $('tpl-bar-overview').innerHTML=html;
+  $('tpl-bar-people').innerHTML=html;
+}
 var _tplEditId='';
 function toast(msg){
   var t=$('toast'); t.textContent=msg; t.classList.add('show');
@@ -1073,13 +1093,13 @@ function saveTpl(){
   if(!text){$('t-text').focus(); return;}
   if(_tplEditId){var t=find(data.templates,_tplEditId); t.name=name; t.text=text;}
   else data.templates.push({id:uid(),name:name,text:text});
-  save(); openTemplates();
+  save(); renderTplBars(); openTemplates();
 }
 function deleteTpl(id){
   var t=find(data.templates,id);
   if(!t||!confirm('Smazat šablonu „'+t.name+'“?')) return;
   data.templates=data.templates.filter(function(x){return x.id!==id;});
-  save(); openTemplates();
+  save(); renderTplBars(); openTemplates();
 }
 
 // ── HLEDÁNÍ ──
