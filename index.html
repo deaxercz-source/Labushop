@@ -658,16 +658,15 @@ function renderOverview(){
   var tExp=exp.reduce(function(s,e){return s+(Number(e.amount)||0);},0)+
     costs.reduce(function(s,c){return s+(parseFloat(c.gift)||0)+(parseFloat(c.postage)||0)+(parseFloat(c.other)||0);},0);
   var profit=tBon-tExp;
-  var notDone=bon.filter(function(b){return (b.status||'pending')!=='done';});
-  var pendAmt=bon.filter(function(b){return (b.status||'pending')==='pending';}).reduce(function(s,b){return s+periodAmount(b,from);},0);
+  var toSend=data.people.filter(function(p){return shipOf(p)==='todo';}).length;
   var done=bon.filter(function(b){return b.status==='done';});
   var todaySum=data.bonuses.reduce(function(s,b){return s+periodAmount(b,todayISO());},0);
 
   $('tiles').innerHTML=
     '<div class="tile"><div class="k">Zisk</div><div class="v '+(profit>=0?'pos':'neg')+'">'+kc(profit)+'</div>'+
       '<div class="s">bonusy '+kc(tBon)+(tExp?' · výdaje −'+kc(tExp):'')+'</div></div>'+
-    '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div><div class="s">📦 '+data.people.filter(function(p){return shipOf(p)==='todo';}).length+' k odeslání · '+bon.length+' bonusů</div></div>'+
-    '<div class="tile"><div class="k">Čekající odměny</div><div class="v">'+notDone.length+'</div><div class="s">'+kc(pendAmt)+' k vyplacení</div></div>'+
+    '<div class="tile"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div></div>'+
+    '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">📦 Balíků k odeslání</div><div class="v">'+toSend+'</div></div>'+
     '<div class="tile"><div class="k">Předané</div><div class="v">'+done.length+'</div><div class="s">dnes +'+kc(todaySum)+'</div></div>';
 
   var flat=[];
