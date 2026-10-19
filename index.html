@@ -682,13 +682,24 @@ function renderChart(){
   });
   if(_chart){_chart.destroy();_chart=null;}
   var vals=days.map(function(d){return map[d];});
+  // Varianta C: tenká čára, bílé tečky a částka u každého dne (u delších období bez popisků, ať se nepřekrývají).
+  var showLabels=n<=14;
+  var valueLabels={id:'valueLabels',afterDatasetsDraw:function(chart){
+    if(!showLabels) return;
+    var ctx=chart.ctx, pts=chart.getDatasetMeta(0).data, v=chart.data.datasets[0].data;
+    ctx.save(); ctx.font="600 11px 'Outfit',sans-serif"; ctx.fillStyle='#1c2320'; ctx.textAlign='center';
+    pts.forEach(function(pt,i){ if(v[i]>0) ctx.fillText(Math.round(v[i]).toLocaleString('cs-CZ'),pt.x,pt.y-10); });
+    ctx.restore();
+  }};
   _chart=new Chart($('chart'),{
     type:'line',
-    data:{labels:days.map(function(d){return fmtDate(d);}),datasets:[{data:vals,borderColor:'#1a9e5c',backgroundColor:'rgba(26,158,92,.1)',
-      borderWidth:2,pointRadius:3,fill:true,tension:0.35}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:function(c){return ' '+kc(c.parsed.y);}}}},
-      scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{beginAtZero:true,ticks:{callback:function(v){return kc(v);}}}}}
+    data:{labels:days.map(function(d){return fmtDate(d);}),datasets:[{data:vals,borderColor:'#1a9e5c',borderWidth:1.5,tension:0,
+      pointRadius:showLabels?4:2,pointHoverRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#1a9e5c',pointBorderWidth:2,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},
+      tooltip:{backgroundColor:'#1c2320',padding:10,cornerRadius:8,displayColors:false,callbacks:{label:function(c){return ' '+kc(c.parsed.y);}}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8}},
+        y:{beginAtZero:true,grid:{color:'#eceee9'},border:{display:false},ticks:{maxTicksLimit:5,callback:function(v){return v>=1000?(v/1000)+' tis.':v;}}}}},
+    plugins:[valueLabels]
   });
 }
 
