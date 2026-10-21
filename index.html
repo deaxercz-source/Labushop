@@ -138,6 +138,11 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ship.todo{background:var(--amber-bg);color:var(--amber)}
 .ship.late{background:#fdecea;color:var(--red)}
 .ship.done{background:var(--green-bg);color:var(--green)}
+.shipline{display:flex;align-items:center;gap:6px}
+.sibtn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:30px;font-size:14px;padding:0;color:var(--muted)}
+.sibtn.has{background:var(--green-bg);border-color:var(--green)}
+.sirow{display:flex;gap:8px;align-items:center}
+.sirow .input{flex:1;min-width:0}
 .shipq{display:flex;gap:6px}
 .shipq button{border:1px solid var(--line);background:#fff;border-radius:999px;width:38px;height:30px;font-size:15px;padding:0}
 .shipq button:hover{background:var(--bg)}
@@ -867,11 +872,12 @@ function renderPeopleList(){
         '<div class="pc-info"><div class="pc-name" onclick="copyName(\''+p.id+'\',this);event.stopPropagation()" title="Klikni pro zkopírování jména">'+esc(p.name)+'</div>'+
         '<div class="pc-sub">'+all.length+' bonus'+(all.length===1?'':'ů')+' · '+
           (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+'</div></div>'+
-        '<div class="pc-right"><span class="total">'+kc(total)+'</span>'+
+        '<div class="pc-right"><span class="total">'+kc(total)+'</span><span class="shipline">'+
+          '<button class="sibtn'+(hasShipInfo(p)?' has':'')+'" data-id="'+esc(p.id)+'" onclick="openShipInfo(this.dataset.id,event)" title="Údaje pro zásilku">📋</button>'+
           (shipOf(p)?shipPillHTML(p):
             '<span class="shipq"><button data-id="'+esc(p.id)+'" data-s="todo" onclick="setShip(this.dataset.id,this.dataset.s,event)" title="Odeslat">📦</button>'+
             '<button data-id="'+esc(p.id)+'" data-s="done" onclick="setShip(this.dataset.id,this.dataset.s,event)" title="Odesláno">✅</button></span>')+
-        '</div><span class="chev">▾</span>'+
+        '</span></div><span class="chev">▾</span>'+
       '</div>'+
       '<div class="pc-body">'+
         '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
@@ -1179,6 +1185,89 @@ function renderNotes(){
       '<button class="icon-btn" onclick="openNoteModal(\'\',\''+n.id+'\')">✎</button>'+
       '<button class="icon-btn" onclick="deleteNote(\''+n.id+'\')">✕</button></div>';
   }).join(''):'<div class="empty">Zatím žádné poznámky 📝</div>';
+}
+
+// ── ÚDAJE PRO ZÁSILKU ──
+// Z vloženého textu (např. z DM) vytáhne jméno, telefon, e-mail a výdejní místo. Výsledek jde ručně opravit.
+var SI_FIELDS=[['name','Jméno'],['phone','Telefon'],['email','E-mail'],['point','Výdejní místo']];
+function hasShipInfo(p){var i=p.shipInfo; return !!(i&&(i.name||i.phone||i.email||i.point));}
+function parseShipInfo(text){
+  var out={name:'',phone:'',email:'',point:''};
+  text=String(text==null?'':text).replace(/\r/g,'');
+  var em=text.match(/[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/);
+  if(em){out.email=em[0]; text=text.replace(em[0],'\n');}
+  var re=/(?:\+|00)?\d[\d \t.\-()]{7,}\d/g, m;
+  while((m=re.exec(text))){
+    var dg=m[0].replace(/\D/g,'');
+    if(dg.length>=9&&dg.length<=14){
+      var raw=m[0].trim();
+      out.phone=/^\+/.test(raw)?'+'+dg:(/^00/.test(dg)?'+'+dg.slice(2):dg);
+      text=text.slice(0,m.index)+'\n'+text.slice(m.index+m[0].length);
+      break;
+    }
+  }
+  var LABEL=/^\s*(jm[eé]no(?:\s+a\s+p[rř][ií]jmen[ií])?|p[rř][ií]jmen[ií]|name|tel(?:efon)?\.?|mobil|e-?mail|v[yý]dejn[ií]\s+m[ií]sto|odb[eě]rn[ií]\s+m[ií]sto|m[ií]sto|pobo[cč]ka|adresa|z[aá]silkovna)\s*[:=\-]\s*/i;
+  var KEY=/(z[aá]silkovn|z-?box|v[yý]dejn|odb[eě]rn|pobo[cč]k|packeta|alza)/i;
+  var NAME=/^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][^\s\d,.]*(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][^\s\d,.]*){1,3}$/;
+  var points=[], loose=[];
+  text.split(/\n|;|\||,/).forEach(function(part){
+    var t=part.trim(); if(!t) return;
+    var lm=t.match(LABEL), kind='';
+    if(lm){
+      var l=lm[1].toLowerCase();
+      kind=/jm[eé]no|p[rř][ií]jmen|name/.test(l)?'name':(/tel|mobil|mail/.test(l)?'skip':'point');
+      t=t.slice(lm[0].length).trim();
+      if(!t) return;
+    }
+    if(kind==='skip') return;
+    if(kind==='name'){ if(!out.name) out.name=t; return; }
+    if(kind==='point'){ points.push(t); return; }
+    if(/^(dobr[ýy]\s+(den|ve[cč]er|r[aá]no)|ahoj|zdrav[ií]m|[cč]au|d[eě]kuji|d[ií]ky|pos[ií]l[aá]m|zde\s+jsou|tady\s+jsou|[uú]daje)\b/i.test(t)||/:$/.test(t)) return;   // pozdravy a nadpisy
+    if(!out.name&&NAME.test(t)&&!KEY.test(t)){ out.name=t; return; }
+    loose.push(t);
+  });
+  if(!out.name){                                   // jméno bez velkých písmen apod.
+    for(var i=0;i<loose.length;i++){ if(!/\d/.test(loose[i])&&!KEY.test(loose[i])){ out.name=loose[i]; loose.splice(i,1); break; } }
+  }
+  out.point=points.concat(loose).join(', ');
+  return out;
+}
+var _siPerson='';
+function openShipInfo(id,ev){
+  if(ev) ev.stopPropagation();
+  var p=find(data.people,id); if(!p) return;
+  _siPerson=id;
+  var i=p.shipInfo||{};
+  openModal('<h2>Údaje pro zásilku · '+esc(p.name)+'</h2>'+
+    '<div class="fld"><label>Vlož všechno najednou (třeba z DM), roztřídí se samo</label>'+
+    '<textarea class="input" id="si-raw" rows="3" placeholder="Jana Nováková, 777 123 456, jana@seznam.cz, Zásilkovna Praha 5 …" oninput="siFromRaw()"></textarea></div>'+
+    SI_FIELDS.map(function(f){
+      return '<div class="fld"><label>'+f[1]+'</label><div class="sirow"><input class="input" id="si-'+f[0]+'" value="'+esc(i[f[0]]||'')+'">'+
+        '<button class="btn btn-sm btn-primary" data-k="'+f[0]+'" onclick="copySi(this.dataset.k)">Kopírovat</button></div></div>';
+    }).join('')+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" onclick="saveShipInfo(true)">Uložit a zavřít</button></div>');
+  $('si-raw').focus();
+}
+function siFromRaw(){
+  var r=parseShipInfo($('si-raw').value);
+  SI_FIELDS.forEach(function(f){$('si-'+f[0]).value=r[f[0]];});
+}
+function saveShipInfo(close){
+  var p=find(data.people,_siPerson); if(!p) return;
+  var info={};
+  SI_FIELDS.forEach(function(f){info[f[0]]=$('si-'+f[0]).value.trim();});
+  p.shipInfo=info;
+  if(close){touchPerson(_siPerson); closeModal();}
+  save();
+  if(close) render();
+}
+function copySi(k){
+  var v=$('si-'+k).value.trim();
+  var label=SI_FIELDS.filter(function(f){return f[0]===k;})[0][1];
+  if(!v){toast('Pole '+label+' je prázdné'); return;}
+  saveShipInfo(false);                              // co zkopíruješ, se zároveň uloží
+  copyText(v).then(function(){toast('✓ Zkopírováno: '+label);},function(){toast('Kopírování se nepovedlo');});
 }
 
 // ── ŠABLONY ZPRÁV ──
