@@ -138,6 +138,8 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ship.todo{background:var(--amber-bg);color:var(--amber)}
 .ship.late{background:#fdecea;color:var(--red)}
 .ship.done{background:var(--green-bg);color:var(--green)}
+.notetoggle{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;margin:-2px 0 12px;color:var(--muted)}
+.notetoggle.on{background:#fff7d6;border-color:#e9d97a;color:#6b5a12}
 .shipline{display:flex;align-items:center;gap:6px}
 .sibtn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:30px;font-size:14px;padding:0;color:var(--muted)}
 .sibtn.has{background:var(--green-bg);border-color:var(--green)}
@@ -289,6 +291,7 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
         <button id="sg-done" class="done" onclick="setShipFilter('done')"></button>
         <button id="sg-none" onclick="setShipFilter('none')"></button>
       </div>
+      <button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
       <div class="bar">
         <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
         <button class="btn" onclick="openPersonModal()">+ Člověk</button>
@@ -500,7 +503,7 @@ function selectProfile(id){
   $('profile-chip').textContent='👤 '+profileName(id)+' ⇄';
   // čistý stav pro nový profil
   openP={};
-  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all';
+  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false;
   $('dash-period').value='today';
   bindProfile();
   showTab('overview');
@@ -656,7 +659,7 @@ function render(){
 }
 function openPerson(id){
   openP[id]=true;
-  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all';
+  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false;
   showTab('people');
   var el=$('pc-'+id); if(el) el.scrollIntoView({block:'center'});
 }
@@ -742,6 +745,13 @@ function renderChart(){
 // ── LIDÉ ──
 var openP={};
 var shipFilter='all';   // all | todo | done
+var noteFilter=false;   // jen lidé s poznámkou
+// Počet poznámek u člověka: poznámky k němu + poznámky u jeho bonusů.
+function personNoteCount(p){
+  return data.notes.filter(function(n){return n.personId===p.id;}).length+
+    data.bonuses.filter(function(b){return b.personId===p.id&&b.note&&String(b.note).trim();}).length;
+}
+function toggleNoteFilter(){noteFilter=!noteFilter; renderPeopleList();}
 var _focusPerson='';
 // Poslední změna člověka (bonus, stav, poznámka, náklady, odesláno, jméno) -> řazení v Lidech.
 function touchPerson(id){
@@ -791,6 +801,10 @@ function renderShipSeg(){
   ['all','todo','done','none'].forEach(function(k){
     var b=$('sg-'+k); b.textContent=L[k]; b.classList.toggle('on',shipFilter===k);
   });
+  var withNote=data.people.filter(function(p){return personNoteCount(p)>0;}).length;
+  var nb=$('note-toggle');
+  nb.textContent='📝 S poznámkou ('+withNote+')'+(noteFilter?' ✕':'');
+  nb.classList.toggle('on',noteFilter);
 }
 function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
@@ -852,6 +866,7 @@ function renderPeopleList(){
   people.forEach(function(p){
     if(f.q&&String(p.name).toLowerCase().indexOf(f.q)<0) return;
     if(shipFilter!=='all'&&(shipOf(p)||'none')!==shipFilter) return;
+    if(noteFilter&&!personNoteCount(p)) return;
     var all=data.bonuses.filter(function(b){return b.personId===p.id;});
     var rem=remainingSites(p.id);
     if(f.rem==='rem'&&!rem.length) return;
@@ -863,7 +878,7 @@ function renderPeopleList(){
     var lab=0,dum=0;
     all.forEach(function(b){bonusGifts(b).forEach(function(g){var q=parseInt(g.qty)||1; if(g.type==='dumpling') dum+=q; else lab+=q;});});
     var doneSites=data.sites.filter(function(s){return rem.indexOf(s)<0;});
-    var isOpen=bonusFilter||openP[p.id];
+    var isOpen=bonusFilter||noteFilter||openP[p.id];
     var notes=data.notes.filter(function(n){return n.personId===p.id;});
     var lc=lastChange(p);
 
