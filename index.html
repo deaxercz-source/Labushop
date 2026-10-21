@@ -161,8 +161,7 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 
 /* overview */
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
-.tiles .tile:first-child{grid-column:1/-1}
-@media(min-width:700px){.tiles{grid-template-columns:repeat(3,1fr)}.tiles .tile:first-child{grid-column:auto}}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .tile .k{color:var(--muted);font-size:13px}
 .tile .v{font-size:23px;font-weight:700;margin-top:2px}
@@ -658,6 +657,14 @@ function openPerson(id){
 }
 
 // ── PŘEHLED ──
+function profitOf(d,from){
+  d=d||{};
+  var bon=(d.bonuses||[]).reduce(function(s,b){return s+periodAmount(b,from);},0);
+  var exp=(d.expenses||[]).filter(function(e){return inPeriod(e.date,from);}).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+  var cost=(d.costs||[]).filter(function(c){return inPeriod(c.date,from);}).reduce(function(s,c){
+    return s+(parseFloat(c.gift)||0)+(parseFloat(c.postage)||0)+(parseFloat(c.other)||0);},0);
+  return {bonuses:bon,spend:exp+cost,profit:bon-exp-cost};
+}
 function renderOverview(){
   var from=periodFrom($('dash-period').value);
   var bon=data.bonuses.filter(function(b){return !from||entriesIn(b,from).length>0;});
@@ -667,12 +674,16 @@ function renderOverview(){
   var tExp=exp.reduce(function(s,e){return s+(Number(e.amount)||0);},0)+
     costs.reduce(function(s,c){return s+(parseFloat(c.gift)||0)+(parseFloat(c.postage)||0)+(parseFloat(c.other)||0);},0);
   var profit=tBon-tExp;
+  var pPepa=profitOf(root,from), pTomas=profitOf(root.profiles&&root.profiles.tomas,from);
+  var jointProfit=pPepa.profit+pTomas.profit;
   var toSend=data.people.filter(function(p){return shipOf(p)==='todo';}).length;
   var lateCnt=data.people.filter(function(p){return waitDays(p)>=3;}).length;
 
   $('tiles').innerHTML=
-    '<div class="tile"><div class="k">Zisk</div><div class="v '+(profit>=0?'pos':'neg')+'">'+kc(profit)+'</div>'+
+    '<div class="tile"><div class="k">Zisk · '+esc(profileName(profile))+'</div><div class="v '+(profit>=0?'pos':'neg')+'">'+kc(profit)+'</div>'+
       '<div class="s">bonusy '+kc(tBon)+(tExp?' · výdaje −'+kc(tExp):'')+'</div></div>'+
+    '<div class="tile"><div class="k">Společný zisk</div><div class="v '+(jointProfit>=0?'pos':'neg')+'">'+kc(jointProfit)+'</div>'+
+      '<div class="s">'+esc(profileName('pepa'))+' '+kc(pPepa.profit)+' · '+esc(profileName('tomas'))+' '+kc(pTomas.profit)+'</div></div>'+
     '<div class="tile"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div></div>'+
     '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">📦 Balíků k odeslání</div><div class="v">'+toSend+'</div>'+(lateCnt?'<div class="s" style="color:var(--red);font-weight:600">⚠ '+lateCnt+' čeká 3+ dny</div>':'')+'</div>';
 
