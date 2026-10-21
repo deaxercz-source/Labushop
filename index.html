@@ -375,10 +375,10 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function find(list,id){return list.filter(function(x){return x.id===id;})[0];}
 
 var PROFILES=[{id:'pepa',name:'Pepa'},{id:'tomas',name:'Tomáš'}];
-var KEYS=['people','sites','bonuses','costs','expenses','notes','workNotes','templates'];
+var KEYS=['people','sites','bonuses','costs','expenses','notes','workNotes'];   // šablony jsou společné: root.templates
 var profile=null;     // aktivní profil (pepa | tomas)
 var root={};          // celý Firestore dokument; Pepa = původní pole, Tomáš = root.profiles.tomas
-var _pending=null, _unsub=null;
+var _pending=null, _unsub=null, _tplDirty=false, _loaded=false;
 
 function profileName(id){var p=PROFILES.filter(function(x){return x.id===id;})[0]; return p?p.name:id;}
 function lastProfile(){try{return localStorage.getItem('labubu-profile')||'';}catch(e){return '';}}
@@ -387,7 +387,7 @@ function lastProfile(){try{return localStorage.getItem('labubu-profile')||'';}ca
 function flushSave(){
   if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
   if(!_pending) return;
-  var p=_pending; _pending=null;
+  var p=_pending; _pending=null; _tplDirty=false;
   db.doc(DB_DOC).set(p,{merge:true}).catch(function(e){console.error('Save error:',e);alert('Uložení se nepovedlo.');});
 }
 function save(){
@@ -395,9 +395,12 @@ function save(){
   var body={};
   KEYS.forEach(function(k){body[k]=data[k]||[];});
   if(data.sitesSeeded) body.sitesSeeded=true;
-  if(data.templatesSeeded) body.templatesSeeded=true;
   body=JSON.parse(JSON.stringify(body));
-  _pending=profile==='tomas'?{profiles:{tomas:body}}:body;
+  var out=profile==='tomas'?{profiles:{tomas:body}}:body;
+  // Společné šablony se zapisují jen když se změnily (ať nepřepíšeme změnu druhého jen kvůli uložení bonusu).
+  if(_tplDirty) out.templates=JSON.parse(JSON.stringify(root.templates||[]));
+  if(root.tplShared) out.tplShared=true;
+  _pending=out;
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer=setTimeout(flushSave,400);
 }
@@ -414,19 +417,30 @@ function bindProfile(){
   } else data=root;
   normalize();
   seedSites();
-  seedTemplates();
+  shareTemplates();
 }
-// Jednorázově: Tomáš dostane kopii Pepových šablon zpráv (doplní jen chybějící podle názvu).
-function seedTemplates(){
-  if(profile!=='tomas'||data.templatesSeeded||!Array.isArray(root.templates)||!root.templates.length) return;
-  var names={};
-  data.templates.forEach(function(t){names[String(t.name).toLowerCase()]=1;});
-  root.templates.forEach(function(t){
-    if(names[String(t.name).toLowerCase()]) return;
-    data.templates.push({id:uid(),name:t.name,text:t.text});
-  });
-  data.templatesSeeded=true;
-  save();
+// Šablony zpráv jsou společné pro Pepu i Tomáše (jeden seznam v root.templates).
+function shareTemplates(){
+  if(!Array.isArray(root.templates)) root.templates=[];
+  // Jednorázové sloučení: co měl Tomáš navíc ve svém profilu, se přidá do společného seznamu (podle názvu).
+  if(_loaded&&!root.tplShared){
+    var own=root.profiles&&root.profiles.tomas&&root.profiles.tomas.templates;
+    if(Array.isArray(own)){
+      var names={};
+      root.templates.forEach(function(t){names[String(t.name).toLowerCase()]=1;});
+      own.forEach(function(t){
+        var k=String(t.name).toLowerCase();
+        if(names[k]) return;
+        names[k]=1; root.templates.push({id:t.id||uid(),name:t.name,text:t.text});
+      });
+    }
+    root.tplShared=true; _tplDirty=true; save();
+  }
+  // Tomáš čte i zapisuje společný seznam přes data.templates (neukládá se do jeho profilu).
+  if(profile==='tomas'){
+    Object.defineProperty(data,'templates',{configurable:true,enumerable:false,
+      get:function(){return root.templates;},set:function(v){root.templates=v;}});
+  }
 }
 // Jednorázově: Tomáš dostane stejný seznam stránek jako Pepa (doplní jen chybějící podle názvu).
 function seedSites(){
@@ -444,6 +458,7 @@ function seedSites(){
 function initData(userId){
   DB_DOC='labubu/'+userId;
   showLoading(true);
+  _loaded=false;
   if(_unsub){_unsub();_unsub=null;}
   _unsub=db.doc(DB_DOC).onSnapshot(function(doc){
     if(doc.exists){
@@ -458,6 +473,7 @@ function initData(userId){
       }
     }
     showLoading(false);
+    _loaded=true;
     if(profile){bindProfile(); render();}
   },function(err){console.error('Firestore:',err);showLoading(false);});
 }
@@ -516,7 +532,7 @@ document.addEventListener('DOMContentLoaded',function(){
       initData(user.uid);
     } else {
       if(_unsub){_unsub();_unsub=null;}
-      profile=null; root={};
+      profile=null; root={}; _loaded=false;
       $('login-screen').style.display='flex';
       $('app').style.display='none';
       $('profile-screen').style.display='none';
@@ -1217,12 +1233,14 @@ function saveTpl(){
   if(!text){$('t-text').focus(); return;}
   if(_tplEditId){var t=find(data.templates,_tplEditId); t.name=name; t.text=text;}
   else data.templates.push({id:uid(),name:name,text:text});
+  _tplDirty=true;
   save(); renderTplBars(); openTemplates();
 }
 function deleteTpl(id){
   var t=find(data.templates,id);
   if(!t||!confirm('Smazat šablonu „'+t.name+'“?')) return;
   data.templates=data.templates.filter(function(x){return x.id!==id;});
+  _tplDirty=true;
   save(); renderTplBars(); openTemplates();
 }
 
