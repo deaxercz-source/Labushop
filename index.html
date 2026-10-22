@@ -138,6 +138,10 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ship.todo{background:var(--amber-bg);color:var(--amber)}
 .ship.late{background:#fdecea;color:var(--red)}
 .ship.done{background:var(--green-bg);color:var(--green)}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 12px}
+.toggles .notetoggle{margin:0}
+.notetoggle.ask.on{background:#e3eefc;border-color:#9bbbe6;color:#1d5fb4}
+.ship.ask{background:#e3eefc;color:#1d5fb4}
 .notetoggle{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;margin:-2px 0 12px;color:var(--muted)}
 .notetoggle.on{background:#fff7d6;border-color:#e9d97a;color:#6b5a12}
 .shipline{display:flex;align-items:center;gap:6px}
@@ -168,7 +172,8 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 
 /* overview */
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
-@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
+@media(max-width:699px){.tiles .tile:last-child:nth-child(odd){grid-column:1/-1}}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .tile .k{color:var(--muted);font-size:13px}
 .tile .v{font-size:23px;font-weight:700;margin-top:2px}
@@ -291,7 +296,8 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
         <button id="sg-done" class="done" onclick="setShipFilter('done')"></button>
         <button id="sg-none" onclick="setShipFilter('none')"></button>
       </div>
-      <button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
+      <div class="toggles"><button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
+        <button class="notetoggle ask" id="ask-toggle" onclick="toggleAskFilter()"></button></div>
       <div class="bar">
         <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
         <button class="btn" onclick="openPersonModal()">+ Člověk</button>
@@ -503,7 +509,7 @@ function selectProfile(id){
   $('profile-chip').textContent='👤 '+profileName(id)+' ⇄';
   // čistý stav pro nový profil
   openP={};
-  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false;
+  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false; askFilter=false;
   $('dash-period').value='today';
   bindProfile();
   showTab('overview');
@@ -659,7 +665,7 @@ function render(){
 }
 function openPerson(id){
   openP[id]=true;
-  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false;
+  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false; askFilter=false;
   showTab('people');
   var el=$('pc-'+id); if(el) el.scrollIntoView({block:'center'});
 }
@@ -686,6 +692,7 @@ function renderOverview(){
   var jointProfit=pPepa.profit+pTomas.profit;
   var toSend=data.people.filter(function(p){return shipOf(p)==='todo';}).length;
   var lateCnt=data.people.filter(function(p){return waitDays(p)>=3;}).length;
+  var askCnt=data.people.filter(askDue).length;
 
   $('tiles').innerHTML=
     '<div class="tile"><div class="k">Zisk · '+esc(profileName(profile))+'</div><div class="v '+(profit>=0?'pos':'neg')+'">'+kc(profit)+'</div>'+
@@ -693,7 +700,8 @@ function renderOverview(){
     '<div class="tile"><div class="k">Společný zisk</div><div class="v '+(jointProfit>=0?'pos':'neg')+'">'+kc(jointProfit)+'</div>'+
       '<div class="s">'+esc(profileName('pepa'))+' '+kc(pPepa.profit)+' · '+esc(profileName('tomas'))+' '+kc(pTomas.profit)+'</div></div>'+
     '<div class="tile"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div></div>'+
-    '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">📦 Balíků k odeslání</div><div class="v">'+toSend+'</div>'+(lateCnt?'<div class="s" style="color:var(--red);font-weight:600">⚠ '+lateCnt+' čeká 3+ dny</div>':'')+'</div>';
+    '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">📦 Balíků k odeslání</div><div class="v">'+toSend+'</div>'+(lateCnt?'<div class="s" style="color:var(--red);font-weight:600">⚠ '+lateCnt+' čeká 3+ dny</div>':'')+'</div>'+
+    (askCnt?'<div class="tile click" onclick="goToAsk()" title="Zobrazit lidi, kterým je čas se zeptat, jestli zásilka dorazila"><div class="k">💬 Zeptat se, jestli dorazilo</div><div class="v" style="color:#1d5fb4">'+askCnt+'</div></div>':'');
 
   var flat=[];
   bon.forEach(function(b){entriesIn(b,from).forEach(function(e){if(e.d&&Math.abs(e.a)>0.001) flat.push({b:b,e:e});});});
@@ -746,6 +754,19 @@ function renderChart(){
 var openP={};
 var shipFilter='all';   // all | todo | done
 var noteFilter=false;   // jen lidé s poznámkou
+var askFilter=false;    // jen lidé, kterým je čas se zeptat, jestli zásilka dorazila
+// Pracovní dny od data (bez víkendů; samotný den odeslání se nepočítá).
+function ymdUTC(d){var a=String(d).slice(0,10).split('-'); return Date.UTC(+a[0],+a[1]-1,+a[2]);}
+function businessDaysSince(dateStr){
+  if(!dateStr) return 0;
+  var start=ymdUTC(dateStr), end=ymdUTC(todayISO()), n=0;
+  for(var t=start+86400000;t<=end;t+=86400000){var dow=new Date(t).getUTCDay(); if(dow!==0&&dow!==6) n++;}
+  return n;
+}
+// Odesláno, uplynuly 2 pracovní dny a ještě jsme se nezeptali.
+function askDue(p){return shipOf(p)==='done'&&!!p.shipAt&&!p.askedAt&&businessDaysSince(p.shipAt)>=2;}
+function toggleAskFilter(){askFilter=!askFilter; renderPeopleList();}
+function goToAsk(){askFilter=true; showTab('people');}
 // Počet poznámek u člověka: poznámky k němu + poznámky u jeho bonusů.
 function personNoteCount(p){
   return data.notes.filter(function(n){return n.personId===p.id;}).length+
@@ -788,6 +809,7 @@ function waitDays(p){
 function plDays(n){return n+(n===1?' den':(n>=2&&n<=4?' dny':' dní'));}
 function shipPillHTML(p){
   var st=shipOf(p), wd=waitDays(p), late=wd>=3;
+  if(askDue(p)) return '<button class="ship ask" data-id="'+esc(p.id)+'" onclick="openAsk(this.dataset.id,event)" title="Odesláno '+esc(fmtDate(p.shipAt))+'. Klikni a zeptej se, jestli zásilka dorazila.">💬 Zeptat se</button>';
   var cls='ship '+st+(late?' late':'');
   var label=st==='done'?'✅ Odesláno':'📦 Odeslat'+(wd>=1?' · '+plDays(wd):'');
   var tip=st==='todo'&&p.shipAt?'Čeká na odeslání od '+fmtDate(p.shipAt)+'. Klikni pro přepnutí.':'Klikni pro přepnutí Odeslat / Odesláno';
@@ -805,17 +827,20 @@ function renderShipSeg(){
   var nb=$('note-toggle');
   nb.textContent='📝 S poznámkou ('+withNote+')'+(noteFilter?' ✕':'');
   nb.classList.toggle('on',noteFilter);
+  var ab=$('ask-toggle');
+  ab.textContent='💬 K dotazu ('+data.people.filter(askDue).length+')'+(askFilter?' ✕':'');
+  ab.classList.toggle('on',askFilter);
 }
 function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
   var p=find(data.people,id); if(!p) return;
-  var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated;
-  p.ship=state; p.shipAt=state?nowLocal():'';
+  var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated, prevAsk=p.askedAt||'';
+  p.ship=state; p.shipAt=state?nowLocal():''; p.askedAt='';
   touchPerson(id);
   save(); render();
   var label={todo:'Odeslat',done:'Odesláno'}[state]||'bez stavu';
   toast(p.name+' → '+label,function(){
-    p.ship=prev; p.shipAt=prevAt; p.updated=prevUpd; save(); render();
+    p.ship=prev; p.shipAt=prevAt; p.updated=prevUpd; p.askedAt=prevAsk; save(); render();
   });
 }
 function cycleShip(id,ev){
@@ -867,6 +892,7 @@ function renderPeopleList(){
     if(f.q&&String(p.name).toLowerCase().indexOf(f.q)<0) return;
     if(shipFilter!=='all'&&(shipOf(p)||'none')!==shipFilter) return;
     if(noteFilter&&!personNoteCount(p)) return;
+    if(askFilter&&!askDue(p)) return;
     var all=data.bonuses.filter(function(b){return b.personId===p.id;});
     var rem=remainingSites(p.id);
     if(f.rem==='rem'&&!rem.length) return;
@@ -895,7 +921,7 @@ function renderPeopleList(){
         '</span></div><span class="chev">▾</span>'+
       '</div>'+
       '<div class="pc-body">'+
-        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
+        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(p.askedAt?'<span>Zeptáno <b>'+fmtDate(p.askedAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
           (cost?'<span>Náklady <b class="neg">'+kc(cost)+'</b></span><span>Zisk <b class="'+(allTotal-cost>=0?'pos':'neg')+'">'+kc(allTotal-cost)+'</b></span>':'')+
           '<span>🐣 <b>'+lab+'</b></span><span>🥟 <b>'+dum+'</b></span></div>'+
         '<div class="sites">'+
@@ -1202,6 +1228,44 @@ function renderNotes(){
   }).join(''):'<div class="empty">Zatím žádné poznámky 📝</div>';
 }
 
+// ── ZEPTAT SE, JESTLI DORAZILO ──
+var _askPerson='', _askReturn='';
+var ASK_DEFAULT='Dobrý den 🙂 jen se ptáme, zda vám zásilka v pořádku dorazila a je vše v pořádku. Kdyby cokoli nesedělo, dejte nám prosím vědět. Přejeme hezký den! 🐣';
+function openAsk(id,ev){
+  if(ev) ev.stopPropagation();
+  var p=find(data.people,id); if(!p) return;
+  _askPerson=id;
+  var tpls=(data.templates||[]).slice().sort(function(a,b){
+    var ma=/dorazil|zeptat|ověř|v pořádku/i.test(a.name)?0:1, mb=/dorazil|zeptat|ověř|v pořádku/i.test(b.name)?0:1;
+    return ma-mb;
+  });
+  openModal('<h2>💬 Zeptat se · '+esc(p.name)+'</h2>'+
+    '<div class="cat" style="margin-bottom:10px">Odesláno '+fmtDate(p.shipAt)+'. Vyber zprávu: zkopíruje se a člověk se označí jako Zeptáno.</div>'+
+    (tpls.length?tpls.map(function(t){
+      return '<div class="tpl-row"><button class="tpl" data-id="'+esc(t.id)+'" onclick="askWith(this.dataset.id)">'+esc(t.name)+'<span>kopírovat a označit</span></button></div>';
+    }).join(''):'<div class="empty" style="padding:16px">Zatím nemáš žádnou šablonu zprávy.</div>')+
+    '<div class="modal-foot" style="margin-top:12px;flex-wrap:wrap"><button class="btn" onclick="closeModal()">Zavřít</button>'+
+    '<button class="btn" onclick="markAsked(_askPerson)">Jen označit jako Zeptáno</button>'+
+    '<button class="btn btn-primary" onclick="newAskTpl()">+ Nová šablona</button></div>');
+}
+function askWith(tid){
+  var t=find(data.templates,tid); if(!t) return;
+  copyText(t.text).then(function(){markAsked(_askPerson,t.name);},function(){toast('Kopírování se nepovedlo');});
+}
+function markAsked(id,tplName){
+  var p=find(data.people,id); if(!p) return;
+  var prevAsk=p.askedAt||'', prevUpd=p.updated;
+  p.askedAt=nowLocal(); touchPerson(id); save(); closeModal(); render();
+  toast((tplName?'✓ Zkopírováno: '+tplName+' · ':'')+p.name+' → Zeptáno',function(){
+    p.askedAt=prevAsk; p.updated=prevUpd; save(); render();
+  });
+}
+function newAskTpl(){
+  _askReturn=_askPerson;
+  openTplEdit();
+  $('t-name').value='Dorazilo?'; $('t-text').value=ASK_DEFAULT;
+}
+
 // ── ÚDAJE PRO ZÁSILKU ──
 // Z vloženého textu (např. z DM) vytáhne jméno, telefon, e-mail a výdejní místo. Výsledek jde ručně opravit.
 var SI_FIELDS=[['name','Jméno'],['phone','Telefon'],['email','E-mail'],['point','Výdejní místo']];
@@ -1349,7 +1413,9 @@ function saveTpl(){
   if(_tplEditId){var t=find(data.templates,_tplEditId); t.name=name; t.text=text;}
   else data.templates.push({id:uid(),name:name,text:text});
   _tplDirty=true;
-  save(); renderTplBars(); openTemplates();
+  save(); renderTplBars();
+  if(_askReturn){var rid=_askReturn; _askReturn=''; openAsk(rid); return;}
+  openTemplates();
 }
 function deleteTpl(id){
   var t=find(data.templates,id);
