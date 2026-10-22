@@ -172,7 +172,7 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 
 /* overview */
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
-@media(min-width:700px){.tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(auto-fit,minmax(138px,1fr))}}
 @media(max-width:699px){.tiles .tile:last-child:nth-child(odd){grid-column:1/-1}}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
 .tile .k{color:var(--muted);font-size:13px}
@@ -220,6 +220,31 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
   .sites{grid-template-columns:1fr}
   .seg button{font-size:13px;padding:8px 2px}
 }
+
+/* ── Vzhled „Jemný“ ── */
+:root{--bg:#f2f6f1;--line:#e8eee7;--r:18px}
+body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
+.spacer{flex:1}
+.top{background:#fff;border-bottom:1px solid #e8eee7;box-shadow:0 6px 20px -14px rgba(20,40,30,.35)}
+.tab{border-radius:12px;padding:8px 13px}
+.tab.active{background:var(--green);color:#fff;box-shadow:0 6px 14px -6px rgba(26,158,92,.7)}
+.card,.tile,.pc,.tpl-card,.site-card{border:1px solid #edf2ec;box-shadow:0 1px 2px rgba(20,40,30,.04),0 14px 30px -18px rgba(20,40,30,.22);border-radius:18px}
+.tile{padding:16px}
+.tile .k{font-weight:500;font-size:13px}
+.tile .v{font-size:27px;letter-spacing:-.02em;margin-top:4px}
+.btn,.input{border-radius:13px}
+.input{background:#fbfdfb}
+.btn-primary{box-shadow:0 8px 16px -8px rgba(26,158,92,.8)}
+.seg{background:#e5ece4;border-radius:15px;padding:4px}
+.seg button{border-radius:12px}
+.seg button.on{box-shadow:0 2px 6px rgba(20,40,30,.12)}
+.pc{margin-bottom:10px}
+.pc-h{padding:14px 16px}
+.pc-name{font-size:17px;letter-spacing:-.01em}
+.sibtn,.shipq button{box-shadow:0 1px 2px rgba(20,40,30,.06)}
+.ship{padding:6px 13px}
+.modal{border-radius:22px 22px 0 0}
+@media(min-width:600px){.modal{border-radius:22px}}
 </style>
 </head>
 <body>
@@ -246,10 +271,10 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 <div id="app">
   <header class="top">
     <div class="top-in">
-      <div class="logo">🐣 Labubu</div>
+      <button class="chip" id="profile-chip" onclick="showProfilePicker()" title="Přepnout profil"></button>
+      <div class="spacer"></div>
       <button class="icon-btn" onclick="openSearch()" title="Hledat (/)">🔍</button>
       <button class="icon-btn" onclick="openTemplates()" title="Šablony zpráv">📋</button>
-      <button class="chip" id="profile-chip" onclick="showProfilePicker()" title="Přepnout profil"></button>
       <div class="user" id="user-email"></div>
       <nav class="tabs">
         <button class="tab active" data-tab="overview" onclick="showTab('overview')">Přehled</button>
