@@ -147,6 +147,9 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .shipline{display:flex;align-items:center;gap:6px}
 .sibtn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:30px;font-size:14px;padding:0;color:var(--muted)}
 .sibtn.has{background:var(--green-bg);border-color:var(--green)}
+.pc-order{font-size:12px;color:#6b5a12;background:#fff7d6;border-radius:8px;padding:3px 9px;margin-top:6px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;vertical-align:top}
+.orderchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.orderchips .chip{font-size:12px;padding:4px 10px}
 .sirow{display:flex;gap:8px;align-items:center}
 .sirow .input{flex:1;min-width:0}
 .shipq{display:flex;gap:6px}
@@ -937,7 +940,7 @@ function renderPeopleList(){
       '<div class="pc-h" onclick="togglePc(\''+p.id+'\')">'+
         '<div class="pc-info"><div class="pc-name" onclick="copyName(\''+p.id+'\',this);event.stopPropagation()" title="Klikni pro zkopírování jména">'+esc(p.name)+'</div>'+
         '<div class="pc-sub">'+all.length+' bonus'+(all.length===1?'':'ů')+' · '+
-          (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+'</div></div>'+
+          (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+'</div>'+orderLine(p)+'</div>'+
         '<div class="pc-right"><span class="total">'+kc(total)+'</span><span class="shipline">'+
           '<button class="sibtn'+(hasShipInfo(p)?' has':'')+'" data-id="'+esc(p.id)+'" onclick="openShipInfo(this.dataset.id,event)" title="Údaje pro zásilku">📋</button>'+
           (shipOf(p)?shipPillHTML(p):
@@ -1294,7 +1297,9 @@ function newAskTpl(){
 // ── ÚDAJE PRO ZÁSILKU ──
 // Z vloženého textu (např. z DM) vytáhne jméno, telefon, e-mail a výdejní místo. Výsledek jde ručně opravit.
 var SI_FIELDS=[['name','Jméno'],['phone','Telefon'],['email','E-mail'],['point','Výdejní místo']];
-function hasShipInfo(p){var i=p.shipInfo; return !!(i&&(i.name||i.phone||i.email||i.point));}
+function orderOf(p){return (p.shipInfo&&p.shipInfo.order)||'';}
+function hasShipInfo(p){var i=p.shipInfo; return !!(i&&(i.name||i.phone||i.email||i.point||i.order));}
+function orderLine(p){var o=orderOf(p); return o?'<div class="pc-order" data-id="'+esc(p.id)+'" onclick="openShipInfo(this.dataset.id,event)" title="'+esc(o)+'">🎁 '+esc(o)+'</div>':'';}
 function parseShipInfo(text){
   var out={name:'',phone:'',email:'',point:''};
   text=String(text==null?'':text).replace(/\r/g,'');
@@ -1343,6 +1348,11 @@ function openShipInfo(id,ev){
   _siPerson=id;
   var i=p.shipInfo||{};
   openModal('<h2>Údaje pro zásilku · '+esc(p.name)+'</h2>'+
+    '<div class="fld"><label>Co chce v objednávce</label>'+
+    '<textarea class="input" id="si-order" rows="2" placeholder="např. Labubu zelený + 2× dumpling" onblur="saveShipInfo(false)">'+esc(i.order||'')+'</textarea>'+
+    '<div class="orderchips"><button class="chip" data-t="Labubu" onclick="addOrder(this.dataset.t)">＋ Labubu</button>'+
+    '<button class="chip" data-t="Dumpling" onclick="addOrder(this.dataset.t)">＋ Dumpling</button>'+
+    '<button class="chip" data-t="Kravička" onclick="addOrder(this.dataset.t)">＋ Kravička</button></div></div>'+
     '<div class="fld"><label>Vlož všechno najednou (třeba z DM), roztřídí se samo</label>'+
     '<textarea class="input" id="si-raw" rows="3" placeholder="Jana Nováková, 777 123 456, jana@seznam.cz, Zásilkovna Praha 5 …" oninput="siFromRaw()"></textarea></div>'+
     SI_FIELDS.map(function(f){
@@ -1353,6 +1363,11 @@ function openShipInfo(id,ev){
     '<button class="btn btn-primary" onclick="saveShipInfo(true)">Uložit a zavřít</button></div>');
   $('si-raw').focus();
 }
+function addOrder(t){
+  var el=$('si-order'), v=el.value.trim().replace(/[,\s]+$/,'');
+  el.value=v?v+', '+t:t;
+  el.focus();
+}
 function siFromRaw(){
   var r=parseShipInfo($('si-raw').value);
   SI_FIELDS.forEach(function(f){$('si-'+f[0]).value=r[f[0]];});
@@ -1361,6 +1376,7 @@ function saveShipInfo(close){
   var p=find(data.people,_siPerson); if(!p) return;
   var info={};
   SI_FIELDS.forEach(function(f){info[f[0]]=$('si-'+f[0]).value.trim();});
+  info.order=$('si-order').value.trim();
   p.shipInfo=info;
   if(close){touchPerson(_siPerson); closeModal();}
   save();
@@ -1468,9 +1484,9 @@ function runSearch(){
   if(q.length<2){ out.innerHTML='<div class="cat" style="padding:8px 0">Napiš aspoň 2 znaky.</div>'; return; }
   function has(t){return fold(t).indexOf(q)>=0;}
   var groups=[];
-  groups.push({t:'Lidé',items:data.people.filter(function(p){return has(p.name);}).map(function(p){
+  groups.push({t:'Lidé',items:data.people.filter(function(p){return has(p.name)||has(orderOf(p));}).map(function(p){
     var n=data.bonuses.filter(function(b){return b.personId===p.id;}).length;
-    return {k:'p',id:p.id,html:snippet(p.name,q),sub:n+' bonus'+(n===1?'':'ů')+(shipOf(p)?' · '+(shipOf(p)==='done'?'odesláno':'odeslat'):'')};})});
+    return {k:'p',id:p.id,html:snippet(p.name,q),sub:n+' bonus'+(n===1?'':'ů')+(shipOf(p)?' · '+(shipOf(p)==='done'?'odesláno':'odeslat'):'')+(orderOf(p)?' · 🎁 '+orderOf(p):'')};})});
   groups.push({t:'Poznámky',items:data.notes.filter(function(n){return has((n.title||'')+' '+(n.text||''));}).map(function(n){
     var who=n.personId?personName(n.personId):null;
     return {k:'n',id:n.id,html:snippet((n.title?n.title+' — ':'')+(n.text||''),q),sub:who||'obecná poznámka'};})});
