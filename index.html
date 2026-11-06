@@ -140,6 +140,8 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ship.done{background:var(--green-bg);color:var(--green)}
 .toggles{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 12px}
 .toggles .notetoggle{margin:0}
+.notetoggle.pts.on{background:#fff4d6;border-color:#e6c35c;color:#7a5b00}
+.pts{color:#7a5b00;font-weight:700}
 .notetoggle.ask.on{background:#e3eefc;border-color:#9bbbe6;color:#1d5fb4}
 .ship.ask{background:#e3eefc;color:#1d5fb4}
 .notetoggle{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;margin:-2px 0 12px;color:var(--muted)}
@@ -328,7 +330,8 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
         <button id="sg-none" onclick="setShipFilter('none')"></button>
       </div>
       <div class="toggles"><button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
-        <button class="notetoggle ask" id="ask-toggle" onclick="toggleAskFilter()"></button></div>
+        <button class="notetoggle ask" id="ask-toggle" onclick="toggleAskFilter()"></button>
+        <button class="notetoggle pts" id="pts-toggle" onclick="togglePtsFilter()"></button></div>
       <div class="bar">
         <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
         <button class="btn" onclick="openPersonModal()">+ Člověk</button>
@@ -540,7 +543,7 @@ function selectProfile(id){
   $('profile-chip').textContent='👤 '+profileName(id)+' ⇄';
   // čistý stav pro nový profil
   openP={};
-  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false; askFilter=false;
+  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false; askFilter=false; ptsFilter=false;
   $('dash-period').value='today';
   bindProfile();
   showTab('overview');
@@ -696,7 +699,7 @@ function render(){
 }
 function openPerson(id){
   openP[id]=true;
-  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false; askFilter=false;
+  $('f-q').value=''; $('f-range').value='all'; $('f-rem').value='all'; $('f-site').value='all'; shipFilter='all'; noteFilter=false; askFilter=false; ptsFilter=false;
   showTab('people');
   var el=$('pc-'+id); if(el) el.scrollIntoView({block:'center'});
 }
@@ -808,6 +811,33 @@ var openP={};
 var shipFilter='all';   // all | todo | done
 var noteFilter=false;   // jen lidé s poznámkou
 var askFilter=false;    // jen lidé, kterým je čas se zeptat, jestli zásilka dorazila
+var ptsFilter=false;    // jen lidé, kterým je čas uzavřít body
+// BODY: 1 bonus = 1 bod. Když člověk už další body získat nemůže, body se „uzavřou“ (zapíše se aktuální počet bonusů).
+// p.ptsTotal = uzavřený počet bodů, p.ptsSpent = už utracené body, p.ptsAt = kdy se uzavřely.
+function bonusCount(p){return data.bonuses.filter(function(b){return b.personId===p.id;}).length;}
+function ptsClosed(p){return p.ptsTotal!=null&&p.ptsTotal!=='';}
+function ptsLeft(p){return ptsClosed(p)?Math.max(0,(Number(p.ptsTotal)||0)-(Number(p.ptsSpent)||0)):0;}
+function needsClose(p){return !ptsClosed(p)&&bonusCount(p)>0&&remainingSites(p.id).length===0;}
+function ptsBadge(p){return ptsClosed(p)?' · <span class="pts">⭐ '+ptsLeft(p)+(ptsLeft(p)!==Number(p.ptsTotal)?'/'+p.ptsTotal:'')+'</span>':'';}
+function togglePtsFilter(){ptsFilter=!ptsFilter; renderPeopleList();}
+function closePoints(id){
+  var p=find(data.people,id); if(!p) return;
+  var prev={t:p.ptsTotal,a:p.ptsAt,s:p.ptsSpent,u:p.updated};
+  var n=bonusCount(p);
+  p.ptsTotal=n; p.ptsAt=nowLocal(); if(p.ptsSpent==null) p.ptsSpent=0;
+  touchPerson(id); save(); render();
+  toast(p.name+' → ⭐ body uzavřeny: '+n,function(){
+    p.ptsTotal=prev.t; p.ptsAt=prev.a; p.ptsSpent=prev.s; p.updated=prev.u;
+    if(p.ptsTotal==null) delete p.ptsTotal; if(p.ptsAt==null) delete p.ptsAt;
+    save(); render();
+  });
+}
+function reopenPoints(id){
+  var p=find(data.people,id); if(!p) return;
+  if(!confirm('Znovu otevřít body u '+p.name+'? Uzavřený počet se smaže.')) return;
+  delete p.ptsTotal; delete p.ptsAt;
+  touchPerson(id); save(); render();
+}
 // Pracovní dny od data (bez víkendů; samotný den odeslání se nepočítá).
 function ymdUTC(d){var a=String(d).slice(0,10).split('-'); return Date.UTC(+a[0],+a[1]-1,+a[2]);}
 function businessDaysSince(dateStr){
@@ -883,6 +913,9 @@ function renderShipSeg(){
   var ab=$('ask-toggle');
   ab.textContent='💬 K dotazu ('+data.people.filter(askDue).length+')'+(askFilter?' ✕':'');
   ab.classList.toggle('on',askFilter);
+  var pb=$('pts-toggle');
+  pb.textContent='⭐ K uzavření ('+data.people.filter(needsClose).length+')'+(ptsFilter?' ✕':'');
+  pb.classList.toggle('on',ptsFilter);
 }
 function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
@@ -946,6 +979,7 @@ function renderPeopleList(){
     if(shipFilter!=='all'&&(shipOf(p)||'none')!==shipFilter) return;
     if(noteFilter&&!personNoteCount(p)) return;
     if(askFilter&&!askDue(p)) return;
+    if(ptsFilter&&!needsClose(p)) return;
     var all=data.bonuses.filter(function(b){return b.personId===p.id;});
     var rem=remainingSites(p.id);
     if(f.rem==='rem'&&!rem.length) return;
@@ -965,7 +999,7 @@ function renderPeopleList(){
       '<div class="pc-h" onclick="togglePc(\''+p.id+'\')">'+
         '<div class="pc-info"><div class="pc-name" onclick="copyName(\''+p.id+'\',this);event.stopPropagation()" title="Klikni pro zkopírování jména">'+esc(p.name)+'</div>'+
         '<div class="pc-sub">'+all.length+' bonus'+(all.length===1?'':'ů')+' · '+
-          (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+'</div>'+orderLine(p)+'</div>'+
+          (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+ptsBadge(p)+'</div>'+orderLine(p)+'</div>'+
         '<div class="pc-right"><span class="total">'+kc(total)+'</span><span class="shipline">'+
           '<button class="sibtn'+(hasShipInfo(p)?' has':'')+'" data-id="'+esc(p.id)+'" onclick="openShipInfo(this.dataset.id,event)" title="Údaje pro zásilku">📋</button>'+
           (shipOf(p)?shipPillHTML(p):
@@ -974,7 +1008,7 @@ function renderPeopleList(){
         '</span></div><span class="chev">▾</span>'+
       '</div>'+
       '<div class="pc-body">'+
-        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(p.askedAt?'<span>Zeptáno <b>'+fmtDate(p.askedAt)+'</b></span>':'')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
+        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(p.askedAt?'<span>Zeptáno <b>'+fmtDate(p.askedAt)+'</b></span>':'')+(ptsClosed(p)?'<span>Body <b>'+ptsLeft(p)+' / '+esc(p.ptsTotal)+'</b></span>':'<span>Body <b>'+bonusCount(p)+'</b> (neuzavřeno)</span>')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
           (cost?'<span>Náklady <b class="neg">'+kc(cost)+'</b></span><span>Zisk <b class="'+(allTotal-cost>=0?'pos':'neg')+'">'+kc(allTotal-cost)+'</b></span>':'')+
           '<span>🐣 <b>'+lab+'</b></span><span>🥟 <b>'+dum+'</b></span></div>'+
         '<div class="sites">'+
@@ -989,6 +1023,10 @@ function renderPeopleList(){
           '<button class="btn btn-sm btn-primary" onclick="openBonusModal(\''+p.id+'\')">+ Bonus</button>'+
           '<button class="btn btn-sm" onclick="openNoteModal(\''+p.id+'\')">+ Poznámka</button>'+
           '<button class="btn btn-sm" onclick="openCostModal(\''+p.id+'\')">Náklady</button>'+
+          (ptsClosed(p)
+            ?(bonusCount(p)!==Number(p.ptsTotal)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="closePoints(this.dataset.id)">⭐ Přepočítat body ('+bonusCount(p)+')</button>':'')+
+              '<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="reopenPoints(this.dataset.id)">Znovu otevřít body</button>'
+            :'<button class="btn btn-sm'+(needsClose(p)?' btn-primary':'')+'" data-id="'+esc(p.id)+'" onclick="closePoints(this.dataset.id)">⭐ Uzavřít body ('+bonusCount(p)+')</button>')+
           (shipOf(p)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" data-s="" onclick="setShip(this.dataset.id,this.dataset.s,event)">Zrušit označení</button>':'')+
           '<button class="btn btn-sm" onclick="openPersonModal(\''+p.id+'\')">Přejmenovat</button>'+
           '<button class="btn btn-sm btn-danger" onclick="deletePerson(\''+p.id+'\')">Smazat</button>'+
