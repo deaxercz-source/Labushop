@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://widget.packeta.com/v6/www/js/library.js"></script>
 <style>
 :root{--bg:#f2f6f1;--card:#fff;--line:#e8eee7;--text:#1c2320;--muted:#6b756f;--green:#1a9e5c;--green-bg:#e6f5ec;--red:#d6453d;--red-bg:#fdecea;--r:18px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -44,6 +45,8 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;font-wei
 .bar{height:8px;background:#e5ece4;border-radius:999px;overflow:hidden;margin:10px 0 4px}
 .bar i{display:block;height:100%;background:var(--green);width:0;transition:width .15s}
 .sum{font-size:14px;color:var(--muted)}
+.btn.ghost{background:#fff;color:var(--green);border:1px solid var(--green);box-shadow:none}
+.picked{margin-top:8px;padding:10px 12px;border-radius:13px;background:var(--green-bg);color:#14633a;font-size:15px;line-height:1.4}
 .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
 .hidden{display:none}
 .done{text-align:center;padding:26px 16px}
@@ -74,7 +77,11 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;font-wei
       <div class="fld"><label for="f-name">Jméno a příjmení</label><input class="input" id="f-name" autocomplete="name"></div>
       <div class="fld"><label for="f-email">E-mail</label><input class="input" id="f-email" type="email" autocomplete="email"></div>
       <div class="fld"><label for="f-phone">Telefon</label><input class="input" id="f-phone" type="tel" autocomplete="tel" placeholder="např. 777 123 456"></div>
-      <div class="fld"><label for="f-point">Výdejní místo Zásilkovny</label><input class="input" id="f-point" placeholder="např. Zásilkovna Praha 5, Plzeňská 1"></div>
+      <div class="fld"><label for="f-point">Výdejní místo Zásilkovny</label>
+        <button type="button" class="btn ghost" id="btn-point" onclick="pickPoint()">📍 Vybrat výdejní místo na mapě</button>
+        <div class="picked hidden" id="picked"></div>
+        <input class="input hidden" id="f-point" placeholder="Napište výdejní místo (např. Zásilkovna Praha 5, Plzeňská 1)">
+      </div>
       <input class="hp" id="f-web" tabindex="-1" autocomplete="off" aria-hidden="true">
       <button class="btn" id="btn-send" onclick="send()">Odeslat objednávku</button>
       <div id="msg2"></div>
@@ -120,6 +127,30 @@ function norm(s){
 function plBody(n){return n===1?'bod':(n>=2&&n<=4?'body':'bodů');}
 function show(id,on){$(id).classList.toggle('hidden',!on);}
 function msg(id,type,text){$(id).innerHTML=text?'<div class="msg '+type+'">'+esc(text)+'</div>':'';}
+
+// ── výdejní místo: mapa Zásilkovny ──
+// Veřejný „Klíč API“ z klientské sekce Zásilkovny (16 znaků). Bez něj se místo píše textem.
+var PACKETA_KEY='';
+var pickedPt=null;
+function widgetReady(){return !!PACKETA_KEY&&typeof Packeta!=='undefined'&&!!(Packeta.Widget&&Packeta.Widget.pick);}
+function initPointUI(){
+  var ok=widgetReady();
+  show('btn-point',ok); show('f-point',!ok);
+}
+function pickPoint(){
+  if(!widgetReady()) return;
+  Packeta.Widget.pick(PACKETA_KEY,function(p){
+    if(!p) return;
+    // jen vlastní výdejní místa a Z-BOXy Zásilkovny (u externích dopravců by ID nešlo použít)
+    if(p.pickupPointType&&p.pickupPointType!=='internal'){ msg('msg2','warn','Vyberte prosím výdejní místo nebo Z-BOX Zásilkovny.'); return; }
+    var label=[p.name,p.street,p.city].filter(Boolean).join(', ').slice(0,150);
+    pickedPt={id:String(p.id),cc:String(p.country||'cz').toLowerCase().slice(0,2),label:label};
+    var el=$('picked'); el.textContent='✓ '+label; el.classList.remove('hidden');
+    $('btn-point').textContent='📍 Změnit výdejní místo';
+    msg('msg2','','');
+  },{country:'cz,sk',language:'cs',view:'modal'});
+}
+initPointUI();
 
 // ── přístup k databázi (v testech jde nahradit) ──
 function fetchPoints(handle){
@@ -223,11 +254,15 @@ function send(){
   if(!items.length){ msg('msg2','warn','Vyberte prosím aspoň jednu položku.'); return; }
   if(used()>st.left){ msg('msg2','warn','Vybrali jste víc, než máte bodů.'); return; }
   if(missing){ msg('msg2','warn','Vyberte prosím barvu u každé kravičky.'); return; }
-  var name=$('f-name').value.trim(), email=$('f-email').value.trim(), phone=$('f-phone').value.trim(), point=$('f-point').value.trim();
+  var name=$('f-name').value.trim(), email=$('f-email').value.trim(), phone=$('f-phone').value.trim(), point='';
+  if(widgetReady()){
+    if(!pickedPt){ msg('msg2','warn','Vyberte prosím výdejní místo na mapě.'); return; }
+    point=pickedPt.label+' [#'+pickedPt.id+'|'+pickedPt.cc+']';
+  } else point=$('f-point').value.trim();
   if(name.length<3){ msg('msg2','warn','Vyplňte prosím jméno a příjmení.'); return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg('msg2','warn','Zkontrolujte prosím e-mail.'); return; }
   if(phone.replace(/\D/g,'').length<9){ msg('msg2','warn','Zkontrolujte prosím telefon.'); return; }
-  if(point.length<3){ msg('msg2','warn','Napište prosím výdejní místo Zásilkovny.'); return; }
+  if(point.length<3){ msg('msg2','warn','Vyberte prosím výdejní místo Zásilkovny.'); return; }
   $('btn-send').disabled=true;
   submitOrder({handle:st.handle,profile:st.profile,items:items,name:name,email:email,phone:phone,point:point,status:'new'})
     .then(function(){

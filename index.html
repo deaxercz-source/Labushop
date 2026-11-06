@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://widget.packeta.com/v6/www/js/library.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -160,6 +161,9 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .pc-order{font-size:12px;color:#6b5a12;background:#fff7d6;border-radius:8px;padding:3px 9px;margin-top:6px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;vertical-align:top}
 .orderchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .orderchips .chip{font-size:12px;padding:4px 10px}
+.pkt-list{font-size:13px;color:var(--muted);margin:6px 0}
+.pkt-list li{margin-left:18px}
+.notetoggle.pkt{border-color:#e8b4ae;color:#a8332a}
 .sirow{display:flex;gap:8px;align-items:center}
 .sirow .input{flex:1;min-width:0}
 .shipq{display:flex;gap:6px}
@@ -340,7 +344,8 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
       </div>
       <div class="toggles"><button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
         <button class="notetoggle ask" id="ask-toggle" onclick="toggleAskFilter()"></button>
-        <button class="notetoggle pts" id="pts-toggle" onclick="togglePtsFilter()"></button></div>
+        <button class="notetoggle pts" id="pts-toggle" onclick="togglePtsFilter()"></button>
+        <button class="notetoggle pkt" id="pkt-btn" onclick="openExport()"></button></div>
       <div class="bar">
         <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
         <button class="btn" onclick="openPersonModal()">+ Člověk</button>
@@ -932,12 +937,14 @@ function renderShipSeg(){
   var pb=$('pts-toggle');
   pb.textContent='⭐ K uzavření ('+data.people.filter(needsClose).length+')'+(ptsFilter?' ✕':'');
   pb.classList.toggle('on',ptsFilter);
+  var kb=$('pkt-btn'); if(kb) kb.textContent='📦 Export pro Zásilkovnu ('+pktReady().length+')';
 }
 function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
   var p=find(data.people,id); if(!p) return;
   var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated, prevAsk=p.askedAt||'';
   p.ship=state; p.shipAt=state?nowLocal():''; p.askedAt='';
+  if(state==='todo'){delete p.pktAt; delete p.pktNo;}
   touchPerson(id);
   save(); render();
   var label={todo:'Odeslat',done:'Odesláno'}[state]||'bez stavu';
@@ -1412,6 +1419,11 @@ function renderInboxBadge(){
   el.textContent=n?String(n):'';
 }
 
+function splitPoint(str){
+  str=String(str==null?'':str);
+  var m=/\s*\[#(\d+)\|([a-z]{2})\]\s*$/.exec(str);
+  return m?{text:str.slice(0,m.index).trim(),id:m[1],cc:m[2]}:{text:str.trim(),id:'',cc:''};
+}
 function sameVal(a,b,digits){
   var f=function(v){v=String(v==null?'':v).toLowerCase(); return digits?v.replace(/\D/g,''):v.replace(/\s+/g,'');};
   return f(a)===f(b);
@@ -1437,7 +1449,7 @@ function evaluateOrder(o,force){
     if(cost>ptsLeft(p)) return Object.assign({ok:false,reason:'Nedostatek bodů (má '+ptsLeft(p)+', chce '+cost+')'},base);
     var si=p.shipInfo||{};
     if(si.order) return Object.assign({ok:false,reason:'Už má zadanou objednávku, která se ještě neodeslala'},base);
-    var diff=(si.name&&!sameVal(si.name,o.name))||(si.phone&&!sameVal(si.phone,o.phone,true))||(si.email&&!sameVal(si.email,o.email))||(si.point&&!sameVal(si.point,o.point));
+    var diff=(si.name&&!sameVal(si.name,o.name))||(si.phone&&!sameVal(si.phone,o.phone,true))||(si.email&&!sameVal(si.email,o.email))||(si.point&&!sameVal(si.point,splitPoint(o.point).text));
     if(diff) return Object.assign({ok:false,reason:'Údaje se liší od uložených'},base);
   }
   return Object.assign({ok:true},base);
@@ -1445,7 +1457,10 @@ function evaluateOrder(o,force){
 // Zapíše objednávku člověku: údaje pro zásilku, co chce, odečte body a nastaví „Odeslat“.
 function applyOrder(res,o){
   var p=res.person, si=p.shipInfo||{};
-  p.shipInfo={name:o.name||si.name||'',phone:o.phone||si.phone||'',email:o.email||si.email||'',point:o.point||si.point||'',order:res.text};
+  var pt=splitPoint(o.point), keepId=!pt.id&&(!pt.text||sameVal(pt.text,si.point));
+  p.shipInfo={name:o.name||si.name||'',phone:o.phone||si.phone||'',email:o.email||si.email||'',point:pt.text||si.point||'',
+    pointId:pt.id||(keepId?si.pointId||'':''),pointCc:pt.id?pt.cc:(keepId?si.pointCc||'':''),order:res.text};
+  delete p.pktAt; delete p.pktNo;
   p.ptsSpent=(Number(p.ptsSpent)||0)+res.cost;
   p.ship='todo'; p.shipAt=nowLocal(); p.askedAt='';
   touchPerson(p.id); save(); render();
@@ -1498,7 +1513,7 @@ function cancelOrder(id){
 }
 function orderRowHTML(o,kind){
   var when=tsISO(o.createdAt)?fmtDate(tsISO(o.createdAt)):'';
-  var det=[o.name,o.phone,o.email,o.point].filter(Boolean).map(esc).join(' · ');
+  var det=[o.name,o.phone,o.email,splitPoint(o.point).text].filter(Boolean).map(esc).join(' · ');
   var btns=kind==='hold'
     ?'<button class="btn btn-sm btn-primary" data-id="'+esc(o.id)+'" onclick="forceApplyOrder(this.dataset.id)">Použít</button>'+
       '<button class="btn btn-sm btn-danger" data-id="'+esc(o.id)+'" onclick="rejectOrder(this.dataset.id)">Odmítnout</button>'
@@ -1526,6 +1541,102 @@ function openOrders(){
   html+='<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button></div>';
   openModal(html);
   $('modal').setAttribute('data-kind','orders');
+}
+
+// ── ZÁSILKOVNA: MAPA VÝDEJNÍCH MÍST A EXPORT ──
+// Veřejný „Klíč API“ z klientské sekce Zásilkovny (16 znaků). Je určený pro mapu výdejních míst, heslo API sem nepatří.
+var PACKETA_KEY='';
+function widgetReady(){return !!PACKETA_KEY&&typeof Packeta!=='undefined'&&!!(Packeta.Widget&&Packeta.Widget.pick);}
+function pickPacketaPoint(cb){
+  if(!widgetReady()){alert('Mapa výdejních míst není nastavená (chybí klíč API).'); return;}
+  Packeta.Widget.pick(PACKETA_KEY,function(p){
+    if(!p) return;
+    if(p.pickupPointType&&p.pickupPointType!=='internal'){alert('Vyber výdejní místo nebo Z-BOX Zásilkovny (ne externího dopravce).'); return;}
+    cb({id:String(p.id),cc:String(p.country||'cz').toLowerCase().slice(0,2),label:[p.name,p.street,p.city].filter(Boolean).join(', ').slice(0,150)});
+  },{country:'cz,sk',language:'cs',view:'modal'});
+}
+
+var PKT_SENDER='LabuShopCZ';            // odesílatel v klientské sekci (ID 578727)
+function pktPhone(v,cc){
+  v=String(v||'').trim(); if(!v) return '';
+  var dig=v.replace(/\D/g,'');
+  if(v.charAt(0)==='+') return '+'+dig;
+  if(dig.indexOf('00')===0) return '+'+dig.slice(2);
+  if(/^(420|421)\d{9}$/.test(dig)) return '+'+dig;
+  if(dig.length===10&&dig.charAt(0)==='0') dig=dig.slice(1);      // 0905 123 456 -> 905123456
+  if(dig.length===9) return (cc==='sk'?'+421':'+420')+dig;
+  return dig?'+'+dig:'';
+}
+function pktProblems(p){
+  var si=p.shipInfo||{}, pr=[];
+  if(!si.name) pr.push('chybí jméno');
+  if(!si.email&&!si.phone) pr.push('chybí e-mail nebo telefon');
+  if(!si.pointId) pr.push('chybí ID výdejního místa');
+  return pr;
+}
+function pktReady(){return data.people.filter(function(p){return shipOf(p)==='todo'&&!p.pktAt&&!pktProblems(p).length;});}
+function pktBlocked(){return data.people.filter(function(p){return shipOf(p)==='todo'&&!p.pktAt&&pktProblems(p).length;});}
+function pktExported(){return data.people.filter(function(p){return shipOf(p)==='todo'&&p.pktAt;});}
+function csvCell(v){v=String(v==null?'':v); return /[;"\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function pktSetting(k,def){try{var v=localStorage.getItem('labubu-pkt-'+k); return v==null||v===''?def:v;}catch(e){return def;}}
+function openExport(){
+  var ready=pktReady(), blocked=pktBlocked(), done=pktExported();
+  var html='<h2>📦 Export pro Zásilkovnu</h2>';
+  html+='<div class="cat" style="margin-bottom:8px">Odesílatel: <b>'+esc(PKT_SENDER)+'</b> · lidé označení „Odeslat“ s kompletními údaji</div>';
+  if(ready.length){
+    html+='<div class="two"><div class="fld"><label>Hmotnost zásilky (kg)</label><input class="input" id="pk-w" inputmode="decimal" value="'+esc(pktSetting('w','2'))+'"></div>'+
+      '<div class="fld"><label>Hodnota zásilky (Kč)</label><input class="input" id="pk-v" inputmode="numeric" value="'+esc(pktSetting('v','300'))+'"></div></div>'+
+      '<button class="btn btn-primary" style="width:100%" onclick="exportPacketa()">⬇ Stáhnout CSV ('+ready.length+')</button>';
+  } else html+='<div class="empty" style="padding:14px">Zatím není co exportovat.</div>';
+  if(blocked.length){
+    html+='<div class="warn" style="margin-top:12px"><b>K doplnění ('+blocked.length+'):</b><ul class="pkt-list">'+
+      blocked.slice(0,12).map(function(p){return '<li>'+esc(p.name)+' — '+esc(pktProblems(p).join(', '))+'</li>';}).join('')+
+      (blocked.length>12?'<li>… a dalších '+(blocked.length-12)+'</li>':'')+'</ul></div>';
+  }
+  if(done.length){
+    html+='<div class="card" style="margin:12px 0 0;padding:12px"><b>Exportováno, čeká na označení (' + done.length + ')</b>'+
+      '<div class="cat" style="margin:4px 0 8px">Po nahrání souboru ve Zásilkovně klikni, ať se označí jako Odesláno.</div>'+
+      '<button class="btn btn-primary btn-sm" onclick="markExportedSent()">✅ Označit jako Odesláno</button></div>';
+  }
+  html+='<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button></div>';
+  openModal(html);
+}
+function pktBuildCsv(list,weight,value){
+  var d=new Date(), prefix='LS-'+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+'-';
+  var used=data.people.filter(function(p){return p.pktNo&&p.pktNo.indexOf(prefix)===0;}).length;
+  var rows=[['Cislo','Cele jmeno','E-mail','Telefon','Hodnota','Mena','Hmotnost','Vydejni misto','Odesilatel','Poznamka']];
+  list.forEach(function(p,i){
+    var si=p.shipInfo, no=prefix+pad(used+i+1);
+    p.pktNo=no; p.pktAt=nowLocal();
+    var note=('@'+normHandle(p.name)+(si.order?' · '+si.order:'')).slice(0,120);
+    rows.push([no,si.name,si.email||'',pktPhone(si.phone,si.pointCc),value,'CZK',weight,si.pointId,PKT_SENDER,note]);
+  });
+  return rows.map(function(r){return r.map(csvCell).join(';');}).join('\r\n')+'\r\n';
+}
+function exportPacketa(){
+  var list=pktReady(); if(!list.length) return;
+  var w=String($('pk-w').value).trim().replace(',','.'), v=String($('pk-v').value).trim().replace(',','.');
+  if(!(parseFloat(w)>0)){$('pk-w').focus(); return;}
+  if(!(parseFloat(v)>0)){$('pk-v').focus(); return;}
+  try{localStorage.setItem('labubu-pkt-w',w); localStorage.setItem('labubu-pkt-v',v);}catch(e){}
+  var csv=pktBuildCsv(list,w,v);
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='zasilkovna-import-'+todayISO()+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+  list.forEach(function(p){touchPerson(p.id);});
+  save(); render(); openExport();
+  toast('⬇ Staženo: '+list.length+' zásilek');
+}
+function markExportedSent(){
+  var list=pktExported(); if(!list.length) return;
+  if(!confirm('Označit '+list.length+' lidí jako Odesláno?')) return;
+  list.forEach(function(p){
+    p.ship='done'; p.shipAt=nowLocal(); p.askedAt=''; touchPerson(p.id);
+  });
+  save(); closeModal(); render();
+  toast('✅ Odesláno: '+list.length);
 }
 
 // ── ZEPTAT SE, JESTLI DORAZILO ──
@@ -1629,7 +1740,10 @@ function openShipInfo(id,ev){
     '<textarea class="input" id="si-raw" rows="3" placeholder="Jana Nováková, 777 123 456, jana@seznam.cz, Zásilkovna Praha 5 …" oninput="siFromRaw()"></textarea></div>'+
     SI_FIELDS.map(function(f){
       return '<div class="fld"><label>'+f[1]+'</label><div class="sirow"><input class="input" id="si-'+f[0]+'" value="'+esc(i[f[0]]||'')+'">'+
-        '<button class="btn btn-sm btn-primary" data-k="'+f[0]+'" onclick="copySi(this.dataset.k)">Kopírovat</button></div></div>';
+        (f[0]==='point'&&widgetReady()?'<button class="btn btn-sm" onclick="pickPointMap()">📍 Mapa</button>':'')+
+        '<button class="btn btn-sm btn-primary" data-k="'+f[0]+'" onclick="copySi(this.dataset.k)">Kopírovat</button></div>'+
+        (f[0]==='point'?'<input type="hidden" id="si-pointid" value="'+esc(i.pointId||'')+'"><input type="hidden" id="si-pointcc" value="'+esc(i.pointCc||'')+'">'+
+          '<div class="cat" id="si-pid" style="margin-top:4px">'+pidLabel(i.pointId)+'</div>':'')+'</div>';
     }).join('')+
     '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
     '<button class="btn btn-primary" onclick="saveShipInfo(true)">Uložit a zavřít</button></div>');
@@ -1643,12 +1757,22 @@ function addOrder(t){
 function siFromRaw(){
   var r=parseShipInfo($('si-raw').value);
   SI_FIELDS.forEach(function(f){$('si-'+f[0]).value=r[f[0]];});
+  if(r.point){$('si-pointid').value=''; $('si-pointcc').value=''; $('si-pid').innerHTML=pidLabel('');}   // nový text místa = staré ID už neplatí
+}
+function pidLabel(id){return id?'✓ ID výdejního místa: <b>'+esc(id)+'</b>':'⚠ Bez ID místa (pro export do Zásilkovny vyber místo na mapě)';}
+function pickPointMap(){
+  pickPacketaPoint(function(pt){
+    $('si-point').value=pt.label; $('si-pointid').value=pt.id; $('si-pointcc').value=pt.cc;
+    $('si-pid').innerHTML=pidLabel(pt.id);
+    saveShipInfo(false);
+  });
 }
 function saveShipInfo(close){
   var p=find(data.people,_siPerson); if(!p) return;
   var info={};
   SI_FIELDS.forEach(function(f){info[f[0]]=$('si-'+f[0]).value.trim();});
   info.order=$('si-order').value.trim();
+  info.pointId=$('si-pointid')?$('si-pointid').value:''; info.pointCc=$('si-pointcc')?$('si-pointcc').value:'';
   p.shipInfo=info;
   if(close){touchPerson(_siPerson); closeModal();}
   save();
