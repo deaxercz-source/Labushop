@@ -1604,12 +1604,12 @@ function openExport(){
 function pktBuildCsv(list,weight,value){
   var d=new Date(), prefix='LS-'+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+'-';
   var used=data.people.filter(function(p){return p.pktNo&&p.pktNo.indexOf(prefix)===0;}).length;
-  var rows=[['Cislo','Cele jmeno','E-mail','Telefon','Hodnota','Mena','Hmotnost','Vydejni misto','Odesilatel','Poznamka']];
+  var rows=[['','Cislo','Cele jmeno','E-mail','Telefon','Hodnota','Mena','Hmotnost','Vydejni misto','Odesilatel','Poznamka']];
   list.forEach(function(p,i){
     var si=p.shipInfo, no=prefix+pad(used+i+1);
     p.pktNo=no; p.pktAt=nowLocal();
     var note=('@'+normHandle(p.name)+(si.order?' · '+si.order:'')).slice(0,120);
-    rows.push([no,si.name,si.email||'',pktPhone(si.phone,si.pointCc),value,'CZK',weight,si.pointId,PKT_SENDER,note]);
+    rows.push(['',no,si.name,si.email||'',pktPhone(si.phone,si.pointCc),value,'CZK',weight,si.pointId,PKT_SENDER,note]);
   });
   return rows.map(function(r){return r.map(csvCell).join(';');}).join('\r\n')+'\r\n';
 }
