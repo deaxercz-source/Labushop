@@ -203,7 +203,7 @@ function lookup(){
   msg('msg1','','');
   if(!h){msg('msg1','warn','Zadejte prosím své Instagram jméno.');return;}
   $('btn-lookup').disabled=true;
-  fetchPoints(h).then(function(d){
+  (h==='test'?Promise.resolve({u:'test',profile:'pepa',left:3,total:3}):fetchPoints(h)).then(function(d){
     $('btn-lookup').disabled=false;
     if(!d||!(Number(d.total)>0)){
       show('step2',false);
@@ -216,7 +216,7 @@ function lookup(){
       msg('msg1','info','Už nemáte žádné volné body. Děkujeme!');
       return;
     }
-    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{}};
+    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},test:h==='test'};
     $('pts-left').textContent=left;
     $('pts-word').textContent=plBody(left);
     renderItems();
@@ -290,13 +290,14 @@ function send(){
   if(missing){ msg('msg2','warn','Vyberte prosím barvu u každé kravičky.'); return; }
   var name=$('f-name').value.trim(), email=$('f-email').value.trim(), phone=$('f-phone').value.trim(), point='';
   if(widgetReady()){
-    if(!pickedPt){ msg('msg2','warn','Vyberte prosím výdejní místo na mapě.'); return; }
-    point=pickedPt.label+' [#'+pickedPt.id+'|'+pickedPt.cc+']';
+    if(!pickedPt&&!st.test){ msg('msg2','warn','Vyberte prosím výdejní místo na mapě.'); return; }
+    point=pickedPt?pickedPt.label+' [#'+pickedPt.id+'|'+pickedPt.cc+']':'TEST';
   } else point=$('f-point').value.trim();
   if(name.length<3){ msg('msg2','warn','Vyplňte prosím jméno a příjmení.'); return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg('msg2','warn','Zkontrolujte prosím e-mail.'); return; }
   if(phone.replace(/\D/g,'').length<9){ msg('msg2','warn','Zkontrolujte prosím telefon.'); return; }
   if(point.length<3){ msg('msg2','warn','Vyberte prosím výdejní místo Zásilkovny.'); return; }
+  if(st.test){ show('step1',false); show('step2',false); show('step3',true); $('step3').querySelector('p').textContent='Toto byl testovací režim, nic se neodeslalo. Takhle uvidí poděkování zákazníci.'; window.scrollTo(0,0); return; }
   $('btn-send').disabled=true;
   submitOrder({handle:st.handle,profile:st.profile,items:items,name:name,email:email,phone:phone,point:point,status:'new'})
     .then(function(){
