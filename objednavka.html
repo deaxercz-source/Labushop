@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ffffff">
+<title>Objednávka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#f2f6f1;--card:#fff;--line:#e8eee7;--text:#1c2320;--muted:#6b756f;--green:#1a9e5c;--green-bg:#e6f5ec;--red:#d6453d;--red-bg:#fdecea;--r:18px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed;color:var(--text);font-family:'Outfit',system-ui,sans-serif;font-size:16px;-webkit-text-size-adjust:100%;min-height:100%}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+.wrap{max-width:520px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;letter-spacing:-.02em;margin:10px 0 6px}
+.lead{color:var(--muted);margin-bottom:16px;line-height:1.45}
+.card{background:var(--card);border:1px solid #edf2ec;box-shadow:0 1px 2px rgba(20,40,30,.04),0 14px 30px -18px rgba(20,40,30,.22);border-radius:var(--r);padding:16px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.fld{margin-bottom:12px}
+.input{width:100%;padding:12px 14px;background:#fbfdfb;border:1px solid var(--line);border-radius:13px;outline:none}
+.input:focus{border-color:var(--green)}
+.btn{border:none;background:var(--green);color:#fff;border-radius:13px;padding:13px 18px;font-weight:700;width:100%;box-shadow:0 8px 16px -8px rgba(26,158,92,.8);cursor:pointer}
+.btn:disabled{opacity:.5;box-shadow:none;cursor:default}
+.msg{border-radius:13px;padding:12px 14px;margin-top:12px;line-height:1.45;font-size:15px}
+.msg.info{background:var(--green-bg);color:#14633a}
+.msg.warn{background:#fff0dc;color:#7a4a00}
+.msg.err{background:var(--red-bg);color:#8f2620}
+.points{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.points b{font-size:38px;letter-spacing:-.02em;color:var(--green)}
+.item{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:none}
+.item .nm{flex:1;font-weight:600}
+.item .cost{display:block;color:var(--muted);font-weight:500;font-size:13px}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:20px;line-height:1;cursor:pointer}
+.step button:disabled{opacity:.35;cursor:default}
+.step .n{min-width:22px;text-align:center;font-weight:700}
+.colors{padding:0 0 12px 0}
+.colors .input{margin-top:6px}
+.bar{height:8px;background:#e5ece4;border-radius:999px;overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;background:var(--green);width:0;transition:width .15s}
+.sum{font-size:14px;color:var(--muted)}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+.hidden{display:none}
+.done{text-align:center;padding:26px 16px}
+.done .big{font-size:42px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Objednávka</h1>
+  <p class="lead">Zadejte své Instagram jméno a hned uvidíte, kolik máte bodů a co si můžete vybrat.</p>
+
+  <div class="card" id="step1">
+    <div class="fld"><label for="ig">Instagram jméno</label>
+      <input class="input" id="ig" placeholder="např. jana.novakova" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <button class="btn" id="btn-lookup" onclick="lookup()">Zobrazit moje body</button>
+    <div id="msg1"></div>
+  </div>
+
+  <div id="step2" class="hidden">
+    <div class="card">
+      <div class="points"><b id="pts-left">0</b><span id="pts-word">bodů</span></div>
+      <div class="sum">Vyberte, co chcete. Vybrané položky nesmí přesáhnout vaše body.</div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="sum" id="used">Vybráno 0 z 0 bodů</div>
+    </div>
+    <div class="card" id="items"></div>
+    <div class="card">
+      <div class="fld"><label for="f-name">Jméno a příjmení</label><input class="input" id="f-name" autocomplete="name"></div>
+      <div class="fld"><label for="f-email">E-mail</label><input class="input" id="f-email" type="email" autocomplete="email"></div>
+      <div class="fld"><label for="f-phone">Telefon</label><input class="input" id="f-phone" type="tel" autocomplete="tel" placeholder="např. 777 123 456"></div>
+      <div class="fld"><label for="f-point">Výdejní místo Zásilkovny</label><input class="input" id="f-point" placeholder="např. Zásilkovna Praha 5, Plzeňská 1"></div>
+      <input class="hp" id="f-web" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="btn" id="btn-send" onclick="send()">Odeslat objednávku</button>
+      <div id="msg2"></div>
+    </div>
+  </div>
+
+  <div id="step3" class="card done hidden">
+    <div class="big">🎉</div>
+    <h1 style="margin-top:6px">Děkujeme!</h1>
+    <p class="lead" style="margin-bottom:0">Vaši objednávku jsme přijali. Až bude zásilka odeslaná, ozveme se vám na Instagramu.</p>
+  </div>
+</div>
+
+<script>
+// ── Firebase (stejný projekt jako appka; bez přihlášení se dá jen číst jeden záznam s body a vytvořit objednávka) ──
+firebase.initializeApp({
+  apiKey: "AIzaSyCtw2jh80pjX6DfGYnp9dooDS38h9Wmshg",
+  authDomain: "stanek-kalendar.firebaseapp.com",
+  projectId: "stanek-kalendar",
+  appId: "1:927791584501:web:ae99a0fd7499efd66d61bc"
+});
+var db = firebase.firestore();
+
+// Katalog musí odpovídat appce (index.html: ORDER_ITEMS / ORDER_COLORS).
+var ITEMS=[
+  {k:'cow16',label:'Kravička 16 cm',cost:1,color:true},
+  {k:'cow38',label:'Kravička 38 cm',cost:2,color:true},
+  {k:'cow60',label:'Kravička 60 cm',cost:3,color:true},
+  {k:'dump',label:'Mystery Dumpling',cost:1},
+  {k:'butter',label:'Butter Squishy',cost:1},
+  {k:'labubu',label:'Labubu',cost:1}
+];
+var COLORS=['Bílá','Růžová','Hnědá','Béžová'];
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function norm(s){
+  s=String(s||'').toLowerCase().trim();
+  s=s.replace(/^https?:\/\/(www\.)?instagram\.com\//,'').replace(/[\/?#].*$/,'');
+  s=s.replace(/^@+/,'').replace(/\s+/g,'');
+  return s.replace(/[^a-z0-9._]/g,'');
+}
+function plBody(n){return n===1?'bod':(n>=2&&n<=4?'body':'bodů');}
+function show(id,on){$(id).classList.toggle('hidden',!on);}
+function msg(id,type,text){$(id).innerHTML=text?'<div class="msg '+type+'">'+esc(text)+'</div>':'';}
+
+// ── přístup k databázi (v testech jde nahradit) ──
+function fetchPoints(handle){
+  return db.collection('labubu-points').doc('u-'+handle).get().then(function(d){return d.exists?d.data():null;});
+}
+function submitOrder(doc){
+  doc.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+  return db.collection('labubu-orders').add(doc);
+}
+
+// ── stav ──
+var st={handle:'',profile:'',left:0,qty:{},colors:{}};
+
+function lookup(){
+  var h=norm($('ig').value);
+  msg('msg1','','');
+  if(!h){msg('msg1','warn','Zadejte prosím své Instagram jméno.');return;}
+  $('btn-lookup').disabled=true;
+  fetchPoints(h).then(function(d){
+    $('btn-lookup').disabled=false;
+    if(!d||!(Number(d.total)>0)){
+      show('step2',false);
+      msg('msg1','warn','Vaše body zatím nemáme uzavřené. Napište nám prosím zprávu na Instagramu a podíváme se na to.');
+      return;
+    }
+    var left=Number(d.left)||0;
+    if(left<=0){
+      show('step2',false);
+      msg('msg1','info','Už nemáte žádné volné body. Děkujeme!');
+      return;
+    }
+    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{}};
+    $('pts-left').textContent=left;
+    $('pts-word').textContent=plBody(left);
+    renderItems();
+    show('step2',true);
+    $('step2').scrollIntoView({behavior:'smooth',block:'start'});
+  }).catch(function(){
+    $('btn-lookup').disabled=false;
+    msg('msg1','err','Nepodařilo se načíst body. Zkuste to prosím za chvíli znovu.');
+  });
+}
+$('ig').addEventListener('keydown',function(e){if(e.key==='Enter') lookup();});
+
+function used(){
+  return ITEMS.reduce(function(s,it){return s+(st.qty[it.k]||0)*it.cost;},0);
+}
+function renderItems(){
+  var u=used();
+  $('used').textContent='Vybráno '+u+' z '+st.left+' '+plBody(st.left);
+  $('bar').style.width=Math.min(100,Math.round(u/st.left*100))+'%';
+  $('items').innerHTML=ITEMS.map(function(it){
+    var n=st.qty[it.k]||0;
+    var canAdd=u+it.cost<=st.left;
+    var html='<div class="item"><div class="nm">'+esc(it.label)+'<span class="cost">'+it.cost+' '+plBody(it.cost)+'</span></div>'+
+      '<div class="step"><button type="button" data-k="'+it.k+'" data-d="-1" '+(n?'':'disabled')+' aria-label="Ubrat">−</button>'+
+      '<span class="n">'+n+'</span>'+
+      '<button type="button" data-k="'+it.k+'" data-d="1" '+(canAdd?'':'disabled')+' aria-label="Přidat">+</button></div></div>';
+    if(it.color&&n){
+      html+='<div class="colors">';
+      for(var i=0;i<n;i++){
+        var cur=(st.colors[it.k]||[])[i]||'';
+        html+='<label>Barva ('+esc(it.label)+(n>1?' č. '+(i+1):'')+')</label><select class="input" data-k="'+it.k+'" data-i="'+i+'">'+
+          '<option value="">Vyberte barvu…</option>'+COLORS.map(function(c){return '<option'+(c===cur?' selected':'')+'>'+c+'</option>';}).join('')+'</select>';
+      }
+      html+='</div>';
+    }
+    return html;
+  }).join('');
+}
+$('items').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-k]'); if(!b||b.disabled) return;
+  var it=ITEMS.filter(function(x){return x.k===b.getAttribute('data-k');})[0];
+  var d=parseInt(b.getAttribute('data-d'),10);
+  var n=(st.qty[it.k]||0)+d;
+  if(n<0||(d>0&&used()+it.cost>st.left)) return;
+  st.qty[it.k]=n;
+  if(st.colors[it.k]) st.colors[it.k]=st.colors[it.k].slice(0,n);
+  renderItems();
+});
+$('items').addEventListener('change',function(e){
+  var s=e.target; if(s.tagName!=='SELECT') return;
+  var k=s.getAttribute('data-k'), i=parseInt(s.getAttribute('data-i'),10);
+  (st.colors[k]=st.colors[k]||[])[i]=s.value;
+});
+
+function send(){
+  msg('msg2','','');
+  if($('f-web').value){ show('step2',false); show('step3',true); return; }          // past na roboty
+  var last=0; try{last=Number(localStorage.getItem('ord-last'))||0;}catch(e){}
+  if(Date.now()-last<60000){ msg('msg2','warn','Objednávku jste právě odeslali. Chvíli počkejte a zkuste to znovu.'); return; }
+  var items=[], missing=false;
+  ITEMS.forEach(function(it){
+    var n=st.qty[it.k]||0;
+    for(var i=0;i<n;i++){
+      var c=(st.colors[it.k]||[])[i]||'';
+      if(it.color&&!c) missing=true;
+      items.push(it.color?{k:it.k,color:c}:{k:it.k});
+    }
+  });
+  if(!items.length){ msg('msg2','warn','Vyberte prosím aspoň jednu položku.'); return; }
+  if(used()>st.left){ msg('msg2','warn','Vybrali jste víc, než máte bodů.'); return; }
+  if(missing){ msg('msg2','warn','Vyberte prosím barvu u každé kravičky.'); return; }
+  var name=$('f-name').value.trim(), email=$('f-email').value.trim(), phone=$('f-phone').value.trim(), point=$('f-point').value.trim();
+  if(name.length<3){ msg('msg2','warn','Vyplňte prosím jméno a příjmení.'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg('msg2','warn','Zkontrolujte prosím e-mail.'); return; }
+  if(phone.replace(/\D/g,'').length<9){ msg('msg2','warn','Zkontrolujte prosím telefon.'); return; }
+  if(point.length<3){ msg('msg2','warn','Napište prosím výdejní místo Zásilkovny.'); return; }
+  $('btn-send').disabled=true;
+  submitOrder({handle:st.handle,profile:st.profile,items:items,name:name,email:email,phone:phone,point:point,status:'new'})
+    .then(function(){
+      try{localStorage.setItem('ord-last',String(Date.now()));}catch(e){}
+      show('step1',false); show('step2',false); show('step3',true);
+      window.scrollTo(0,0);
+    }).catch(function(){
+      $('btn-send').disabled=false;
+      msg('msg2','err','Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.');
+    });
+}
+</script>
+</body>
+</html>
