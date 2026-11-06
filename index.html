@@ -151,6 +151,9 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ord .oa{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .notetoggle.pts.on{background:#fff4d6;border-color:#e6c35c;color:#7a5b00}
 .pts{color:#7a5b00;font-weight:700}
+.ptsadj{display:inline-flex;align-items:center;gap:6px;background:#fff4d6;border:1px solid #e6c35c;border-radius:999px;padding:2px 4px}
+.ptsadj button{width:30px;height:30px;border-radius:50%;border:none;background:#fff;color:#7a5b00;font-size:18px;font-weight:700;line-height:1;cursor:pointer}
+.ptsadj b{min-width:48px;text-align:center;color:#7a5b00;font-size:14px}
 .notetoggle.ask.on{background:#e3eefc;border-color:#9bbbe6;color:#1d5fb4}
 .ship.ask{background:#e3eefc;color:#1d5fb4}
 .notetoggle{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;margin:-2px 0 12px;color:var(--muted)}
@@ -841,6 +844,27 @@ function ptsLeft(p){return ptsClosed(p)?Math.max(0,(Number(p.ptsTotal)||0)-(Numb
 function needsClose(p){return !ptsClosed(p)&&bonusCount(p)>0&&remainingSites(p.id).length===0;}
 function ptsBadge(p){return ptsClosed(p)?' · <span class="pts">⭐ '+ptsLeft(p)+(ptsLeft(p)!==Number(p.ptsTotal)?'/'+p.ptsTotal:'')+'</span>':'';}
 function togglePtsFilter(){ptsFilter=!ptsFilter; renderPeopleList();}
+// Ruční úprava bodů tlačítky − / +. Když ještě nejsou uzavřené, uzavřou se z aktuálního počtu bonusů a pak se upraví.
+function adjPts(id,delta){
+  var p=find(data.people,id); if(!p) return;
+  var prev={t:p.ptsTotal,a:p.ptsAt,s:p.ptsSpent,u:p.updated};
+  if(!ptsClosed(p)){p.ptsTotal=bonusCount(p); p.ptsAt=nowLocal();}
+  p.ptsTotal=Math.max(0,(Number(p.ptsTotal)||0)+delta);
+  if(p.ptsSpent==null) p.ptsSpent=0;
+  touchPerson(id); save(); render();
+  toast(p.name+' → ⭐ '+ptsLeft(p)+' / '+p.ptsTotal,function(){
+    p.ptsTotal=prev.t; p.ptsAt=prev.a; p.ptsSpent=prev.s; p.updated=prev.u;
+    if(p.ptsTotal==null) delete p.ptsTotal; if(p.ptsAt==null) delete p.ptsAt;
+    save(); render();
+  });
+}
+// Vrátí utracené body (třeba po zrušené objednávce nebo ručním vyřízení).
+function resetSpent(id){
+  var p=find(data.people,id); if(!p) return;
+  var n=Number(p.ptsSpent)||0; if(!n) return;
+  if(!confirm('Vrátit '+n+' utracených bodů u '+p.name+'?')) return;
+  p.ptsSpent=0; touchPerson(id); save(); render();
+}
 function closePoints(id){
   var p=find(data.people,id); if(!p) return;
   var prev={t:p.ptsTotal,a:p.ptsAt,s:p.ptsSpent,u:p.updated};
@@ -1046,6 +1070,10 @@ function renderPeopleList(){
           '<button class="btn btn-sm btn-primary" onclick="openBonusModal(\''+p.id+'\')">+ Bonus</button>'+
           '<button class="btn btn-sm" onclick="openNoteModal(\''+p.id+'\')">+ Poznámka</button>'+
           '<button class="btn btn-sm" onclick="openCostModal(\''+p.id+'\')">Náklady</button>'+
+          '<span class="ptsadj"><button data-id="'+esc(p.id)+'" onclick="adjPts(this.dataset.id,-1)" title="Ubrat bod">−</button>'+
+            '<b>⭐ '+(ptsClosed(p)?ptsLeft(p)+'/'+esc(p.ptsTotal):bonusCount(p))+'</b>'+
+            '<button data-id="'+esc(p.id)+'" onclick="adjPts(this.dataset.id,1)" title="Přidat bod">+</button></span>'+
+          (Number(p.ptsSpent)>0?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="resetSpent(this.dataset.id)">↺ Vrátit utracené ('+esc(p.ptsSpent)+')</button>':'')+
           (ptsClosed(p)
             ?(bonusCount(p)!==Number(p.ptsTotal)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="closePoints(this.dataset.id)">⭐ Přepočítat body ('+bonusCount(p)+')</button>':'')+
               '<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="reopenPoints(this.dataset.id)">Znovu otevřít body</button>'
