@@ -130,7 +130,7 @@ function msg(id,type,text){$(id).innerHTML=text?'<div class="msg '+type+'">'+esc
 
 // ── výdejní místo: mapa Zásilkovny ──
 // Veřejný „Klíč API“ z klientské sekce Zásilkovny (16 znaků). Bez něj se místo píše textem.
-var PACKETA_KEY='';
+var PACKETA_KEY='77e23e5871722aaa';
 var pickedPt=null;
 function widgetReady(){return !!PACKETA_KEY&&typeof Packeta!=='undefined'&&!!(Packeta.Widget&&Packeta.Widget.pick);}
 function initPointUI(){

@@ -1545,7 +1545,7 @@ function openOrders(){
 
 // ── ZÁSILKOVNA: MAPA VÝDEJNÍCH MÍST A EXPORT ──
 // Veřejný „Klíč API“ z klientské sekce Zásilkovny (16 znaků). Je určený pro mapu výdejních míst, heslo API sem nepatří.
-var PACKETA_KEY='';
+var PACKETA_KEY='77e23e5871722aaa';
 function widgetReady(){return !!PACKETA_KEY&&typeof Packeta!=='undefined'&&!!(Packeta.Widget&&Packeta.Widget.pick);}
 function pickPacketaPoint(cb){
   if(!widgetReady()){alert('Mapa výdejních míst není nastavená (chybí klíč API).'); return;}
