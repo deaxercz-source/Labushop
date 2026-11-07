@@ -329,7 +329,7 @@ $('items').addEventListener('click',function(e){
   if(it.pick&&d>0) openPick(n-1);                  // po přidání Labubu se rovnou nabídne výběr
 });
 
-// ── výběr Labubu: řada → postavička ──
+// ── výběr Labubu: krabička ──
 var pickIdx=-1;
 function openPick(i){
   pickIdx=i; renderPick();
@@ -348,7 +348,7 @@ function pickSeriesSel(id){
 function renderPick(){
   var n=st.qty.labubu||1, tag=n>1?' (Labubu č. '+(pickIdx+1)+')':'';
   $('pick').innerHTML='<button type="button" class="x" onclick="closePick()" aria-label="Zavřít">✕</button>'+
-    '<h3>Vyberte krabičku'+esc(tag)+'</h3><div class="sub">Klepněte na řadu, kterou chcete. Postavička uvnitř je překvapení 🎁</div><div class="series">'+
+    '<h3>Vyberte krabičku'+esc(tag)+'</h3><div class="sub">Klepněte na krabičku, kterou chcete. Postavička uvnitř je překvapení 🎁</div><div class="series">'+
     LABUBU.map(function(sr){
       var out=SOLD_OUT.indexOf(sr.id)>=0;
       return '<button type="button" data-id="'+sr.id+'" onclick="pickSeriesSel(this.dataset.id)"'+(out?' disabled':'')+'><img src="'+esc(sr.img)+'" alt="">'+esc(sr.name)+(out?'<br><small>došla</small>':'')+'</button>';
