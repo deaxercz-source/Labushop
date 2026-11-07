@@ -939,6 +939,13 @@ function resetSpent(id){
   if(!confirm('Vrátit '+n+' utracených bodů u '+p.name+'?')) return;
   p.ptsSpent=0; touchPerson(id); save(); render();
 }
+// Uzavřené body se samy srovnají s počtem bonusů, ale jen když předtím seděly (ručně upravené body se nepřepisují).
+function pointsInSync(p){return !!p&&ptsClosed(p)&&Number(p.ptsTotal)===bonusCount(p);}
+function resyncPoints(p,wasSync){
+  if(!wasSync||!p) return false;
+  var n=bonusCount(p); if(Number(p.ptsTotal)===n) return false;
+  p.ptsTotal=n; p.ptsAt=nowLocal(); return true;
+}
 function closePoints(id){
   var p=find(data.people,id); if(!p) return;
   var prev={t:p.ptsTotal,a:p.ptsAt,s:p.ptsSpent,u:p.updated};
@@ -1364,17 +1371,22 @@ function saveBonus(){
   } else {
     rec.date=rec.date||nowLocal();
     rec.log=[{d:rec.date,a:amount}];
+    var pp=find(data.people,personId), wasSync=pointsInSync(pp);
     rec.id=uid(); data.bonuses.push(rec);
+    var synced=resyncPoints(pp,wasSync);
   }
   touchPerson(personId);
   save(); closeModal(); render();
+  if(synced) toast('⭐ '+pp.name+': body '+ptsLeft(pp)+' / '+pp.ptsTotal);
 }
 function deleteBonus(id){
   if(!confirm('Smazat tento bonus?')) return;
-  var gone=find(data.bonuses,id);
+  var gone=find(data.bonuses,id), pp=gone&&find(data.people,gone.personId), wasSync=pointsInSync(pp);
   data.bonuses=data.bonuses.filter(function(b){return b.id!==id;});
+  var synced=resyncPoints(pp,wasSync);
   if(gone) touchPerson(gone.personId);
   save(); render();
+  if(synced) toast('⭐ '+pp.name+': body '+ptsLeft(pp)+' / '+pp.ptsTotal);
 }
 
 function openCostModal(personId){
