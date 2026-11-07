@@ -1754,7 +1754,7 @@ function pktCreate(id){
 }
 function genToken(){
   var a=new Uint8Array(16); (window.crypto||window.msCrypto).getRandomValues(a);
-  return Array.prototype.map.call(a,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+  return 'labu-'+Array.prototype.map.call(a,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
 }
 function openPktSetup(){
   var c=root.pktCfg||{}, tok=c.token||genToken();
@@ -1762,13 +1762,19 @@ function openPktSetup(){
     '<div class="cat" style="margin-bottom:6px">Jednorázové nastavení (asi 5 minut). API heslo Zásilkovny zůstane jen ve tvém skriptu na Googlu, do appky se nikdy nezadává.</div>'+
     '<ol class="pktsteps">'+
     '<li>Otevři <b>script.google.com</b> → <b>Nový projekt</b>, smaž všechen kód a vlož tento:<div style="margin-top:6px"><button class="btn btn-sm btn-primary" onclick="pktCopyScript()">Kopírovat kód skriptu</button></div></li>'+
-    '<li>Vlevo <b>⚙ Nastavení projektu</b> → dole <b>Vlastnosti skriptu</b> → přidej dvě:<br><b>PACKETA_PASSWORD</b> = API heslo ze Zásilkovny (client.packeta.com → Podpora → API, celých 32 znaků)<br><b>TOKEN</b> = <input class="input" id="pk-token" value="'+esc(tok)+'" onfocus="this.select()" style="margin-top:4px"></li>'+
+    '<li>Vlevo <b>⚙ Nastavení projektu</b> → dole <b>Vlastnosti skriptu</b> → přidej dvě:<br><b>PACKETA_PASSWORD</b> = API heslo ze Zásilkovny (client.packeta.com → Podpora → API, celých 32 znaků)<br><b>TOKEN</b> = vymyšlený text, který se musí v appce a ve skriptu shodovat (<u>ne</u> heslo ze Zásilkovny):<div class="sirow" style="margin-top:4px"><input class="input" id="pk-token" value="'+esc(tok)+'" onfocus="this.select()">'+
+      '<button class="btn btn-sm" onclick="pktNewToken()">Nový</button>'+
+      '<button class="btn btn-sm btn-primary" onclick="pktCopyToken()">Kopírovat</button></div></li>'+
     '<li>Vpravo nahoře <b>Nasadit → Nové nasazení</b> → typ <b>Webová aplikace</b> → Spustit jako: <b>Já</b>, Přístup: <b>Kdokoli</b> → Nasadit (a povol oprávnění).</li>'+
     '<li>Zkopíruj <b>URL webové aplikace</b> (končí na /exec) a vlož sem:<input class="input" id="pk-url" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(c.url||'')+'" style="margin-top:6px"></li>'+
     '</ol>'+
     '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
     (c.url?'<button class="btn" onclick="savePktCfg(true)">Odpojit</button>':'')+
     '<button class="btn btn-primary" onclick="savePktCfg(false)">Uložit</button></div>');
+}
+function pktNewToken(){$('pk-token').value=genToken();}
+function pktCopyToken(){
+  copyText($('pk-token').value.trim()).then(function(){toast('✓ Token zkopírován');},function(){toast('Kopírování se nepovedlo');});
 }
 function pktCopyScript(){
   copyText(PKT_SCRIPT).then(function(){toast('✓ Kód skriptu zkopírován');},function(){toast('Kopírování se nepovedlo');});
@@ -1779,6 +1785,7 @@ function savePktCfg(remove){
   else{
     if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\s]+\/exec$/.test(url)){alert('URL musí začínat https://script.google.com/macros/s/ a končit /exec.'); return;}
     if(tok.length<8){alert('Token je moc krátký.'); return;}
+    if(/^[0-9a-f]{32}$/i.test(tok)&&!confirm('Tohle vypadá jako API heslo ze Zásilkovny. Token má být jiný, vymyšlený text (tlačítko „Nový“). Opravdu ho takhle uložit?')) return;
     root.pktCfg={url:url,token:tok};
   }
   save(); closeModal(); render();
