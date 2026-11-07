@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>🐣 Labubu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://widget.packeta.com/v6/www/js/library.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -141,6 +141,15 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .ship.done{background:var(--green-bg);color:var(--green)}
 .toggles{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 12px}
 .toggles .notetoggle{margin:0}
+#pkt-n:not(:empty){background:var(--green);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:2px;vertical-align:top}
+.setrow{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin:0 0 8px;font-size:15px}
+.setrow span{color:var(--muted);font-size:13px}
+.sizebar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin:6px 0}
+.sizebar i{display:block;height:100%;background:var(--green);border-radius:999px}
+.sizebar i.warn{background:#e6a817}.sizebar i.bad{background:var(--red)}
+#filters-btn.on{background:var(--green-bg);border-color:var(--green)}
+.card-actions.more{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.card-actions.more .btn-danger{margin-left:auto}
 #inbox-n:not(:empty){background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:2px;vertical-align:top}
 .ord{border-top:1px solid var(--line);padding:10px 0}
 .ord:first-of-type{border-top:none}
@@ -273,6 +282,45 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
 .ship{padding:6px 13px}
 .modal{border-radius:22px 22px 0 0}
 @media(min-width:600px){.modal{border-radius:22px}}
+
+/* ── Vylepšení vzhledu ── */
+.top .icon-btn{position:relative;padding:8px;border-radius:12px;color:#5d6b64;display:grid;place-items:center}
+.top .icon-btn .ic{width:21px;height:21px;display:block}
+.top .icon-btn:hover{background:var(--green-bg);color:var(--green)}
+.top .icon-btn:active{transform:scale(.94)}
+#pkt-n:not(:empty),#inbox-n:not(:empty){position:absolute;top:1px;right:-1px;margin:0;line-height:1.35;box-shadow:0 0 0 2px #fff}
+.top-in{gap:6px}
+.chip{background:#f4f8f3;border-color:#e4ece3}
+.pc-name,.tile .v,.modal h2,.card-h .name,.site-card .n{font-family:'Fredoka','Outfit',system-ui,sans-serif}
+.pc-name{font-weight:600;letter-spacing:0}
+.tile .v{font-weight:600}
+.modal h2{font-weight:600;font-size:20px}
+.av{width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;
+  color:hsl(var(--h) 45% 30%);background:hsl(var(--h) 75% 90%);box-shadow:inset 0 0 0 1.5px hsl(var(--h) 55% 82%)}
+.pc-h:hover{background:#fafdfa}
+.pc-h:active{background:#f3f9f4}
+.pc{transition:box-shadow .15s}
+.pc.open{box-shadow:0 1px 2px rgba(20,40,30,.05),0 18px 34px -16px rgba(20,40,30,.3)}
+.seg button{display:flex;align-items:center;justify-content:center;gap:0;white-space:nowrap}
+.seg button .n{display:inline-block;margin-left:6px;min-width:20px;padding:1px 6px;border-radius:999px;background:rgba(20,40,30,.07);font-size:12px;font-weight:700;line-height:1.5}
+.seg button.on .n{background:var(--green-bg);color:var(--green)}
+.seg button.todo.on .n{background:var(--amber-bg);color:var(--amber)}
+.filters .btn{white-space:nowrap}
+.tpl-card{padding:12px 14px}
+.tpl-chip{background:#fff;border-color:#bfe3cf}
+.tpl-chip:hover{background:var(--green-bg)}
+.card-actions .btn-sm{border-radius:11px}
+.count{font-weight:500;letter-spacing:.01em}
+.toggles .notetoggle{border-radius:999px;padding:8px 14px}
+.empty{font-size:15px}
+@media(max-width:640px){
+  .pc-h{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px 10px}
+  .pc-h .av{grid-row:1/3;align-self:start;width:40px;height:40px;font-size:17px}
+  .pc-right{display:contents}
+  .pc-right .total{grid-column:3;grid-row:1;justify-self:end}
+  .pc-right .shipline{grid-column:2/5;grid-row:2;justify-self:start}
+  .pc-h .chev{grid-column:4;grid-row:1}
+}
 </style>
 </head>
 <body>
@@ -301,9 +349,9 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
     <div class="top-in">
       <button class="chip" id="profile-chip" onclick="showProfilePicker()" title="Přepnout profil"></button>
       <div class="spacer"></div>
-      <button class="icon-btn" onclick="openSearch()" title="Hledat (/)">🔍</button>
-      <button class="icon-btn" onclick="openTemplates()" title="Šablony zpráv">📋</button>
-      <button class="icon-btn" onclick="openOrders()" title="Objednávky od zákazníků">📥<span id="inbox-n"></span></button>
+      <button class="icon-btn" onclick="openExport()" title="Export pro Zásilkovnu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg><span id="pkt-n"></span></button>
+      <button class="icon-btn" onclick="openTemplates()" title="Šablony zpráv"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg></button>
+      <button class="icon-btn" onclick="openOrders()" title="Objednávky od zákazníků"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/></svg><span id="inbox-n"></span></button>
       <div class="user" id="user-email"></div>
       <nav class="tabs">
         <button class="tab active" data-tab="overview" onclick="showTab('overview')">Přehled</button>
@@ -312,7 +360,8 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
         <button class="tab" data-tab="notes" onclick="showTab('notes')">Poznámky</button>
         <button class="tab" data-tab="sites" onclick="showTab('sites')">Stránky</button>
       </nav>
-      <button class="icon-btn" onclick="window._fbSignOut()" title="Odhlásit">⎋</button>
+      <button class="icon-btn" onclick="openSettings()" title="Nastavení"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+      <button class="icon-btn" onclick="window._fbSignOut()" title="Odhlásit"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
     </div>
   </header>
 
@@ -353,33 +402,38 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
         <button id="sg-done" class="done" onclick="setShipFilter('done')"></button>
         <button id="sg-none" onclick="setShipFilter('none')"></button>
       </div>
-      <div class="toggles"><button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
-        <button class="notetoggle ask" id="ask-toggle" onclick="toggleAskFilter()"></button>
-        <button class="notetoggle pts" id="pts-toggle" onclick="togglePtsFilter()"></button>
-        <button class="notetoggle pkt" id="pkt-btn" onclick="openExport()"></button></div>
       <div class="bar">
-        <input class="input grow" id="f-q" placeholder="Hledat jméno…" oninput="renderPeopleList()">
+        <input class="input grow" id="f-q" placeholder="Hledat…" title="Jméno nebo poznámka" oninput="renderPeopleList()">
         <button class="btn" onclick="openPersonModal()">+ Člověk</button>
         <button class="btn btn-primary" onclick="openBonusModal()">+ Bonus</button>
       </div>
       <div class="filters">
-        <select class="input" id="f-sort" onchange="setSort()">
+        <select class="input grow" id="f-sort" onchange="setSort()">
           <option value="change">Řadit: poslední změna</option>
           <option value="todo">Řadit: 📦 k odeslání nahoře</option>
           <option value="az">Řadit: A–Z</option>
         </select>
-        <select class="input" id="f-rem" onchange="renderPeopleList()">
-          <option value="all">Všichni lidé</option>
-          <option value="rem">Zbývá udělat stránky</option>
-          <option value="done">Vše hotovo</option>
-        </select>
-        <select class="input" id="f-range" onchange="renderPeopleList()">
-          <option value="all">Vše</option>
-          <option value="month">Tento měsíc</option>
-          <option value="30">30 dní</option>
-          <option value="7">7 dní</option>
-        </select>
-        <select class="input" id="f-site" onchange="renderPeopleList()"></select>
+        <button class="btn" id="filters-btn" onclick="toggleFilters()">Filtry</button>
+      </div>
+      <div id="filters-more" style="display:none">
+        <div class="toggles"><button class="notetoggle" id="note-toggle" onclick="toggleNoteFilter()"></button>
+          <button class="notetoggle ask" id="ask-toggle" onclick="toggleAskFilter()"></button>
+          <button class="notetoggle pts" id="pts-toggle" onclick="togglePtsFilter()"></button></div>
+        <div class="filters">
+          <select class="input" id="f-rem" onchange="renderPeopleList()">
+            <option value="all">Všichni lidé</option>
+            <option value="rem">Zbývá udělat stránky</option>
+            <option value="done">Vše hotovo</option>
+          </select>
+          <select class="input" id="f-range" onchange="renderPeopleList()">
+            <option value="all">Vše</option>
+            <option value="month">Tento měsíc</option>
+            <option value="30">30 dní</option>
+            <option value="7">7 dní</option>
+          </select>
+          <select class="input" id="f-site" onchange="renderPeopleList()"></select>
+          <button class="btn btn-sm" onclick="clearFilters()">Zrušit filtry</button>
+        </div>
       </div>
       <div class="count" id="people-count"></div>
       <div id="people-list"></div>
@@ -494,6 +548,7 @@ function bindProfile(){
   processOrders();
   syncPublicPoints();
   pktAutoSync();
+  checkDataSize();
 }
 // Šablony zpráv jsou společné pro Pepu i Tomáše (jeden seznam v root.templates).
 function shareTemplates(){
@@ -957,9 +1012,9 @@ function shipOf(p){return p.ship==='todo'||p.ship==='done'?p.ship:'';}
 function renderShipSeg(){
   var c={todo:0,done:0,none:0};
   data.people.forEach(function(p){c[shipOf(p)||'none']++;});
-  var L={all:'Vše ('+data.people.length+')',todo:'📦 Odeslat ('+c.todo+')',done:'✅ Odesláno ('+c.done+')',none:'Bez stavu ('+c.none+')'};
+  var T={all:'Vše',todo:'Odeslat',done:'Odesláno',none:'Bez stavu'}, N={all:data.people.length,todo:c.todo,done:c.done,none:c.none};
   ['all','todo','done','none'].forEach(function(k){
-    var b=$('sg-'+k); b.textContent=L[k]; b.classList.toggle('on',shipFilter===k);
+    var b=$('sg-'+k); b.innerHTML=T[k]+'<span class="n">'+N[k]+'</span>'; b.classList.toggle('on',shipFilter===k);
   });
   var withNote=data.people.filter(function(p){return personNoteCount(p)>0;}).length;
   var nb=$('note-toggle');
@@ -971,7 +1026,25 @@ function renderShipSeg(){
   var pb=$('pts-toggle');
   pb.textContent='⭐ K uzavření ('+data.people.filter(needsClose).length+')'+(ptsFilter?' ✕':'');
   pb.classList.toggle('on',ptsFilter);
-  var kb=$('pkt-btn'); if(kb) kb.textContent='📦 Export pro Zásilkovnu ('+pktReady().length+')';
+  var kb=$('pkt-n'); if(kb){var rn=pktReady().length; kb.textContent=rn?String(rn):'';}
+  updateFiltersBtn();
+}
+// Filtry pod jedním tlačítkem. Panel je vidět, když je něco zapnuté nebo když ho člověk otevřel.
+var filtersOpen=false;
+function activeFilters(){
+  return (noteFilter?1:0)+(askFilter?1:0)+(ptsFilter?1:0)+($('f-rem').value!=='all'?1:0)+($('f-range').value!=='all'?1:0)+($('f-site').value!=='all'?1:0);
+}
+function updateFiltersBtn(){
+  var n=activeFilters(), b=$('filters-btn');
+  b.textContent='Filtry'+(n?' ('+n+')':'')+(filtersOpen||n?' ▴':' ▾');
+  b.classList.toggle('on',n>0);
+  $('filters-more').style.display=(filtersOpen||n>0)?'block':'none';
+}
+function toggleFilters(){filtersOpen=!filtersOpen; updateFiltersBtn();}
+function clearFilters(){
+  $('f-rem').value='all'; $('f-range').value='all'; if($('f-site')) $('f-site').value='all';
+  noteFilter=false; askFilter=false; ptsFilter=false; filtersOpen=false;
+  renderPeopleList();
 }
 function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
@@ -998,6 +1071,9 @@ function refreshSiteFilter(){
   sel.value=find(data.sites,cur)?cur:'all';
 }
 function renderPeople(){ refreshSiteFilter(); renderPeopleList(); }
+function toggleMore(id){
+  var el=$('more-'+id); if(el) el.style.display=el.style.display==='none'?'flex':'none';
+}
 function togglePc(id){
   openP[id]=!openP[id];
   var el=$('pc-'+id); if(el) el.classList.toggle('open',!!openP[id]);
@@ -1010,6 +1086,20 @@ function copyName(id,el){
   });
 }
 
+// Hledání u Lidí: jméno, objednávka a poznámky člověka (poznámky od 2 znaků).
+function personMatches(p,q){
+  q=fold(q); function has(t){return fold(t).indexOf(q)>=0;}
+  if(has(p.name)||has(orderOf(p))) return true;
+  if(q.length<2) return false;
+  return data.notes.some(function(n){return n.personId===p.id&&has((n.title||'')+' '+(n.text||''));})||
+    data.bonuses.some(function(b){return b.personId===p.id&&b.note&&has(b.note);});
+}
+// Barevný kroužek s iniciálou (barva se odvodí z jména, takže je pro člověka vždy stejná).
+function avatarHTML(name){
+  var n=String(name||''), m=n.match(/[A-Za-z0-9\u00C0-\u017F]/), ch=m?m[0].toUpperCase():'?', h=0, i;
+  for(i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))%360;
+  return '<span class="av" style="--h:'+h+'">'+esc(ch)+'</span>';
+}
 function renderPeopleList(){
   renderShipSeg();
   var f={q:$('f-q').value.trim().toLowerCase(),range:$('f-range').value,site:$('f-site').value,rem:$('f-rem').value};
@@ -1032,7 +1122,7 @@ function renderPeopleList(){
   }).map(function(x){return x.p;});
   var html='', shown=0;
   people.forEach(function(p){
-    if(f.q&&String(p.name).toLowerCase().indexOf(f.q)<0) return;
+    if(f.q&&!personMatches(p,f.q)) return;
     if(shipFilter!=='all'&&(shipOf(p)||'none')!==shipFilter) return;
     if(noteFilter&&!personNoteCount(p)) return;
     if(askFilter&&!askDue(p)) return;
@@ -1054,7 +1144,7 @@ function renderPeopleList(){
 
     html+='<div class="pc'+(isOpen?' open':'')+'" id="pc-'+p.id+'">'+
       '<div class="pc-h" onclick="togglePc(\''+p.id+'\')">'+
-        '<div class="pc-info"><div class="pc-name" onclick="copyName(\''+p.id+'\',this);event.stopPropagation()" title="Klikni pro zkopírování jména">'+esc(p.name)+'</div>'+
+        avatarHTML(p.name)+'<div class="pc-info"><div class="pc-name" onclick="copyName(\''+p.id+'\',this);event.stopPropagation()" title="Klikni pro zkopírování jména">'+esc(p.name)+'</div>'+
         '<div class="pc-sub">'+all.length+' bonus'+(all.length===1?'':'ů')+' · '+
           (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+ptsBadge(p)+'</div>'+orderLine(p)+'</div>'+
         '<div class="pc-right"><span class="total">'+kc(total)+'</span><span class="shipline">'+
@@ -1078,16 +1168,19 @@ function renderPeopleList(){
         (mb.length?mb.map(bonusRowHTML).join(''):'<div class="cat" style="padding:10px 0">'+(all.length?'Nic nevyhovuje filtru.':'Zatím žádný bonus.')+'</div>')+
         '<div class="card-actions">'+
           '<button class="btn btn-sm btn-primary" onclick="openBonusModal(\''+p.id+'\')">+ Bonus</button>'+
-          '<button class="btn btn-sm" onclick="openNoteModal(\''+p.id+'\')">+ Poznámka</button>'+
-          '<button class="btn btn-sm" onclick="openCostModal(\''+p.id+'\')">Náklady</button>'+
           '<span class="ptsadj"><button data-id="'+esc(p.id)+'" onclick="adjPts(this.dataset.id,-1)" title="Ubrat bod">−</button>'+
             '<b>⭐ '+(ptsClosed(p)?ptsLeft(p)+'/'+esc(p.ptsTotal):bonusCount(p))+'</b>'+
             '<button data-id="'+esc(p.id)+'" onclick="adjPts(this.dataset.id,1)" title="Přidat bod">+</button></span>'+
-          (Number(p.ptsSpent)>0?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="resetSpent(this.dataset.id)">↺ Vrátit utracené ('+esc(p.ptsSpent)+')</button>':'')+
           (ptsClosed(p)
-            ?(bonusCount(p)!==Number(p.ptsTotal)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="closePoints(this.dataset.id)">⭐ Přepočítat body ('+bonusCount(p)+')</button>':'')+
-              '<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="reopenPoints(this.dataset.id)">Znovu otevřít body</button>'
+            ?(bonusCount(p)!==Number(p.ptsTotal)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="closePoints(this.dataset.id)">⭐ Přepočítat body ('+bonusCount(p)+')</button>':'')
             :'<button class="btn btn-sm'+(needsClose(p)?' btn-primary':'')+'" data-id="'+esc(p.id)+'" onclick="closePoints(this.dataset.id)">⭐ Uzavřít body ('+bonusCount(p)+')</button>')+
+          '<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="toggleMore(this.dataset.id)" title="Další akce">⋯</button>'+
+        '</div>'+
+        '<div class="card-actions more" id="more-'+esc(p.id)+'" style="display:none">'+
+          '<button class="btn btn-sm" onclick="openNoteModal(\''+p.id+'\')">+ Poznámka</button>'+
+          '<button class="btn btn-sm" onclick="openCostModal(\''+p.id+'\')">Náklady</button>'+
+          (Number(p.ptsSpent)>0?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="resetSpent(this.dataset.id)">↺ Vrátit utracené ('+esc(p.ptsSpent)+')</button>':'')+
+          (ptsClosed(p)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" onclick="reopenPoints(this.dataset.id)">Znovu otevřít body</button>':'')+
           (shipOf(p)?'<button class="btn btn-sm" data-id="'+esc(p.id)+'" data-s="" onclick="setShip(this.dataset.id,this.dataset.s,event)">Zrušit označení</button>':'')+
           '<button class="btn btn-sm" onclick="openPersonModal(\''+p.id+'\')">Přejmenovat</button>'+
           '<button class="btn btn-sm btn-danger" onclick="deletePerson(\''+p.id+'\')">Smazat</button>'+
@@ -2131,68 +2224,48 @@ function deleteTpl(id){
   save(); renderTplBars(); openTemplates();
 }
 
-// ── HLEDÁNÍ ──
-function openSearch(){
-  openModal('<h2>Hledat</h2><input class="input" id="s-q" placeholder="Jméno, poznámka, prac. poznámka…" oninput="runSearch()" autocomplete="off">'+
-    '<div id="s-res" style="margin-top:6px"></div>');
-  $('s-q').focus(); runSearch();
-}
-function snippet(text,q){
-  text=String(text==null?'':text);
-  var i=fold(text).indexOf(q);
-  if(i<0) return esc(text.slice(0,90));
-  var a=Math.max(0,i-25), z=Math.min(text.length,i+q.length+55);
-  return (a>0?'…':'')+esc(text.slice(a,i))+'<mark>'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length,z))+(z<text.length?'…':'');
-}
-function runSearch(){
-  var q=fold($('s-q').value.trim()), out=$('s-res');
-  if(q.length<2){ out.innerHTML='<div class="cat" style="padding:8px 0">Napiš aspoň 2 znaky.</div>'; return; }
-  function has(t){return fold(t).indexOf(q)>=0;}
-  var groups=[];
-  groups.push({t:'Lidé',items:data.people.filter(function(p){return has(p.name)||has(orderOf(p));}).map(function(p){
-    var n=data.bonuses.filter(function(b){return b.personId===p.id;}).length;
-    return {k:'p',id:p.id,html:snippet(p.name,q),sub:n+' bonus'+(n===1?'':'ů')+(shipOf(p)?' · '+(shipOf(p)==='done'?'odesláno':'odeslat'):'')+(orderOf(p)?' · 🎁 '+orderOf(p):'')};})});
-  groups.push({t:'Poznámky',items:data.notes.filter(function(n){return has((n.title||'')+' '+(n.text||''));}).map(function(n){
-    var who=n.personId?personName(n.personId):null;
-    return {k:'n',id:n.id,html:snippet((n.title?n.title+' — ':'')+(n.text||''),q),sub:who||'obecná poznámka'};})});
-  groups.push({t:'Poznámky u bonusů',items:data.bonuses.filter(function(b){return b.note&&has(b.note);}).map(function(b){
-    return {k:'b',id:b.id,html:snippet(b.note,q),sub:(personName(b.personId)||'?')+' · '+bonusSite(b)};})});
-  groups.push({t:'Prac. poznámky',items:data.workNotes.filter(function(n){return has(n.text);}).map(function(n){
-    return {k:'w',id:n.id,html:snippet(n.text,q),sub:fmtDate(n.date)};})});
-  var html='', total=0;
-  groups.forEach(function(g){
-    if(!g.items.length) return;
-    total+=g.items.length;
-    html+='<div class="sg">'+g.t+' ('+g.items.length+')</div>'+g.items.slice(0,15).map(function(it){
-      return '<button class="sr" data-k="'+it.k+'" data-id="'+esc(it.id)+'" onclick="goResult(this.dataset.k,this.dataset.id)">'+it.html+
-        '<span class="srs">'+esc(it.sub)+'</span></button>';
-    }).join('')+(g.items.length>15?'<div class="cat" style="padding:4px 6px">+ '+(g.items.length-15)+' dalších, zpřesni hledání</div>':'');
-  });
-  out.innerHTML=total?html:'<div class="empty" style="padding:20px">Nic nenalezeno.</div>';
-}
-function goResult(k,id){
-  closeModal();
-  if(k==='p') openPerson(id);
-  else if(k==='b'){var b=find(data.bonuses,id); if(b) openPerson(b.personId);}
-  else if(k==='n'){
-    var n=find(data.notes,id);
-    if(n&&n.personId&&find(data.people,n.personId)) openPerson(n.personId);
-    else {showTab('notes'); setNotesMode('notes');}
-  } else {
-    showTab('notes'); setNotesMode('work');
-    var el=$('w-'+id);
-    if(el){el.scrollIntoView({block:'center'}); el.classList.add('flash'); setTimeout(function(){el.classList.remove('flash');},1700);}
-  }
-}
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){closeModal(); return;}
   if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
     var t=e.target&&e.target.tagName;
     if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return;
     if($('app').style.display==='none'||$('modal-bg').classList.contains('open')) return;
-    e.preventDefault(); openSearch();
+    e.preventDefault(); showTab('people'); var q=$('f-q'); if(q){q.focus(); q.select();}
   }
 });
+
+// ── NASTAVENÍ, ZÁLOHA ──
+var DOC_LIMIT=1048576;              // dokument ve Firestore smí mít zhruba 1 MiB
+var _sizeWarned=false;
+function dataSizeBytes(){try{return new Blob([JSON.stringify(root)]).size;}catch(e){return 0;}}
+function checkDataSize(){
+  if(_sizeWarned||!_loaded) return;
+  var pct=Math.round(dataSizeBytes()/DOC_LIMIT*100);
+  if(pct>=75){_sizeWarned=true; toast('⚠ Data zabírají asi '+pct+' % limitu databáze. Stáhni zálohu v ⚙ Nastavení.');}
+}
+function openSettings(){
+  var sz=dataSizeBytes(), pct=Math.min(100,Math.round(sz/DOC_LIMIT*100));
+  openModal('<h2>⚙ Nastavení</h2>'+
+    '<button class="setrow" onclick="openPktSetup()"><b>📦 Zásilkovna</b><span>'+(pktCfg()?'propojeno':'nepropojeno')+'</span></button>'+
+    '<button class="setrow" onclick="openTemplates()"><b>📋 Šablony zpráv</b><span>'+(root.templates||[]).length+'</span></button>'+
+    '<div class="fld" style="margin-top:14px"><label>Odkaz pro zákazníky (objednávka)</label><div class="sirow"><input class="input" readonly value="'+esc(orderLink())+'" onfocus="this.select()">'+
+      '<button class="btn btn-sm btn-primary" onclick="copyOrderLink()">Kopírovat</button></div></div>'+
+    '<div class="fld"><label>Záloha a velikost dat</label>'+
+      '<div class="sizebar"><i class="'+(pct>=90?'bad':(pct>=75?'warn':''))+'" style="width:'+pct+'%"></i></div>'+
+      '<div class="cat" style="margin-bottom:8px">Přibližně '+Math.round(sz/1024)+' KB z '+Math.round(DOC_LIMIT/1024)+' KB (limit jednoho dokumentu), '+pct+' %.</div>'+
+      '<button class="btn" onclick="downloadBackup()">⬇ Stáhnout zálohu (JSON)</button></div>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zavřít</button></div>');
+}
+// Záloha celé databáze (oba profily + šablony). Token ke skriptu Zásilkovny se do ní nedává.
+function downloadBackup(){
+  var copy=JSON.parse(JSON.stringify(root)); delete copy.pktCfg;
+  var blob=new Blob([JSON.stringify(copy,null,1)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='labushop-zaloha-'+todayISO()+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+  toast('⬇ Záloha stažena');
+}
 
 // ── VÝDAJE ──
 function renderExpenses(){
