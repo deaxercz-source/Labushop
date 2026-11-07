@@ -134,6 +134,11 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .sumbox .tot{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);color:var(--muted);font-size:14px}
 .sumbtns{display:flex;gap:10px;margin-top:8px}
 .sumbtns .btn{flex:1;padding:14px 10px}
+.langsw{display:flex;justify-content:center;gap:12px;margin-top:10px}
+.langsw button{border:none;background:none;padding:3px;border-radius:50%;line-height:0;cursor:pointer;opacity:.4;transition:opacity .15s,transform .15s}
+.langsw button svg{width:20px;height:20px;display:block}
+.langsw button:hover{opacity:.85}
+.langsw button.on{opacity:.9;transform:scale(1.08)}
 .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
 .hidden{display:none}
 .done{text-align:center;padding:34px 20px}
@@ -154,53 +159,54 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
       <span class="hb b4"><img src="img/icon-butter.png" alt=""></span>
       <span class="sp s2">✨</span>
     </div>
-    <h1><span class="f">Vaše</span> <span class="o">objednávka</span></h1>
-    <p class="lead">Zadejte své Instagram jméno, hned uvidíte, kolik máte bodů, a vyberte si, co chcete.</p>
+    <h1><span class="f" data-i18n="h1a">Vaše</span> <span class="o" data-i18n="h1b">objednávka</span></h1>
+    <p class="lead" data-i18n="lead">Zadejte své Instagram jméno, hned uvidíte, kolik máte bodů, a vyberte si, co chcete.</p>
   </div>
 
   <div class="card" id="step1">
-    <div class="ct"><span class="n">1</span>Kdo jste?</div>
-    <div class="fld"><label for="ig">Instagram jméno</label>
-      <input class="input" id="ig" placeholder="např. jana.novakova" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-    <button class="btn" id="btn-lookup" onclick="lookup()">Zobrazit moje body 💌</button>
+    <div class="ct"><span class="n">1</span><span data-i18n="s1t">Kdo jste?</span></div>
+    <div class="fld"><label for="ig" data-i18n="ig_l">Instagram jméno</label>
+      <input class="input" id="ig" placeholder="např. jana.novakova" data-i18n-ph="ig_ph" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    <button class="btn" id="btn-lookup" onclick="lookup()" data-i18n="btn_lookup">Zobrazit moje body 💌</button>
     <div id="msg1"></div>
   </div>
 
   <div id="step2" class="hidden">
     <div class="card">
       <div class="points"><div class="badge" id="pts-left">0</div>
-        <div class="txt"><b id="pts-title">Vaše body</b><span id="pts-word">bodů</span><span> · 1 bod = 1 splněný bonus</span></div></div>
+        <div class="txt"><b id="pts-title">Vaše body</b><span id="pts-word">bodů</span><span id="pts-rule" data-i18n="pts_rule"> · 1 bod = 1 splněný bonus</span></div></div>
       <div class="bar"><i id="bar"></i></div>
       <div class="msg warn hidden" id="open-note"></div>
       <div class="sum" id="used">Vybráno 0 z 0 bodů</div>
       <div class="priceinfo" id="priceinfo"></div>
     </div>
     <div class="card">
-      <div class="ct"><span class="n">2</span>Co si vyberete?</div>
+      <div class="ct"><span class="n">2</span><span data-i18n="s2t">Co si vyberete?</span></div>
       <div id="items"></div>
     </div>
     <div class="card" id="order-form">
-      <div class="ct"><span class="n">3</span>Kam to pošleme?</div>
-      <div class="fld"><label for="f-name">Jméno a příjmení</label><input class="input" id="f-name" autocomplete="name"></div>
-      <div class="fld"><label for="f-email">E-mail</label><input class="input" id="f-email" type="email" autocomplete="email"></div>
-      <div class="fld"><label for="f-phone">Telefon</label><input class="input" id="f-phone" type="tel" autocomplete="tel" placeholder="např. 777 123 456"></div>
-      <div class="fld"><label for="f-point">Výdejní místo Zásilkovny</label>
+      <div class="ct"><span class="n">3</span><span data-i18n="s3t">Kam to pošleme?</span></div>
+      <div class="fld"><label for="f-name" data-i18n="f_name">Jméno a příjmení</label><input class="input" id="f-name" autocomplete="name"></div>
+      <div class="fld"><label for="f-email" data-i18n="f_email">E-mail</label><input class="input" id="f-email" type="email" autocomplete="email"></div>
+      <div class="fld"><label for="f-phone" data-i18n="f_phone">Telefon</label><input class="input" id="f-phone" type="tel" autocomplete="tel" placeholder="např. 777 123 456" data-i18n-ph="f_phone_ph"></div>
+      <div class="fld"><label for="f-point" data-i18n="f_point_l">Výdejní místo Zásilkovny</label>
         <button type="button" class="btn ghost" id="btn-point" onclick="pickPoint()">📍 Vybrat výdejní místo na mapě</button>
         <div class="picked hidden" id="picked"></div>
-        <input class="input hidden" id="f-point" placeholder="Napište výdejní místo (např. Zásilkovna Praha 5, Plzeňská 1)">
+        <input class="input hidden" id="f-point" placeholder="Napište výdejní místo (např. Zásilkovna Praha 5, Plzeňská 1)" data-i18n-ph="pt_ph">
       </div>
       <input class="hp" id="f-web" tabindex="-1" autocomplete="off" aria-hidden="true">
-      <button class="btn" id="btn-send" onclick="send()">Odeslat objednávku 🎁</button>
+      <button class="btn" id="btn-send" onclick="send()" data-i18n="btn_send">Odeslat objednávku 🎁</button>
       <div id="msg2"></div>
     </div>
   </div>
 
   <div id="step3" class="card done hidden">
     <div class="big">🎉</div>
-    <h2>Děkujeme!</h2>
-    <p>Vaši objednávku jsme přijali. Až bude zásilka odeslaná, ozveme se vám na Instagramu.</p>
+    <h2 data-i18n="thx_t">Děkujeme!</h2>
+    <p data-i18n="thx_p">Vaši objednávku jsme přijali. Až bude zásilka odeslaná, ozveme se vám na Instagramu.</p>
   </div>
   <div class="foot">💗</div>
+  <div class="langsw" role="group" aria-label="Jazyk"><button type="button" id="lang-cs" onclick="setLang('cs')" title="Čeština" aria-label="Čeština"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><clipPath id="fc"><circle cx="12" cy="12" r="11"/></clipPath></defs><g clip-path="url(#fc)"><rect width="24" height="12" fill="#fff"/><rect y="12" width="24" height="12" fill="#d7141a"/><path d="M0 0 L13 12 L0 24Z" fill="#11457e"/></g><circle cx="12" cy="12" r="11" fill="none" stroke="#d9cfe8" stroke-width="1"/></svg></button><button type="button" id="lang-sk" onclick="setLang('sk')" title="Slovenčina" aria-label="Slovenčina"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><clipPath id="fs"><circle cx="12" cy="12" r="11"/></clipPath></defs><g clip-path="url(#fs)"><rect width="24" height="8" fill="#fff"/><rect y="8" width="24" height="8" fill="#0b4ea2"/><rect y="16" width="24" height="8" fill="#ee1c25"/><path d="M5 6.5h6v5.2c0 2.2-1.6 3.4-3 4-1.4-.6-3-1.8-3-4z" fill="#ee1c25" stroke="#fff" stroke-width=".8"/><path d="M8 8v6M6.2 10h3.6" stroke="#fff" stroke-width="1.1"/></g><circle cx="12" cy="12" r="11" fill="none" stroke="#d9cfe8" stroke-width="1"/></svg></button></div>
 </div>
 
 <div id="pick-bg" class="sheet-bg hidden" onclick="closePick(event)"><div class="sheet" id="pick"></div></div>
@@ -236,6 +242,66 @@ var LABUBU=[
 var SOLD_OUT=[];
 function labubuSeries(id){return LABUBU.filter(function(x){return x.id===id;})[0];}
 
+// ── jazyk: čeština / slovenština (podle telefonu, jde přepnout; volba se pamatuje) ──
+var I18N={
+cs:{h1a:'Vaše',h1b:'objednávka',lead:'Zadejte své Instagram jméno, hned uvidíte, kolik máte bodů, a vyberte si, co chcete.',
+ s1t:'Kdo jste?',ig_l:'Instagram jméno',ig_ph:'např. jana.novakova',btn_lookup:'Zobrazit moje body 💌',
+ pts_t:'Vaše body',pts_t_open:'Vaše body zatím',pts_rule:' · 1 bod = 1 splněný bonus',
+ open_note:'Vaše body ještě nejsou uzavřené, proto se jejich počet může změnit. Zatím se můžete jen podívat, co si za ně půjde vzít. Objednat půjde, až je uzavřeme.',
+ used:'Vybráno {u} z {n} {w}',s2t:'Co si vyberete?',gone:'Došlo',
+ pick_choose:'Vyberte krabičku',pick_sur:'Postavička je překvapení 🎁',chg:'Změnit',sel:'Vybrat',num:' · č. {n}',
+ col_l:'Barva ({l}{n})',col_ph:'Vyberte barvu…',
+ sh_t:'Vyberte krabičku{tag}',sh_sub:'Klepněte na krabičku, kterou chcete. Postavička uvnitř je překvapení 🎁',sh_out:'došla',tagn:' (Labubu č. {n})',
+ s3t:'Kam to pošleme?',f_name:'Jméno a příjmení',f_email:'E-mail',f_phone:'Telefon',f_phone_ph:'např. 777 123 456',f_point_l:'Výdejní místo Zásilkovny',
+ btn_pt1:'📍 Vybrat výdejní místo na mapě',btn_pt2:'📍 Změnit výdejní místo',pt_ph:'Napište výdejní místo (např. Zásilkovna Praha 5, Plzeňská 1)',btn_send:'Odeslat objednávku 🎁',
+ thx_t:'Děkujeme!',thx_p:'Vaši objednávku jsme přijali. Až bude zásilka odeslaná, ozveme se vám na Instagramu.',
+ thx_test:'Toto byl testovací režim, nic se neodeslalo. Takhle uvidí poděkování zákazníci.',
+ aria_minus:'Ubrat',aria_plus:'Přidat',aria_close:'Zavřít',
+ m_ig:'Zadejte prosím své Instagram jméno.',m_nopoints:'Pod tímto jménem zatím nemáme žádné body. Zkontrolujte prosím, jestli není překlep, nebo nám napište na Instagramu.',
+ m_noleft:'Už nemáte žádné volné body. Děkujeme!',m_loaderr:'Nepodařilo se načíst body. Zkuste to prosím za chvíli znovu.',
+ m_recent:'Objednávku jste právě odeslali. Chvíli počkejte a zkuste to znovu.',m_noitem:'Vyberte prosím aspoň jednu položku.',m_over:'Vybrali jste víc, než máte bodů.',
+ m_pick:'Vyberte prosím krabičku u každého Labubu.',m_color:'Vyberte prosím barvu u každé kravičky.',m_ptmap:'Vyberte prosím výdejní místo na mapě.',
+ m_name:'Vyplňte prosím jméno a příjmení.',m_email:'Zkontrolujte prosím e-mail.',m_phone:'Zkontrolujte prosím telefon.',m_pttext:'Vyberte prosím výdejní místo Zásilkovny.',
+ w_ptype:'Vyberte prosím výdejní místo nebo Z-BOX Zásilkovny.',
+ sum_t:'Zkontrolujte objednávku',sum_sub:'Ještě se to dá upravit. Potom už objednávku odešlete.',sum_what:'Objednáváte',sum_use:'Použijete {c} z {n} {w}',
+ sum_to:'Pošleme na',sum_edit:'Upravit',sum_ok:'Potvrdit a odeslat',m_gone:'Tohle mezitím došlo: {x}. Upravte prosím objednávku.',
+ m_senderr:'Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.'},
+sk:{h1a:'Vaša',h1b:'objednávka',lead:'Zadajte svoje Instagram meno, hneď uvidíte, koľko máte bodov, a vyberte si, čo chcete.',
+ s1t:'Kto ste?',ig_l:'Instagram meno',ig_ph:'napr. jana.novakova',btn_lookup:'Zobraziť moje body 💌',
+ pts_t:'Vaše body',pts_t_open:'Vaše body zatiaľ',pts_rule:' · 1 bod = 1 splnený bonus',
+ open_note:'Vaše body ešte nie sú uzavreté, preto sa ich počet môže zmeniť. Zatiaľ sa môžete len pozrieť, čo si za ne môžete vybrať. Objednať pôjde, keď ich uzavrieme.',
+ used:'Vybrané {u} z {n} {w}',s2t:'Čo si vyberiete?',gone:'Vypredané',
+ pick_choose:'Vyberte krabičku',pick_sur:'Postavička je prekvapenie 🎁',chg:'Zmeniť',sel:'Vybrať',num:' · č. {n}',
+ col_l:'Farba ({l}{n})',col_ph:'Vyberte farbu…',
+ sh_t:'Vyberte krabičku{tag}',sh_sub:'Ťuknite na krabičku, ktorú chcete. Postavička vo vnútri je prekvapenie 🎁',sh_out:'vypredaná',tagn:' (Labubu č. {n})',
+ s3t:'Kam to pošleme?',f_name:'Meno a priezvisko',f_email:'E-mail',f_phone:'Telefón',f_phone_ph:'napr. 905 123 456',f_point_l:'Výdajné miesto Packeta',
+ btn_pt1:'📍 Vybrať výdajné miesto na mape',btn_pt2:'📍 Zmeniť výdajné miesto',pt_ph:'Napíšte výdajné miesto (napr. Packeta Bratislava, Obchodná 1)',btn_send:'Odoslať objednávku 🎁',
+ thx_t:'Ďakujeme!',thx_p:'Vašu objednávku sme prijali. Keď bude zásielka odoslaná, ozveme sa vám na Instagrame.',
+ thx_test:'Toto bol testovací režim, nič sa neodoslalo. Takto uvidia poďakovanie zákazníci.',
+ aria_minus:'Ubrať',aria_plus:'Pridať',aria_close:'Zavrieť',
+ m_ig:'Zadajte, prosím, svoje Instagram meno.',m_nopoints:'Pod týmto menom zatiaľ nemáme žiadne body. Skontrolujte, prosím, či nie je preklep, alebo nám napíšte na Instagrame.',
+ m_noleft:'Už nemáte žiadne voľné body. Ďakujeme!',m_loaderr:'Nepodarilo sa načítať body. Skúste to, prosím, o chvíľu znova.',
+ m_recent:'Objednávku ste práve odoslali. Chvíľu počkajte a skúste to znova.',m_noitem:'Vyberte, prosím, aspoň jednu položku.',m_over:'Vybrali ste viac, než máte bodov.',
+ m_pick:'Vyberte, prosím, krabičku pri každom Labubu.',m_color:'Vyberte, prosím, farbu pri každej kravičke.',m_ptmap:'Vyberte, prosím, výdajné miesto na mape.',
+ m_name:'Vyplňte, prosím, meno a priezvisko.',m_email:'Skontrolujte, prosím, e-mail.',m_phone:'Skontrolujte, prosím, telefónne číslo.',m_pttext:'Vyberte, prosím, výdajné miesto Packeta.',
+ w_ptype:'Vyberte, prosím, výdajné miesto alebo Z-BOX Packeta.',
+ sum_t:'Skontrolujte objednávku',sum_sub:'Ešte sa to dá upraviť. Potom už objednávku odošlite.',sum_what:'Objednávate',sum_use:'Použijete {c} z {n} {w}',
+ sum_to:'Pošleme na',sum_edit:'Upraviť',sum_ok:'Potvrdiť a odoslať',m_gone:'Toto sa medzitým minulo: {x}. Upravte, prosím, objednávku.',
+ m_senderr:'Objednávku sa nepodarilo odoslať. Skúste to, prosím, znova, alebo nám napíšte na Instagrame.'}
+};
+var COLORS_SK={'Bílá':'Biela','Růžová':'Ružová','Hnědá':'Hnedá','Béžová':'Béžová'};   // hodnota se odesílá česky, jen se jinak zobrazí
+function detectLang(){
+  try{var sv=localStorage.getItem('ord-lang'); if(sv==='cs'||sv==='sk') return sv;}catch(e){}
+  var l=(navigator.languages&&navigator.languages[0])||navigator.language||'';
+  return String(l).toLowerCase().indexOf('sk')===0?'sk':'cs';
+}
+var LANG=detectLang();
+function t(k,p){
+  var s=(I18N[LANG]||{})[k]; if(s==null) s=I18N.cs[k]; if(s==null) return k;
+  return p?s.replace(/\{(\w+)\}/g,function(m,n){return p[n]!=null?p[n]:m;}):s;
+}
+function colorName(c){return LANG==='sk'&&COLORS_SK[c]?COLORS_SK[c]:c;}
+
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function norm(s){
@@ -244,8 +310,8 @@ function norm(s){
   s=s.replace(/^@+/,'').replace(/\s+/g,'');
   return s.replace(/[^a-z0-9._]/g,'');
 }
-function plBodu(n){return n===1?'bodu':'bodů';}   // „z 3 bodů“
-function plBody(n){return n===1?'bod':(n>=2&&n<=4?'body':'bodů');}
+function plBodu(n){return n===1?'bodu':(LANG==='sk'?'bodov':'bodů');}   // „z 3 bodů“ / „z 3 bodov“
+function plBody(n){return n===1?'bod':(n>=2&&n<=4?'body':(LANG==='sk'?'bodov':'bodů'));}
 function show(id,on){$(id).classList.toggle('hidden',!on);}
 function msg(id,type,text){$(id).innerHTML=text?'<div class="msg '+type+'">'+esc(text)+'</div>':'';}
 
@@ -263,14 +329,15 @@ function pickPoint(){
   Packeta.Widget.pick(PACKETA_KEY,function(p){
     if(!p) return;
     // jen vlastní výdejní místa a Z-BOXy Zásilkovny (u externích dopravců by ID nešlo použít)
-    if(p.pickupPointType&&p.pickupPointType!=='internal'){ msg('msg2','warn','Vyberte prosím výdejní místo nebo Z-BOX Zásilkovny.'); return; }
+    if(p.pickupPointType&&p.pickupPointType!=='internal'){ msg('msg2','warn',t('w_ptype')); return; }
     var label=[p.name,p.street,p.city].filter(Boolean).join(', ').slice(0,150);
     pickedPt={id:String(p.id),cc:String(p.country||'cz').toLowerCase().slice(0,2),label:label};
     var el=$('picked'); el.textContent='✓ '+label; el.classList.remove('hidden');
-    $('btn-point').textContent='📍 Změnit výdejní místo';
+    updatePointBtn();
     msg('msg2','','');
-  },{country:'cz,sk',language:'cs',view:'modal'});
+  },{country:'cz,sk',language:LANG,view:'modal'});
 }
+function updatePointBtn(){$('btn-point').textContent=pickedPt?t('btn_pt2'):t('btn_pt1');}
 initPointUI();
 
 // ── přístup k databázi (v testech jde nahradit) ──
@@ -294,7 +361,7 @@ var st={handle:'',profile:'',left:0,qty:{},colors:{},labubu:[]};
 function lookup(){
   var h=norm($('ig').value);
   msg('msg1','','');
-  if(!h){msg('msg1','warn','Zadejte prosím své Instagram jméno.');return;}
+  if(!h){msg('msg1','warn',t('m_ig'));return;}
   $('btn-lookup').disabled=true;
   var pts=h==='test'?Promise.resolve({u:'test',profile:'pepa',left:3,total:3}):h==='testopen'?Promise.resolve({u:'testopen',profile:'pepa',left:2,total:2,open:true}):fetchPoints(h);
   Promise.all([pts,fetchStock()]).then(function(r){
@@ -302,34 +369,38 @@ function lookup(){
     $('btn-lookup').disabled=false;
     if(!d||!(Number(d.total)>0)){
       show('step2',false);
-      msg('msg1','warn','Pod tímto jménem zatím nemáme žádné body. Zkontrolujte prosím, jestli není překlep, nebo nám napište na Instagramu.');
+      msg('msg1','warn',t('m_nopoints'));
       return;
     }
     var left=Number(d.left)||0;
     if(left<=0){
       show('step2',false);
-      msg('msg1','info','Už nemáte žádné volné body. Děkujeme!');
+      msg('msg1','info',t('m_noleft'));
       return;
     }
     var open=!!d.open;
     st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},labubu:[],test:h==='test',open:open,out:out};
     SOLD_OUT=LABUBU.filter(function(sr){return out.indexOf('labubu:'+sr.id)>=0;}).map(function(sr){return sr.id;});
-    $('priceinfo').innerHTML=priceLine();
-    $('pts-title').textContent=open?'Vaše body zatím':'Vaše body';
-    $('open-note').textContent=open?'Vaše body ještě nejsou uzavřené, proto se jejich počet může změnit. Zatím se můžete jen podívat, co si za ně půjde vzít. Objednat půjde, až je uzavřeme.':'';
     show('open-note',open); show('order-form',!open);
     $('pts-left').textContent=left;
-    $('pts-word').textContent=plBody(left);
-    renderItems();
+    refreshStep2();
     show('step2',true);
     $('step2').scrollIntoView({behavior:'smooth',block:'start'});
   }).catch(function(){
     $('btn-lookup').disabled=false;
-    msg('msg1','err','Nepodařilo se načíst body. Zkuste to prosím za chvíli znovu.');
+    msg('msg1','err',t('m_loaderr'));
   });
 }
 $('ig').addEventListener('keydown',function(e){if(e.key==='Enter') lookup();});
 
+// Texty druhého kroku, které závisí na jazyku a stavu bodů.
+function refreshStep2(){
+  $('pts-title').textContent=st.open?t('pts_t_open'):t('pts_t');
+  $('open-note').textContent=st.open?t('open_note'):'';
+  $('pts-word').textContent=plBody(st.left);
+  $('priceinfo').innerHTML=priceLine();
+  renderItems();
+}
 // Ceník pod body: „1 bod: …, 2 body: …“ (z katalogu, takže vždy sedí).
 function priceLine(){
   var by={};
@@ -347,23 +418,23 @@ function used(){
 }
 function renderItems(){
   var u=used();
-  $('used').textContent='Vybráno '+u+' z '+st.left+' '+plBodu(st.left);
+  $('used').textContent=t('used',{u:u,n:st.left,w:plBodu(st.left)});
   $('bar').style.width=Math.min(100,Math.round(u/st.left*100))+'%';
   $('items').innerHTML=ITEMS.map(function(it){
     var n=st.qty[it.k]||0;
     var gone=itemOut(it);
     var canAdd=!gone&&u+it.cost<=st.left;
-    var html='<div class="item'+(n?' sel':'')+(gone?' gone':'')+'">'+(it.img?'<span class="em pic"><img src="'+esc(it.img)+'" alt=""></span>':'<span class="em">'+it.em+'</span>')+'<div class="nm">'+esc(it.label)+'<span class="cost">'+(gone?'Došlo':it.cost+' '+plBody(it.cost))+'</span></div>'+
-      '<div class="step"><button type="button" data-k="'+it.k+'" data-d="-1" '+(n?'':'disabled')+' aria-label="Ubrat">−</button>'+
+    var html='<div class="item'+(n?' sel':'')+(gone?' gone':'')+'">'+(it.img?'<span class="em pic"><img src="'+esc(it.img)+'" alt=""></span>':'<span class="em">'+it.em+'</span>')+'<div class="nm">'+esc(it.label)+'<span class="cost">'+(gone?esc(t('gone')):it.cost+' '+plBody(it.cost))+'</span></div>'+
+      '<div class="step"><button type="button" data-k="'+it.k+'" data-d="-1" '+(n?'':'disabled')+' aria-label="'+esc(t('aria_minus'))+'">−</button>'+
       '<span class="n">'+n+'</span>'+
-      '<button type="button" data-k="'+it.k+'" data-d="1" '+(canAdd?'':'disabled')+' aria-label="Přidat">+</button></div></div>';
+      '<button type="button" data-k="'+it.k+'" data-d="1" '+(canAdd?'':'disabled')+' aria-label="'+esc(t('aria_plus'))+'">+</button></div></div>';
     if(it.pick&&n){
       html+='<div class="pickrow">';
       for(var j=0;j<n;j++){
-        var c=(st.labubu||[])[j], sr=c&&labubuSeries(c.series), tag=n>1?' · č. '+(j+1):'';
+        var c=(st.labubu||[])[j], sr=c&&labubuSeries(c.series), tag=n>1?t('num',{n:j+1}):'';
         html+='<button type="button" class="pick'+(c?' ok':'')+'" onclick="openPick('+j+')">'+
-          (c?'<img src="'+esc(sr.img)+'" alt=""><span><b>'+esc(sr.name)+'</b><small>Postavička je překvapení 🎁'+tag+'</small></span><span class="chg">Změnit</span>'
-            :'<span class="ph">🐰</span><span><b>Vyberte krabičku</b><small>Labubu'+tag+'</small></span><span class="chg">Vybrat</span>')+'</button>';
+          (c?'<img src="'+esc(sr.img)+'" alt=""><span><b>'+esc(sr.name)+'</b><small>'+esc(t('pick_sur')+tag)+'</small></span><span class="chg">'+esc(t('chg'))+'</span>'
+            :'<span class="ph">🐰</span><span><b>'+esc(t('pick_choose'))+'</b><small>Labubu'+esc(tag)+'</small></span><span class="chg">'+esc(t('sel'))+'</span>')+'</button>';
       }
       html+='</div>';
     }
@@ -371,8 +442,8 @@ function renderItems(){
       html+='<div class="colors">';
       for(var i=0;i<n;i++){
         var cur=(st.colors[it.k]||[])[i]||'';
-        html+='<label>Barva ('+esc(it.label)+(n>1?' č. '+(i+1):'')+')</label><select class="input" data-k="'+it.k+'" data-i="'+i+'">'+
-          '<option value="">Vyberte barvu…</option>'+COLORS.map(function(c){return '<option'+(c===cur?' selected':'')+'>'+c+'</option>';}).join('')+'</select>';
+        html+='<label>'+esc(t('col_l',{l:it.label,n:(n>1?t('num',{n:i+1}).replace(' · ',' '):'')}))+'</label><select class="input" data-k="'+it.k+'" data-i="'+i+'">'+
+          '<option value="">'+esc(t('col_ph'))+'</option>'+COLORS.map(function(c){return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(colorName(c))+'</option>';}).join('')+'</select>';
       }
       html+='</div>';
     }
@@ -409,12 +480,12 @@ function pickSeriesSel(id){
   closePick(); renderItems();
 }
 function renderPick(){
-  var n=st.qty.labubu||1, tag=n>1?' (Labubu č. '+(pickIdx+1)+')':'';
-  $('pick').innerHTML='<button type="button" class="x" onclick="closePick()" aria-label="Zavřít">✕</button>'+
-    '<h3>Vyberte krabičku'+esc(tag)+'</h3><div class="sub">Klepněte na krabičku, kterou chcete. Postavička uvnitř je překvapení 🎁</div><div class="series">'+
+  var n=st.qty.labubu||1, tag=n>1?t('tagn',{n:pickIdx+1}):'';
+  $('pick').innerHTML='<button type="button" class="x" onclick="closePick()" aria-label="'+esc(t('aria_close'))+'">✕</button>'+
+    '<h3>'+esc(t('sh_t',{tag:tag}))+'</h3><div class="sub">'+esc(t('sh_sub'))+'</div><div class="series">'+
     LABUBU.map(function(sr){
       var out=SOLD_OUT.indexOf(sr.id)>=0;
-      return '<button type="button" data-id="'+sr.id+'" onclick="pickSeriesSel(this.dataset.id)"'+(out?' disabled':'')+'><img src="'+esc(sr.img)+'" alt="">'+esc(sr.name)+(out?'<br><small>došla</small>':'')+'</button>';
+      return '<button type="button" data-id="'+sr.id+'" onclick="pickSeriesSel(this.dataset.id)"'+(out?' disabled':'')+'><img src="'+esc(sr.img)+'" alt="">'+esc(sr.name)+(out?'<br><small>'+esc(t('sh_out'))+'</small>':'')+'</button>';
     }).join('')+'</div>';
 }
 document.addEventListener('keydown',function(e){if(e.key==='Escape') closePick();});
@@ -429,7 +500,7 @@ function send(){
   if(st.open) return;                                   // neuzavřené body: jen náhled
   if($('f-web').value){ show('step2',false); show('step3',true); return; }          // past na roboty
   var last=0; try{last=Number(localStorage.getItem('ord-last'))||0;}catch(e){}
-  if(Date.now()-last<60000){ msg('msg2','warn','Objednávku jste právě odeslali. Chvíli počkejte a zkuste to znovu.'); return; }
+  if(Date.now()-last<60000){ msg('msg2','warn',t('m_recent')); return; }
   var items=[], missing=false, missingPick=false;
   ITEMS.forEach(function(it){
     var n=st.qty[it.k]||0;
@@ -445,19 +516,19 @@ function send(){
       items.push(it.color?{k:it.k,color:c}:{k:it.k});
     }
   });
-  if(!items.length){ msg('msg2','warn','Vyberte prosím aspoň jednu položku.'); return; }
-  if(used()>st.left){ msg('msg2','warn','Vybrali jste víc, než máte bodů.'); return; }
-  if(missingPick){ msg('msg2','warn','Vyberte prosím krabičku u každého Labubu.'); return; }
-  if(missing){ msg('msg2','warn','Vyberte prosím barvu u každé kravičky.'); return; }
+  if(!items.length){ msg('msg2','warn',t('m_noitem')); return; }
+  if(used()>st.left){ msg('msg2','warn',t('m_over')); return; }
+  if(missingPick){ msg('msg2','warn',t('m_pick')); return; }
+  if(missing){ msg('msg2','warn',t('m_color')); return; }
   var name=$('f-name').value.trim(), email=$('f-email').value.trim(), phone=$('f-phone').value.trim(), point='';
   if(widgetReady()){
-    if(!pickedPt&&!st.test){ msg('msg2','warn','Vyberte prosím výdejní místo na mapě.'); return; }
+    if(!pickedPt&&!st.test){ msg('msg2','warn',t('m_ptmap')); return; }
     point=pickedPt?pickedPt.label+' [#'+pickedPt.id+'|'+pickedPt.cc+']':'TEST';
   } else point=$('f-point').value.trim();
-  if(name.length<3){ msg('msg2','warn','Vyplňte prosím jméno a příjmení.'); return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg('msg2','warn','Zkontrolujte prosím e-mail.'); return; }
-  if(phone.replace(/\D/g,'').length<9){ msg('msg2','warn','Zkontrolujte prosím telefon.'); return; }
-  if(point.length<3){ msg('msg2','warn','Vyberte prosím výdejní místo Zásilkovny.'); return; }
+  if(name.length<3){ msg('msg2','warn',t('m_name')); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg('msg2','warn',t('m_email')); return; }
+  if(phone.replace(/\D/g,'').length<9){ msg('msg2','warn',t('m_phone')); return; }
+  if(point.length<3){ msg('msg2','warn',t('m_pttext')); return; }
   showSummary({handle:st.handle,profile:st.profile,items:items,name:name,email:email,phone:phone,point:point,status:'new'});
 }
 
@@ -465,19 +536,19 @@ function send(){
 var pendingOrder=null;
 function itemLine(it){
   var def=ITEMS.filter(function(x){return x.k===it.k;})[0], sr=it.series&&labubuSeries(it.series);
-  return esc(def?def.label:it.k)+(sr?' – '+esc(sr.name):'')+(it.color?' ('+esc(it.color)+')':'');
+  return esc(def?def.label:it.k)+(sr?' – '+esc(sr.name):'')+(it.color?' ('+esc(colorName(it.color))+')':'');
 }
 function showSummary(o){
   pendingOrder=o;
   var cost=used(), pt=String(o.point||'').replace(/\s*\[#\d+\|[a-z]{2}\]\s*$/,'');
-  $('sum').innerHTML='<button type="button" class="x" onclick="closeSummary()" aria-label="Zavřít">✕</button>'+
-    '<h3>Zkontrolujte objednávku</h3><div class="sub">Ještě se to dá upravit. Potom už objednávku odešlete.</div>'+
-    '<div class="sumbox"><b>Objednáváte</b><ul>'+o.items.map(function(it){return '<li>'+itemLine(it)+'</li>';}).join('')+'</ul>'+
-      '<div class="tot">Použijete '+cost+' z '+st.left+' '+plBodu(st.left)+'</div></div>'+
-    '<div class="sumbox"><b>Pošleme na</b>'+esc(o.name)+'<br>'+esc(o.phone)+' · '+esc(o.email)+'<br>📍 '+esc(pt)+'</div>'+
+  $('sum').innerHTML='<button type="button" class="x" onclick="closeSummary()" aria-label="'+esc(t('aria_close'))+'">✕</button>'+
+    '<h3>'+esc(t('sum_t'))+'</h3><div class="sub">'+esc(t('sum_sub'))+'</div>'+
+    '<div class="sumbox"><b>'+esc(t('sum_what'))+'</b><ul>'+o.items.map(function(it){return '<li>'+itemLine(it)+'</li>';}).join('')+'</ul>'+
+      '<div class="tot">'+esc(t('sum_use',{c:cost,n:st.left,w:plBodu(st.left)}))+'</div></div>'+
+    '<div class="sumbox"><b>'+esc(t('sum_to'))+'</b>'+esc(o.name)+'<br>'+esc(o.phone)+' · '+esc(o.email)+'<br>📍 '+esc(pt)+'</div>'+
     '<div id="msg3"></div>'+
-    '<div class="sumbtns"><button type="button" class="btn ghost" onclick="closeSummary()">Upravit</button>'+
-      '<button type="button" class="btn" id="btn-confirm" onclick="confirmSend()">Potvrdit a odeslat</button></div>';
+    '<div class="sumbtns"><button type="button" class="btn ghost" onclick="closeSummary()">'+esc(t('sum_edit'))+'</button>'+
+      '<button type="button" class="btn" id="btn-confirm" onclick="confirmSend()">'+esc(t('sum_ok'))+'</button></div>';
   $('sum-bg').classList.remove('hidden'); document.body.style.overflow='hidden';
   $('sum').scrollTop=0;
 }
@@ -497,20 +568,39 @@ function confirmSend(){
     if(gone.length){
       st.out=out; SOLD_OUT=LABUBU.filter(function(sr){return out.indexOf('labubu:'+sr.id)>=0;}).map(function(sr){return sr.id;});
       $('btn-confirm').disabled=false;
-      msg('msg3','warn','Tohle mezitím došlo: '+gone.map(itemLine).map(function(t){return t.replace(/&amp;/g,'&');}).join(', ')+'. Upravte prosím objednávku.');
+      msg('msg3','warn',t('m_gone',{x:gone.map(itemLine).map(function(x){return x.replace(/&amp;/g,'&');}).join(', ')}));
       renderItems();
       return;
     }
-    if(st.test){ $('step3').querySelector('p').textContent='Toto byl testovací režim, nic se neodeslalo. Takhle uvidí poděkování zákazníci.'; finishOrder(); return; }
+    if(st.test){ $('step3').querySelector('p').textContent=t('thx_test'); finishOrder(); return; }
     return submitOrder(o).then(function(){
       try{localStorage.setItem('ord-last',String(Date.now()));}catch(e){}
       finishOrder();
     });
   }).catch(function(){
     $('btn-confirm').disabled=false;
-    msg('msg3','err','Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.');
+    msg('msg3','err',t('m_senderr'));
   });
 }
+
+// ── přepnutí jazyka ──
+function applyLang(){
+  document.documentElement.lang=LANG;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'),function(el){el.textContent=t(el.getAttribute('data-i18n'));});
+  Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-ph]'),function(el){el.setAttribute('placeholder',t(el.getAttribute('data-i18n-ph')));});
+  $('lang-cs').classList.toggle('on',LANG==='cs'); $('lang-sk').classList.toggle('on',LANG==='sk');
+  updatePointBtn();
+  msg('msg1','',''); msg('msg2','','');
+  if(st&&st.handle&&!$('step2').classList.contains('hidden')) refreshStep2();
+  if(!$('pick-bg').classList.contains('hidden')) renderPick();
+  if(!$('sum-bg').classList.contains('hidden')&&pendingOrder) showSummary(pendingOrder);
+}
+function setLang(l){
+  if(l!=='cs'&&l!=='sk') return;
+  LANG=l; try{localStorage.setItem('ord-lang',l);}catch(e){}
+  applyLang();
+}
+applyLang();
 </script>
 </body>
 </html>
