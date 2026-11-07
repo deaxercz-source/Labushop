@@ -1413,6 +1413,7 @@ function tsISO(ts){
 }
 
 // Zveřejní jen „Instagram jméno → body“ (nic dalšího), ať je zákazník hned vidí. Dokument: labubu-points/u-<jméno>.
+// U neuzavřených bodů je open:true, zákazník se na ně smí jen podívat (objednat jde až po uzavření).
 function syncPublicPoints(){
   if(!profile||!_loaded) return;
   var prof=profile, col=db.collection('labubu-points');
@@ -1421,19 +1422,22 @@ function syncPublicPoints(){
     _pubReady[prof]='loading';
     col.where('profile','==',prof).get().then(function(snap){
       var cache=_pubCache[prof]=(_pubCache[prof]||{});
-      snap.forEach(function(d){var v=d.data(); cache[d.id]=v.left+'|'+v.total;});
+      snap.forEach(function(d){var v=d.data(); cache[d.id]=v.left+'|'+v.total+'|'+(v.open?1:0);});
       _pubReady[prof]=true; syncPublicPoints();
     }).catch(function(e){console.error('points sync init',e); _pubReady[prof]=false;});
     return;
   }
   var want={};
   data.people.forEach(function(p){
-    if(!ptsClosed(p)) return;
     var h=normHandle(p.name); if(!h) return;
-    want['u-'+h]={u:h,profile:prof,left:ptsLeft(p),total:Number(p.ptsTotal)||0};
+    if(ptsClosed(p)) want['u-'+h]={u:h,profile:prof,left:ptsLeft(p),total:Number(p.ptsTotal)||0};
+    else if(bonusCount(p)>0){                      // neuzavřené body: zákazník vidí průběžný počet jen jako náhled (open:true)
+      var n=bonusCount(p);
+      want['u-'+h]={u:h,profile:prof,left:n,total:n,open:true};
+    }
   });
   var cache=_pubCache[prof]||(_pubCache[prof]={}), ops=[];
-  Object.keys(want).forEach(function(id){var key=want[id].left+'|'+want[id].total; if(cache[id]!==key) ops.push({id:id,set:want[id],key:key});});
+  Object.keys(want).forEach(function(id){var key=want[id].left+'|'+want[id].total+'|'+(want[id].open?1:0); if(cache[id]!==key) ops.push({id:id,set:want[id],key:key});});
   Object.keys(cache).forEach(function(id){if(!want[id]) ops.push({id:id,del:true});});
   if(!ops.length) return;
   ops=ops.slice(0,400);

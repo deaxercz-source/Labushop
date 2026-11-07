@@ -77,6 +77,9 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .item.sel{border-color:#c9b4fb;background:#faf6ff}
 .item .em{width:46px;height:46px;border-radius:50%;background:#f6efff;display:grid;place-items:center;font-size:24px;flex:none}
 .item.sel .em{background:var(--grad)}
+.item .em.pic{padding:2px;overflow:hidden}
+.item .em.pic img{width:100%;height:100%;object-fit:contain;display:block}
+.item.sel .em.pic{background:#ecdfff}
 .item .nm{flex:1;font-weight:700;line-height:1.2}
 .item .cost{display:block;color:var(--muted);font-weight:500;font-size:13px;margin-top:2px}
 .step{display:flex;align-items:center;gap:8px}
@@ -137,15 +140,16 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
   <div id="step2" class="hidden">
     <div class="card">
       <div class="points"><div class="badge" id="pts-left">0</div>
-        <div class="txt"><b>Vaše body</b><span id="pts-word">bodů</span><span> · vybírejte jen do výše svých bodů</span></div></div>
+        <div class="txt"><b id="pts-title">Vaše body</b><span id="pts-word">bodů</span><span> · vybírejte jen do výše svých bodů</span></div></div>
       <div class="bar"><i id="bar"></i></div>
+      <div class="msg warn hidden" id="open-note"></div>
       <div class="sum" id="used">Vybráno 0 z 0 bodů</div>
     </div>
     <div class="card">
       <div class="ct"><span class="n">2</span>Co si vyberete?</div>
       <div id="items"></div>
     </div>
-    <div class="card">
+    <div class="card" id="order-form">
       <div class="ct"><span class="n">3</span>Kam to pošleme?</div>
       <div class="fld"><label for="f-name">Jméno a příjmení</label><input class="input" id="f-name" autocomplete="name"></div>
       <div class="fld"><label for="f-email">E-mail</label><input class="input" id="f-email" type="email" autocomplete="email"></div>
@@ -186,9 +190,9 @@ var ITEMS=[
   {k:'cow16',label:'Kravička 16 cm',cost:1,color:true,em:'🐄'},
   {k:'cow38',label:'Kravička 38 cm',cost:2,color:true,em:'🐄'},
   {k:'cow60',label:'Kravička 60 cm',cost:3,color:true,em:'🐄'},
-  {k:'dump',label:'Mystery Dumpling',cost:1,em:'🥟'},
+  {k:'dump',label:'Mystery Dumpling',cost:1,em:'🥟',img:'img/icon-dumpling.png'},
   {k:'butter',label:'Butter Squishy',cost:1,em:'🧈'},
-  {k:'labubu',label:'Labubu',cost:1,em:'🐰',pick:true}
+  {k:'labubu',label:'Labubu',cost:1,em:'🐰',pick:true,img:'img/icon-labubu.png'}
 ];
 var COLORS=['Bílá','Růžová','Hnědá','Béžová'];
 // Řady Labubu (blind boxy; postavička uvnitř je náhodná). Musí odpovídat appce: index.html ORDER_LABUBU.
@@ -254,11 +258,11 @@ function lookup(){
   msg('msg1','','');
   if(!h){msg('msg1','warn','Zadejte prosím své Instagram jméno.');return;}
   $('btn-lookup').disabled=true;
-  (h==='test'?Promise.resolve({u:'test',profile:'pepa',left:3,total:3}):fetchPoints(h)).then(function(d){
+  (h==='test'?Promise.resolve({u:'test',profile:'pepa',left:3,total:3}):h==='testopen'?Promise.resolve({u:'testopen',profile:'pepa',left:2,total:2,open:true}):fetchPoints(h)).then(function(d){
     $('btn-lookup').disabled=false;
     if(!d||!(Number(d.total)>0)){
       show('step2',false);
-      msg('msg1','warn','Vaše body zatím nemáme uzavřené. Napište nám prosím zprávu na Instagramu a podíváme se na to.');
+      msg('msg1','warn','Pod tímto jménem zatím nemáme žádné body. Zkontrolujte prosím, jestli není překlep, nebo nám napište na Instagramu.');
       return;
     }
     var left=Number(d.left)||0;
@@ -267,7 +271,11 @@ function lookup(){
       msg('msg1','info','Už nemáte žádné volné body. Děkujeme!');
       return;
     }
-    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},labubu:[],test:h==='test'};
+    var open=!!d.open;
+    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},labubu:[],test:h==='test',open:open};
+    $('pts-title').textContent=open?'Vaše body zatím':'Vaše body';
+    $('open-note').textContent=open?'Vaše body ještě nejsou uzavřené, proto se jejich počet může změnit. Zatím se můžete jen podívat, co si za ně půjde vzít. Objednat půjde, až je uzavřeme.':'';
+    show('open-note',open); show('order-form',!open);
     $('pts-left').textContent=left;
     $('pts-word').textContent=plBody(left);
     renderItems();
@@ -290,7 +298,7 @@ function renderItems(){
   $('items').innerHTML=ITEMS.map(function(it){
     var n=st.qty[it.k]||0;
     var canAdd=u+it.cost<=st.left;
-    var html='<div class="item'+(n?' sel':'')+'"><span class="em">'+it.em+'</span><div class="nm">'+esc(it.label)+'<span class="cost">'+it.cost+' '+plBody(it.cost)+'</span></div>'+
+    var html='<div class="item'+(n?' sel':'')+'">'+(it.img?'<span class="em pic"><img src="'+esc(it.img)+'" alt=""></span>':'<span class="em">'+it.em+'</span>')+'<div class="nm">'+esc(it.label)+'<span class="cost">'+it.cost+' '+plBody(it.cost)+'</span></div>'+
       '<div class="step"><button type="button" data-k="'+it.k+'" data-d="-1" '+(n?'':'disabled')+' aria-label="Ubrat">−</button>'+
       '<span class="n">'+n+'</span>'+
       '<button type="button" data-k="'+it.k+'" data-d="1" '+(canAdd?'':'disabled')+' aria-label="Přidat">+</button></div></div>';
@@ -363,6 +371,7 @@ $('items').addEventListener('change',function(e){
 
 function send(){
   msg('msg2','','');
+  if(st.open) return;                                   // neuzavřené body: jen náhled
   if($('f-web').value){ show('step2',false); show('step3',true); return; }          // past na roboty
   var last=0; try{last=Number(localStorage.getItem('ord-last'))||0;}catch(e){}
   if(Date.now()-last<60000){ msg('msg2','warn','Objednávku jste právě odeslali. Chvíli počkejte a zkuste to znovu.'); return; }
