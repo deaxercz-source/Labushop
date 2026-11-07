@@ -1706,6 +1706,7 @@ function pktBlockHTML(p){
       '<button class="btn btn-sm btn-primary" data-id="'+id+'" onclick="pktCopyCode(this.dataset.id)">Kopírovat kód</button>'+
       (shipOf(p)!=='done'?'<button class="btn btn-sm" data-id="'+id+'" onclick="pktMarkSent(this.dataset.id)">✅ Označit jako Odesláno</button>':'<span class="cat">Odesláno</span>')+
       '<button class="btn btn-sm" data-id="'+id+'" onclick="pktCancel(this.dataset.id)"'+(_pktBusy?' disabled':'')+'>'+(_pktBusy?'⏳ Ruším…':'🗑 Stornovat zásilku')+'</button>'+
+      '<button class="btn btn-sm" onclick="openPktSetup()" title="Nastavení propojení">⚙</button>'+
       '</div><div class="pktmsg" id="si-pktmsg"></div></div>';
   }
   if(!pktCfg()){
