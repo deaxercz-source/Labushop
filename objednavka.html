@@ -43,7 +43,18 @@ body::after{width:380px;height:380px;background:#cbbcff;bottom:-120px;right:-120
 button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 .wrap{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:28px 16px 70px}
 .hero{text-align:center;margin-bottom:22px}
-.hero .spark{font-size:30px;letter-spacing:6px}
+.hero .spark{display:flex;justify-content:center;align-items:center;gap:7px;margin-bottom:6px}
+.hero .sp{font-size:22px;line-height:1;animation:twinkle 2.6s ease-in-out infinite}
+.hero .sp.s2{animation-delay:1.3s}
+.hero .hb{width:60px;height:60px;border-radius:50%;background:#fff;border:2px solid #f0e6fb;display:grid;place-items:center;flex:none;
+  box-shadow:0 14px 22px -12px rgba(167,139,250,.75),0 2px 4px rgba(167,139,250,.12)}
+.hero .hb img{width:46px;height:46px;object-fit:contain;display:block}
+.hero .hb.b1{transform:rotate(-7deg)}
+.hero .hb.b2{transform:translateY(-7px) rotate(5deg)}
+.hero .hb.b3{transform:rotate(-4deg)}
+.hero .hb.b4{transform:translateY(-5px) rotate(7deg)}
+@keyframes twinkle{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.15)}}
+@media(prefers-reduced-motion:reduce){.hero .sp{animation:none}}
 .hero h1{font-family:'Fredoka',sans-serif;font-weight:700;font-size:38px;line-height:1.05;margin:6px 0 8px;letter-spacing:-.01em}
 .hero h1 .f{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero h1 .o{color:var(--ink)}
@@ -112,6 +123,17 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .series button:disabled{opacity:.45;cursor:default}
 .series button small{font-weight:500;color:var(--muted)}
 .series button img{width:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;display:block;margin-bottom:6px}
+.item.gone{opacity:.55}
+.item.gone .cost{color:#c0392b;font-weight:700}
+.priceinfo{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--muted);line-height:1.6}
+.priceinfo b{color:var(--ink)}
+.sumbox{background:#faf6ff;border:1.5px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:10px;font-size:15px;line-height:1.5}
+.sumbox>b{display:block;font-family:'Fredoka',sans-serif;font-size:16px;margin-bottom:4px}
+.sumbox ul{list-style:none}
+.sumbox li{padding:3px 0}
+.sumbox .tot{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);color:var(--muted);font-size:14px}
+.sumbtns{display:flex;gap:10px;margin-top:8px}
+.sumbtns .btn{flex:1;padding:14px 10px}
 .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
 .hidden{display:none}
 .done{text-align:center;padding:34px 20px}
@@ -124,7 +146,14 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 <body>
 <div class="wrap">
   <div class="hero">
-    <div class="spark">✨🐄🥟✨</div>
+    <div class="spark" aria-hidden="true">
+      <span class="sp">✨</span>
+      <span class="hb b1"><img src="img/icon-cow.png" alt=""></span>
+      <span class="hb b2"><img src="img/icon-dumpling.png" alt=""></span>
+      <span class="hb b3"><img src="img/icon-labubu.png" alt=""></span>
+      <span class="hb b4"><img src="img/icon-butter.png" alt=""></span>
+      <span class="sp s2">✨</span>
+    </div>
     <h1><span class="f">Vaše</span> <span class="o">objednávka</span></h1>
     <p class="lead">Zadejte své Instagram jméno, hned uvidíte, kolik máte bodů, a vyberte si, co chcete.</p>
   </div>
@@ -140,10 +169,11 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
   <div id="step2" class="hidden">
     <div class="card">
       <div class="points"><div class="badge" id="pts-left">0</div>
-        <div class="txt"><b id="pts-title">Vaše body</b><span id="pts-word">bodů</span><span> · vybírejte jen do výše svých bodů</span></div></div>
+        <div class="txt"><b id="pts-title">Vaše body</b><span id="pts-word">bodů</span><span> · 1 bod = 1 splněný bonus</span></div></div>
       <div class="bar"><i id="bar"></i></div>
       <div class="msg warn hidden" id="open-note"></div>
       <div class="sum" id="used">Vybráno 0 z 0 bodů</div>
+      <div class="priceinfo" id="priceinfo"></div>
     </div>
     <div class="card">
       <div class="ct"><span class="n">2</span>Co si vyberete?</div>
@@ -174,6 +204,7 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 </div>
 
 <div id="pick-bg" class="sheet-bg hidden" onclick="closePick(event)"><div class="sheet" id="pick"></div></div>
+<div id="sum-bg" class="sheet-bg hidden" onclick="closeSummary(event)"><div class="sheet" id="sum"></div></div>
 
 <script>
 // ── Firebase (stejný projekt jako appka; bez přihlášení se dá jen číst jeden záznam s body a vytvořit objednávka) ──
@@ -213,6 +244,7 @@ function norm(s){
   s=s.replace(/^@+/,'').replace(/\s+/g,'');
   return s.replace(/[^a-z0-9._]/g,'');
 }
+function plBodu(n){return n===1?'bodu':'bodů';}   // „z 3 bodů“
 function plBody(n){return n===1?'bod':(n>=2&&n<=4?'body':'bodů');}
 function show(id,on){$(id).classList.toggle('hidden',!on);}
 function msg(id,type,text){$(id).innerHTML=text?'<div class="msg '+type+'">'+esc(text)+'</div>':'';}
@@ -245,6 +277,12 @@ initPointUI();
 function fetchPoints(handle){
   return db.collection('labubu-points').doc('u-'+handle).get().then(function(d){return d.exists?d.data():null;});
 }
+// Co právě došlo (nastavuje majitel v appce): klíče položek a 'labubu:<krabička>'. Když se nenačte, nic není vyprodané.
+function fetchStock(){
+  return db.collection('labubu-points').doc('stock').get().then(function(d){
+    var o=d.exists?d.data().out:null; return Array.isArray(o)?o.map(String):[];
+  }).catch(function(){return [];});
+}
 function submitOrder(doc){
   doc.createdAt=firebase.firestore.FieldValue.serverTimestamp();
   return db.collection('labubu-orders').add(doc);
@@ -258,7 +296,9 @@ function lookup(){
   msg('msg1','','');
   if(!h){msg('msg1','warn','Zadejte prosím své Instagram jméno.');return;}
   $('btn-lookup').disabled=true;
-  (h==='test'?Promise.resolve({u:'test',profile:'pepa',left:3,total:3}):h==='testopen'?Promise.resolve({u:'testopen',profile:'pepa',left:2,total:2,open:true}):fetchPoints(h)).then(function(d){
+  var pts=h==='test'?Promise.resolve({u:'test',profile:'pepa',left:3,total:3}):h==='testopen'?Promise.resolve({u:'testopen',profile:'pepa',left:2,total:2,open:true}):fetchPoints(h);
+  Promise.all([pts,fetchStock()]).then(function(r){
+    var d=r[0], out=r[1];
     $('btn-lookup').disabled=false;
     if(!d||!(Number(d.total)>0)){
       show('step2',false);
@@ -272,7 +312,9 @@ function lookup(){
       return;
     }
     var open=!!d.open;
-    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},labubu:[],test:h==='test',open:open};
+    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},labubu:[],test:h==='test',open:open,out:out};
+    SOLD_OUT=LABUBU.filter(function(sr){return out.indexOf('labubu:'+sr.id)>=0;}).map(function(sr){return sr.id;});
+    $('priceinfo').innerHTML=priceLine();
     $('pts-title').textContent=open?'Vaše body zatím':'Vaše body';
     $('open-note').textContent=open?'Vaše body ještě nejsou uzavřené, proto se jejich počet může změnit. Zatím se můžete jen podívat, co si za ně půjde vzít. Objednat půjde, až je uzavřeme.':'';
     show('open-note',open); show('order-form',!open);
@@ -288,17 +330,30 @@ function lookup(){
 }
 $('ig').addEventListener('keydown',function(e){if(e.key==='Enter') lookup();});
 
+// Ceník pod body: „1 bod: …, 2 body: …“ (z katalogu, takže vždy sedí).
+function priceLine(){
+  var by={};
+  ITEMS.forEach(function(it){(by[it.cost]=by[it.cost]||[]).push(it.label);});
+  return Object.keys(by).sort().map(function(c){return '<b>'+c+' '+plBody(Number(c))+':</b> '+esc(by[c].join(', '));}).join('<br>');
+}
+// Došlo = položka je v seznamu nebo (u Labubu) jsou vyprodané všechny krabičky.
+function itemOut(it){
+  var out=(st.out||[]);
+  if(out.indexOf(it.k)>=0) return true;
+  return !!it.pick&&LABUBU.every(function(sr){return SOLD_OUT.indexOf(sr.id)>=0;});
+}
 function used(){
   return ITEMS.reduce(function(s,it){return s+(st.qty[it.k]||0)*it.cost;},0);
 }
 function renderItems(){
   var u=used();
-  $('used').textContent='Vybráno '+u+' z '+st.left+' '+plBody(st.left);
+  $('used').textContent='Vybráno '+u+' z '+st.left+' '+plBodu(st.left);
   $('bar').style.width=Math.min(100,Math.round(u/st.left*100))+'%';
   $('items').innerHTML=ITEMS.map(function(it){
     var n=st.qty[it.k]||0;
-    var canAdd=u+it.cost<=st.left;
-    var html='<div class="item'+(n?' sel':'')+'">'+(it.img?'<span class="em pic"><img src="'+esc(it.img)+'" alt=""></span>':'<span class="em">'+it.em+'</span>')+'<div class="nm">'+esc(it.label)+'<span class="cost">'+it.cost+' '+plBody(it.cost)+'</span></div>'+
+    var gone=itemOut(it);
+    var canAdd=!gone&&u+it.cost<=st.left;
+    var html='<div class="item'+(n?' sel':'')+(gone?' gone':'')+'">'+(it.img?'<span class="em pic"><img src="'+esc(it.img)+'" alt=""></span>':'<span class="em">'+it.em+'</span>')+'<div class="nm">'+esc(it.label)+'<span class="cost">'+(gone?'Došlo':it.cost+' '+plBody(it.cost))+'</span></div>'+
       '<div class="step"><button type="button" data-k="'+it.k+'" data-d="-1" '+(n?'':'disabled')+' aria-label="Ubrat">−</button>'+
       '<span class="n">'+n+'</span>'+
       '<button type="button" data-k="'+it.k+'" data-d="1" '+(canAdd?'':'disabled')+' aria-label="Přidat">+</button></div></div>';
@@ -403,17 +458,58 @@ function send(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg('msg2','warn','Zkontrolujte prosím e-mail.'); return; }
   if(phone.replace(/\D/g,'').length<9){ msg('msg2','warn','Zkontrolujte prosím telefon.'); return; }
   if(point.length<3){ msg('msg2','warn','Vyberte prosím výdejní místo Zásilkovny.'); return; }
-  if(st.test){ show('step1',false); show('step2',false); show('step3',true); $('step3').querySelector('p').textContent='Toto byl testovací režim, nic se neodeslalo. Takhle uvidí poděkování zákazníci.'; window.scrollTo(0,0); return; }
-  $('btn-send').disabled=true;
-  submitOrder({handle:st.handle,profile:st.profile,items:items,name:name,email:email,phone:phone,point:point,status:'new'})
-    .then(function(){
+  showSummary({handle:st.handle,profile:st.profile,items:items,name:name,email:email,phone:phone,point:point,status:'new'});
+}
+
+// ── shrnutí před odesláním ──
+var pendingOrder=null;
+function itemLine(it){
+  var def=ITEMS.filter(function(x){return x.k===it.k;})[0], sr=it.series&&labubuSeries(it.series);
+  return esc(def?def.label:it.k)+(sr?' – '+esc(sr.name):'')+(it.color?' ('+esc(it.color)+')':'');
+}
+function showSummary(o){
+  pendingOrder=o;
+  var cost=used(), pt=String(o.point||'').replace(/\s*\[#\d+\|[a-z]{2}\]\s*$/,'');
+  $('sum').innerHTML='<button type="button" class="x" onclick="closeSummary()" aria-label="Zavřít">✕</button>'+
+    '<h3>Zkontrolujte objednávku</h3><div class="sub">Ještě se to dá upravit. Potom už objednávku odešlete.</div>'+
+    '<div class="sumbox"><b>Objednáváte</b><ul>'+o.items.map(function(it){return '<li>'+itemLine(it)+'</li>';}).join('')+'</ul>'+
+      '<div class="tot">Použijete '+cost+' z '+st.left+' '+plBodu(st.left)+'</div></div>'+
+    '<div class="sumbox"><b>Pošleme na</b>'+esc(o.name)+'<br>'+esc(o.phone)+' · '+esc(o.email)+'<br>📍 '+esc(pt)+'</div>'+
+    '<div id="msg3"></div>'+
+    '<div class="sumbtns"><button type="button" class="btn ghost" onclick="closeSummary()">Upravit</button>'+
+      '<button type="button" class="btn" id="btn-confirm" onclick="confirmSend()">Potvrdit a odeslat</button></div>';
+  $('sum-bg').classList.remove('hidden'); document.body.style.overflow='hidden';
+  $('sum').scrollTop=0;
+}
+function closeSummary(e){
+  if(e&&e.target&&e.target.id!=='sum-bg') return;
+  $('sum-bg').classList.add('hidden'); document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape') closeSummary();});
+function finishOrder(){
+  closeSummary(); show('step1',false); show('step2',false); show('step3',true); window.scrollTo(0,0);
+}
+function confirmSend(){
+  var o=pendingOrder; if(!o) return;
+  $('btn-confirm').disabled=true; msg('msg3','','');
+  fetchStock().then(function(out){                      // mezitím mohlo něco dojít
+    var gone=o.items.filter(function(it){return out.indexOf(it.k)>=0||(it.series&&out.indexOf('labubu:'+it.series)>=0);});
+    if(gone.length){
+      st.out=out; SOLD_OUT=LABUBU.filter(function(sr){return out.indexOf('labubu:'+sr.id)>=0;}).map(function(sr){return sr.id;});
+      $('btn-confirm').disabled=false;
+      msg('msg3','warn','Tohle mezitím došlo: '+gone.map(itemLine).map(function(t){return t.replace(/&amp;/g,'&');}).join(', ')+'. Upravte prosím objednávku.');
+      renderItems();
+      return;
+    }
+    if(st.test){ $('step3').querySelector('p').textContent='Toto byl testovací režim, nic se neodeslalo. Takhle uvidí poděkování zákazníci.'; finishOrder(); return; }
+    return submitOrder(o).then(function(){
       try{localStorage.setItem('ord-last',String(Date.now()));}catch(e){}
-      show('step1',false); show('step2',false); show('step3',true);
-      window.scrollTo(0,0);
-    }).catch(function(){
-      $('btn-send').disabled=false;
-      msg('msg2','err','Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.');
+      finishOrder();
     });
+  }).catch(function(){
+    $('btn-confirm').disabled=false;
+    msg('msg3','err','Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.');
+  });
 }
 </script>
 </body>

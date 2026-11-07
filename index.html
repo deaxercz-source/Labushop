@@ -144,6 +144,13 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 #pkt-n:not(:empty){background:var(--green);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:2px;vertical-align:top}
 .setrow{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin:0 0 8px;font-size:15px}
 .setrow span{color:var(--muted);font-size:13px}
+.stocklist{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stockrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;color:var(--text);margin:0;cursor:pointer}
+.stockrow:first-child{border-top:none}
+.stockrow input{width:18px;height:18px;accent-color:var(--green);flex:none}
+.stockrow span{flex:1}
+.stockrow em{font-style:normal;font-size:12px;color:var(--green);font-weight:600}
+.stockrow:has(input:not(:checked)) em{color:var(--red)}
 .sizebar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin:6px 0}
 .sizebar i{display:block;height:100%;background:var(--green);border-radius:999px}
 .sizebar i.warn{background:#e6a817}.sizebar i.bad{background:var(--red)}
@@ -527,6 +534,7 @@ function save(){
   if(_tplDirty) out.templates=JSON.parse(JSON.stringify(root.templates||[]));
   if(root.tplShared) out.tplShared=true;
   if(root.pktCfg) out.pktCfg=JSON.parse(JSON.stringify(root.pktCfg));
+  if(Array.isArray(root.stockOut)) out.stockOut=root.stockOut.slice();
   _pending=out;
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer=setTimeout(flushSave,400);
@@ -549,6 +557,7 @@ function bindProfile(){
   syncPublicPoints();
   pktAutoSync();
   checkDataSize();
+  publishStockOnce();
 }
 // Šablony zpráv jsou společné pro Pepu i Tomáše (jeden seznam v root.templates).
 function shareTemplates(){
@@ -1569,6 +1578,20 @@ function sameVal(a,b,digits){
   var f=function(v){v=String(v==null?'':v).toLowerCase(); return digits?v.replace(/\D/g,''):v.replace(/\s+/g,'');};
   return f(a)===f(b);
 }
+// Co z objednávky je podle nastavení v appce vyprodané (klíče: položka nebo 'labubu:<krabička>').
+function stockGone(items){
+  var out=(root&&Array.isArray(root.stockOut))?root.stockOut:[], gone=[];
+  (Array.isArray(items)?items:[]).forEach(function(it){
+    if(!it) return;
+    var def=ORDER_ITEMS.filter(function(x){return x.k===it.k;})[0]; if(!def) return;
+    var label=def.label;
+    if(out.indexOf(it.k)>=0) gone.push(label);
+    else if(it.series&&out.indexOf('labubu:'+it.series)>=0){
+      var ser=ORDER_LABUBU.filter(function(x){return x.id===it.series;})[0]; gone.push(label+' – '+(ser?ser.name:it.series));
+    }
+  });
+  return gone.filter(function(g,i){return gone.indexOf(g)===i;});
+}
 // Posouzení objednávky z vlastních dat. force = potvrzení ručně (jen jméno a položky musí sedět).
 function evaluateOrder(o,force){
   var lines=[], cost=0, bad=false;
@@ -1592,6 +1615,8 @@ function evaluateOrder(o,force){
   if(!p) return {ok:false,reason:'Jméno nenalezeno v profilu '+profileName(profile),text:text,cost:cost};
   var base={person:p,text:text,cost:cost};
   if(!force){
+    var gone=stockGone(o.items);
+    if(gone.length) return Object.assign({ok:false,reason:'Došlo: '+gone.join(', ')},base);
     if(!ptsClosed(p)) return Object.assign({ok:false,reason:'Body nejsou uzavřené'},base);
     if(cost>ptsLeft(p)) return Object.assign({ok:false,reason:'Nedostatek bodů (má '+ptsLeft(p)+', chce '+cost+')'},base);
     var si=p.shipInfo||{};
@@ -2235,9 +2260,34 @@ document.addEventListener('keydown',function(e){
 });
 
 // ── NASTAVENÍ, ZÁLOHA ──
+function stockOutKeys(){return Array.isArray(root.stockOut)?root.stockOut:[];}
+function stockRowsHTML(){
+  var out=stockOutKeys(), rows=[];
+  ORDER_ITEMS.forEach(function(it){
+    if(it.pick) ORDER_LABUBU.forEach(function(sr){rows.push({k:'labubu:'+sr.id,t:'Labubu · '+sr.name});});
+    else rows.push({k:it.k,t:it.label});
+  });
+  return '<div class="stocklist">'+rows.map(function(r){
+    var on=out.indexOf(r.k)<0;
+    return '<label class="stockrow"><input type="checkbox" data-k="'+esc(r.k)+'" onchange="toggleStock(this)"'+(on?' checked':'')+'><span>'+esc(r.t)+'</span><em>'+(on?'skladem':'došlo')+'</em></label>';
+  }).join('')+'</div>';
+}
+function toggleStock(el){
+  var k=el.getAttribute('data-k'), out=stockOutKeys().slice(), i=out.indexOf(k);
+  if(el.checked&&i>=0) out.splice(i,1);                 // skladem
+  if(!el.checked&&i<0) out.push(k);                     // došlo
+  root.stockOut=out; save(); publishStock();
+  var em=el.parentNode.querySelector('em'); if(em) em.textContent=el.checked?'skladem':'došlo';
+}
+// Zveřejní seznam vyprodaného (jen klíče) pro stránku zákazníků: labubu-points/stock.
+function publishStock(){
+  db.collection('labubu-points').doc('stock').set({out:stockOutKeys()}).catch(function(e){console.error('stock',e); toast('Dostupnost se nepodařilo zveřejnit.');});
+}
 var DOC_LIMIT=1048576;              // dokument ve Firestore smí mít zhruba 1 MiB
 var _sizeWarned=false;
 function dataSizeBytes(){try{return new Blob([JSON.stringify(root)]).size;}catch(e){return 0;}}
+var _stockPub=false;
+function publishStockOnce(){if(_stockPub||!_loaded||!Array.isArray(root.stockOut)) return; _stockPub=true; publishStock();}
 function checkDataSize(){
   if(_sizeWarned||!_loaded) return;
   var pct=Math.round(dataSizeBytes()/DOC_LIMIT*100);
@@ -2248,6 +2298,7 @@ function openSettings(){
   openModal('<h2>⚙ Nastavení</h2>'+
     '<button class="setrow" onclick="openPktSetup()"><b>📦 Zásilkovna</b><span>'+(pktCfg()?'propojeno':'nepropojeno')+'</span></button>'+
     '<button class="setrow" onclick="openTemplates()"><b>📋 Šablony zpráv</b><span>'+(root.templates||[]).length+'</span></button>'+
+    '<div class="fld" style="margin-top:14px"><label>Dostupnost zboží (odškrtnuté = „Došlo“ na stránce pro zákazníky)</label>'+stockRowsHTML()+'</div>'+
     '<div class="fld" style="margin-top:14px"><label>Odkaz pro zákazníky (objednávka)</label><div class="sirow"><input class="input" readonly value="'+esc(orderLink())+'" onfocus="this.select()">'+
       '<button class="btn btn-sm btn-primary" onclick="copyOrderLink()">Kopírovat</button></div></div>'+
     '<div class="fld"><label>Záloha a velikost dat</label>'+
