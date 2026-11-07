@@ -1551,7 +1551,7 @@ function orderRowHTML(o,kind){
     (o.reason?'<div class="orsn">⚠ '+esc(o.reason)+'</div>':'')+
     '<div class="odet">'+det+'</div><div class="oa">'+btns+'</div></div>';
 }
-function orderLink(){return new URL('objednavka.html',location.href).href.split('?')[0].split('#')[0];}
+function orderLink(){return new URL('objednavka',location.href).href.split('?')[0].split('#')[0];}
 function copyOrderLink(){
   copyText(orderLink()).then(function(){toast('✓ Odkaz zkopírován');},function(){toast('Kopírování se nepovedlo');});
 }
