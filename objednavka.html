@@ -88,6 +88,27 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .colors{padding:0 4px 12px 4px;margin-top:-4px}
 .colors .input{margin-top:6px;margin-bottom:8px}
 .picked{margin-top:10px;padding:12px 14px;border-radius:16px;background:#e9f8f1;color:#17694a;font-size:15px;line-height:1.4}
+.pickrow{margin:-4px 4px 12px 4px;display:flex;flex-direction:column;gap:8px}
+.pick{display:flex;align-items:center;gap:12px;width:100%;padding:8px 14px 8px 8px;border:1.5px dashed #c9b4fb;border-radius:18px;background:#faf6ff;cursor:pointer;text-align:left}
+.pick.ok{border-style:solid;background:#fff}
+.pick img,.pick .ph{width:54px;height:54px;border-radius:12px;flex:none;object-fit:cover;background:#f1e8fb}
+.pick .ph{display:grid;place-items:center;font-size:26px}
+.pick b{display:block;font-weight:700;line-height:1.2}
+.pick small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.pick .chg{margin-left:auto;color:#8b5cf6;font-weight:700;font-size:14px}
+.sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(43,33,64,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet-bg.hidden{display:none}
+.sheet{position:relative;width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#fff;border-radius:28px 28px 0 0;padding:20px 16px 26px;box-shadow:0 -20px 50px -20px rgba(43,33,64,.5)}
+@media(min-width:600px){.sheet-bg{align-items:center}.sheet{border-radius:28px;max-height:86vh}}
+.sheet h3{font-family:'Fredoka',sans-serif;font-size:22px;margin-bottom:2px;padding-right:40px}
+.sheet .sub{color:var(--muted);font-size:14px;margin-bottom:14px}
+.sheet .x{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;border:none;background:#f1e8fb;color:#8b5cf6;font-size:18px;cursor:pointer}
+.series{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.series button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:6px 6px 10px;cursor:pointer;font-weight:700;font-size:13px;line-height:1.2}
+.series button:active{border-color:#c9b4fb;background:#faf6ff}
+.series button:disabled{opacity:.45;cursor:default}
+.series button small{font-weight:500;color:var(--muted)}
+.series button img{width:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;display:block;margin-bottom:6px}
 .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
 .hidden{display:none}
 .done{text-align:center;padding:34px 20px}
@@ -148,6 +169,8 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
   <div class="foot">💗</div>
 </div>
 
+<div id="pick-bg" class="sheet-bg hidden" onclick="closePick(event)"><div class="sheet" id="pick"></div></div>
+
 <script>
 // ── Firebase (stejný projekt jako appka; bez přihlášení se dá jen číst jeden záznam s body a vytvořit objednávka) ──
 firebase.initializeApp({
@@ -165,9 +188,18 @@ var ITEMS=[
   {k:'cow60',label:'Kravička 60 cm',cost:3,color:true,em:'🐄'},
   {k:'dump',label:'Mystery Dumpling',cost:1,em:'🥟'},
   {k:'butter',label:'Butter Squishy',cost:1,em:'🧈'},
-  {k:'labubu',label:'Labubu',cost:1,em:'🐰'}
+  {k:'labubu',label:'Labubu',cost:1,em:'🐰',pick:true}
 ];
 var COLORS=['Bílá','Růžová','Hnědá','Béžová'];
+// Řady Labubu (blind boxy; postavička uvnitř je náhodná). Musí odpovídat appce: index.html ORDER_LABUBU.
+// Dočasně nedostupná řada: SOLD_OUT.push('macaron').
+var LABUBU=[
+  {id:'big-energy',name:'Big into Energy',img:'img/labubu-big-energy.jpg'},
+  {id:'have-a-seat',name:'Have a Seat',img:'img/labubu-have-a-seat.jpg'},
+  {id:'macaron',name:'Exciting Macaron',img:'img/labubu-macaron.jpg'}
+];
+var SOLD_OUT=[];
+function labubuSeries(id){return LABUBU.filter(function(x){return x.id===id;})[0];}
 
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -215,7 +247,7 @@ function submitOrder(doc){
 }
 
 // ── stav ──
-var st={handle:'',profile:'',left:0,qty:{},colors:{}};
+var st={handle:'',profile:'',left:0,qty:{},colors:{},labubu:[]};
 
 function lookup(){
   var h=norm($('ig').value);
@@ -235,7 +267,7 @@ function lookup(){
       msg('msg1','info','Už nemáte žádné volné body. Děkujeme!');
       return;
     }
-    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},test:h==='test'};
+    st={handle:h,profile:d.profile||'pepa',left:left,qty:{},colors:{},labubu:[],test:h==='test'};
     $('pts-left').textContent=left;
     $('pts-word').textContent=plBody(left);
     renderItems();
@@ -262,6 +294,16 @@ function renderItems(){
       '<div class="step"><button type="button" data-k="'+it.k+'" data-d="-1" '+(n?'':'disabled')+' aria-label="Ubrat">−</button>'+
       '<span class="n">'+n+'</span>'+
       '<button type="button" data-k="'+it.k+'" data-d="1" '+(canAdd?'':'disabled')+' aria-label="Přidat">+</button></div></div>';
+    if(it.pick&&n){
+      html+='<div class="pickrow">';
+      for(var j=0;j<n;j++){
+        var c=(st.labubu||[])[j], sr=c&&labubuSeries(c.series), tag=n>1?' · č. '+(j+1):'';
+        html+='<button type="button" class="pick'+(c?' ok':'')+'" onclick="openPick('+j+')">'+
+          (c?'<img src="'+esc(sr.img)+'" alt=""><span><b>'+esc(sr.name)+'</b><small>Postavička je překvapení 🎁'+tag+'</small></span><span class="chg">Změnit</span>'
+            :'<span class="ph">🐰</span><span><b>Vyberte krabičku</b><small>Labubu'+tag+'</small></span><span class="chg">Vybrat</span>')+'</button>';
+      }
+      html+='</div>';
+    }
     if(it.color&&n){
       html+='<div class="colors">';
       for(var i=0;i<n;i++){
@@ -282,8 +324,37 @@ $('items').addEventListener('click',function(e){
   if(n<0||(d>0&&used()+it.cost>st.left)) return;
   st.qty[it.k]=n;
   if(st.colors[it.k]) st.colors[it.k]=st.colors[it.k].slice(0,n);
+  if(it.pick) st.labubu=(st.labubu||[]).slice(0,n);
   renderItems();
+  if(it.pick&&d>0) openPick(n-1);                  // po přidání Labubu se rovnou nabídne výběr
 });
+
+// ── výběr Labubu: řada → postavička ──
+var pickIdx=-1;
+function openPick(i){
+  pickIdx=i; renderPick();
+  $('pick-bg').classList.remove('hidden'); document.body.style.overflow='hidden';
+  $('pick').scrollTop=0;
+}
+function closePick(e){
+  if(e&&e.target&&e.target.id!=='pick-bg') return;
+  $('pick-bg').classList.add('hidden'); document.body.style.overflow='';
+}
+function pickSeriesSel(id){
+  var sr=labubuSeries(id); if(!sr||SOLD_OUT.indexOf(sr.id)>=0) return;
+  (st.labubu=st.labubu||[])[pickIdx]={series:sr.id};
+  closePick(); renderItems();
+}
+function renderPick(){
+  var n=st.qty.labubu||1, tag=n>1?' (Labubu č. '+(pickIdx+1)+')':'';
+  $('pick').innerHTML='<button type="button" class="x" onclick="closePick()" aria-label="Zavřít">✕</button>'+
+    '<h3>Vyberte krabičku'+esc(tag)+'</h3><div class="sub">Klepněte na řadu, kterou chcete. Postavička uvnitř je překvapení 🎁</div><div class="series">'+
+    LABUBU.map(function(sr){
+      var out=SOLD_OUT.indexOf(sr.id)>=0;
+      return '<button type="button" data-id="'+sr.id+'" onclick="pickSeriesSel(this.dataset.id)"'+(out?' disabled':'')+'><img src="'+esc(sr.img)+'" alt="">'+esc(sr.name)+(out?'<br><small>došla</small>':'')+'</button>';
+    }).join('')+'</div>';
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape') closePick();});
 $('items').addEventListener('change',function(e){
   var s=e.target; if(s.tagName!=='SELECT') return;
   var k=s.getAttribute('data-k'), i=parseInt(s.getAttribute('data-i'),10);
@@ -295,17 +366,24 @@ function send(){
   if($('f-web').value){ show('step2',false); show('step3',true); return; }          // past na roboty
   var last=0; try{last=Number(localStorage.getItem('ord-last'))||0;}catch(e){}
   if(Date.now()-last<60000){ msg('msg2','warn','Objednávku jste právě odeslali. Chvíli počkejte a zkuste to znovu.'); return; }
-  var items=[], missing=false;
+  var items=[], missing=false, missingPick=false;
   ITEMS.forEach(function(it){
     var n=st.qty[it.k]||0;
     for(var i=0;i<n;i++){
       var c=(st.colors[it.k]||[])[i]||'';
       if(it.color&&!c) missing=true;
+      if(it.pick){
+        var pk=(st.labubu||[])[i];
+        if(!pk){missingPick=true; items.push({k:it.k}); continue;}
+        items.push({k:it.k,series:pk.series});
+        continue;
+      }
       items.push(it.color?{k:it.k,color:c}:{k:it.k});
     }
   });
   if(!items.length){ msg('msg2','warn','Vyberte prosím aspoň jednu položku.'); return; }
   if(used()>st.left){ msg('msg2','warn','Vybrali jste víc, než máte bodů.'); return; }
+  if(missingPick){ msg('msg2','warn','Vyberte prosím krabičku u každého Labubu.'); return; }
   if(missing){ msg('msg2','warn','Vyberte prosím barvu u každé kravičky.'); return; }
   var name=$('f-name').value.trim(), email=$('f-email').value.trim(), phone=$('f-phone').value.trim(), point='';
   if(widgetReady()){

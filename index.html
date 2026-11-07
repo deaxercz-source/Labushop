@@ -1390,9 +1390,15 @@ var ORDER_ITEMS=[
   {k:'cow60',label:'Kravička 60 cm',cost:3,color:true},
   {k:'dump',label:'Mystery Dumpling',cost:1},
   {k:'butter',label:'Butter Squishy',cost:1},
-  {k:'labubu',label:'Labubu',cost:1}
+  {k:'labubu',label:'Labubu',cost:1,pick:true}
 ];
 var ORDER_COLORS=['Bílá','Růžová','Hnědá','Béžová'];
+// Řady Labubu (blind boxy, postavička uvnitř je náhodná). Musí odpovídat objednavka.html: LABUBU.
+var ORDER_LABUBU=[
+  {id:'big-energy',name:'Big into Energy'},
+  {id:'have-a-seat',name:'Have a Seat'},
+  {id:'macaron',name:'Exciting Macaron'}
+];
 var _orders=[], _ordersUnsub=null, _orderBusy={}, _pubCache={}, _pubReady={};
 
 function normHandle(s){
@@ -1474,7 +1480,13 @@ function evaluateOrder(o,force){
     if(!def){bad=true; return;}
     var color=def.color?(ORDER_COLORS.indexOf(it.color)>=0?it.color:''):'';
     if(def.color&&!color) bad=true;
-    cost+=def.cost; lines.push(def.label+(color?' ('+color+')':''));
+    var lab='';
+    if(def.pick&&it.series){                      // starší objednávky bez výběru řady zůstávají platné
+      var ser=ORDER_LABUBU.filter(function(x){return x.id===it.series;})[0];
+      if(!ser){bad=true; return;}
+      lab=ser.name;
+    }
+    cost+=def.cost; lines.push(def.label+(color?' ('+color+')':'')+(lab?' ('+lab+')':''));
   });
   var text=lines.join(', ');
   if(!lines.length||bad) return {ok:false,reason:'Neplatná položka v objednávce',text:text,cost:cost};
