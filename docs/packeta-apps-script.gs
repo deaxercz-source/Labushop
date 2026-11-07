@@ -44,3 +44,9 @@ function out_(o) {
 function esc_(v) {
   return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// Jednorázově spusť tuhle funkci (tlačítko Spustit), aby Google zobrazil žádost o povolení.
+// Jen zavolá web Zásilkovny, žádnou zásilku nevytváří.
+function povolit() {
+  UrlFetchApp.fetch('https://www.zasilkovna.cz/api/rest', { muteHttpExceptions: true });
+}
