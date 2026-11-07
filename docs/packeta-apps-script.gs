@@ -1,4 +1,4 @@
-// LabuShop → Zásilkovna: vytvoří zásilku a vrátí její kód.
+// LabuShop → Zásilkovna: vytvoří zásilku a vrátí její kód, případně ji stornuje.
 // API heslo je uložené jen ve „Vlastnostech skriptu“ (PACKETA_PASSWORD), do appky ani na web se nikdy nedostane.
 function doPost(e) {
   try {
@@ -9,17 +9,25 @@ function doPost(e) {
     var pw = props.getProperty('PACKETA_PASSWORD');
     if (!pw) return out_({ ok: false, error: 'Ve vlastnostech skriptu chybí PACKETA_PASSWORD.' });
 
-    var attrs = '';
-    ['number', 'name', 'surname', 'email', 'phone', 'addressId', 'value', 'currency', 'weight', 'eshop'].forEach(function (k) {
-      if (req[k] !== undefined && req[k] !== null && String(req[k]) !== '') attrs += '<' + k + '>' + esc_(req[k]) + '</' + k + '>';
-    });
-    var xml = '<createPacket><apiPassword>' + esc_(pw) + '</apiPassword><packetAttributes>' + attrs + '</packetAttributes></createPacket>';
+    var cancel = req.action === 'cancel';
+    var xml;
+    if (cancel) {
+      if (!req.packetId) return out_({ ok: false, error: 'Chybí ID zásilky.' });
+      xml = '<cancelPacket><apiPassword>' + esc_(pw) + '</apiPassword><packetId>' + esc_(req.packetId) + '</packetId></cancelPacket>';
+    } else {
+      var attrs = '';
+      ['number', 'name', 'surname', 'email', 'phone', 'addressId', 'value', 'currency', 'weight', 'eshop'].forEach(function (k) {
+        if (req[k] !== undefined && req[k] !== null && String(req[k]) !== '') attrs += '<' + k + '>' + esc_(req[k]) + '</' + k + '>';
+      });
+      xml = '<createPacket><apiPassword>' + esc_(pw) + '</apiPassword><packetAttributes>' + attrs + '</packetAttributes></createPacket>';
+    }
     var r = UrlFetchApp.fetch('https://www.zasilkovna.cz/api/rest', {
       method: 'post', contentType: 'application/xml', payload: xml, muteHttpExceptions: true
     });
 
     var root = XmlService.parse(r.getContentText()).getRootElement();
     if (root.getChildText('status') === 'ok') {
+      if (cancel) return out_({ ok: true, cancelled: true });
       var res = root.getChild('result');
       return out_({ ok: true, id: res.getChildText('id'), barcode: res.getChildText('barcode'), barcodeText: res.getChildText('barcodeText') });
     }
