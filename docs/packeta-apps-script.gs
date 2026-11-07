@@ -9,6 +9,7 @@ function doPost(e) {
     var pw = props.getProperty('PACKETA_PASSWORD');
     if (!pw) return out_({ ok: false, error: 'Ve vlastnostech skriptu chybí PACKETA_PASSWORD.' });
 
+    if (req.action === 'info') return out_(info_(pw, req.packetId));
     var cancel = req.action === 'cancel';
     var xml;
     if (cancel) {
@@ -57,4 +58,20 @@ function esc_(v) {
 // Jen zavolá web Zásilkovny, žádnou zásilku nevytváří.
 function povolit() {
   UrlFetchApp.fetch('https://www.zasilkovna.cz/api/rest', { muteHttpExceptions: true });
+}
+
+// Zkouška: vrátí surové odpovědi Zásilkovny o zásilce (jen čtení, nic nemění).
+function info_(pw, packetId) {
+  if (!packetId) return { ok: false, error: 'Chybí ID zásilky.' };
+  var raw = {};
+  ['packetInfo', 'packetStatus', 'packetTracking'].forEach(function (m) {
+    var text = '';
+    [String(packetId), 'Z' + packetId].some(function (pid) {
+      var xml = '<' + m + '><apiPassword>' + esc_(pw) + '</apiPassword><packetId>' + esc_(pid) + '</packetId></' + m + '>';
+      text = UrlFetchApp.fetch('https://www.zasilkovna.cz/api/rest', { method: 'post', contentType: 'application/xml', payload: xml, muteHttpExceptions: true }).getContentText();
+      return text.indexOf('<status>ok</status>') >= 0;
+    });
+    raw[m] = text.split(pw).join('***');
+  });
+  return { ok: true, raw: raw };
 }
