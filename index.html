@@ -161,6 +161,13 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .shipline{display:flex;align-items:center;gap:6px}
 .sibtn{border:1px solid var(--line);background:#fff;border-radius:999px;width:34px;height:30px;font-size:14px;padding:0;color:var(--muted)}
 .sibtn.has{background:var(--green-bg);border-color:var(--green)}
+.pktbox{border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 14px;background:#fafcfb}
+.pktbox.done{background:var(--green-bg);border-color:var(--green)}
+.pktcode{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;letter-spacing:.02em;margin:6px 0 10px;user-select:all}
+.pktmsg{margin-top:8px;font-size:13px;color:var(--amber)}
+.pktrow{display:flex;gap:8px;flex-wrap:wrap}
+.pktscript{width:100%;height:90px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.pktsteps{margin:6px 0 12px 18px;line-height:1.55;font-size:14px}
 .pc-order{font-size:12px;color:#6b5a12;background:#fff7d6;border-radius:8px;padding:3px 9px;margin-top:6px;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;vertical-align:top}
 .orderchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .orderchips .chip{font-size:12px;padding:4px 10px}
@@ -464,6 +471,7 @@ function save(){
   // Společné šablony se zapisují jen když se změnily (ať nepřepíšeme změnu druhého jen kvůli uložení bonusu).
   if(_tplDirty) out.templates=JSON.parse(JSON.stringify(root.templates||[]));
   if(root.tplShared) out.tplShared=true;
+  if(root.pktCfg) out.pktCfg=JSON.parse(JSON.stringify(root.pktCfg));
   _pending=out;
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer=setTimeout(flushSave,400);
@@ -968,7 +976,7 @@ function setShip(id,state,ev){
   var p=find(data.people,id); if(!p) return;
   var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated, prevAsk=p.askedAt||'';
   p.ship=state; p.shipAt=state?nowLocal():''; p.askedAt='';
-  if(state==='todo'){delete p.pktAt; delete p.pktNo;}
+  if(state==='todo'){delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText;}
   touchPerson(id);
   save(); render();
   var label={todo:'Odeslat',done:'Odesláno'}[state]||'bez stavu';
@@ -1055,7 +1063,7 @@ function renderPeopleList(){
         '</span></div><span class="chev">▾</span>'+
       '</div>'+
       '<div class="pc-body">'+
-        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(p.askedAt?'<span>Zeptáno <b>'+fmtDate(p.askedAt)+'</b></span>':'')+(ptsClosed(p)?'<span>Body <b>'+ptsLeft(p)+' / '+esc(p.ptsTotal)+'</b></span>':'<span>Body <b>'+bonusCount(p)+'</b> (neuzavřeno)</span>')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
+        '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(p.pktBarcode?'<span>Zásilka <b>'+esc(p.pktBarcode)+'</b></span>':'')+(p.askedAt?'<span>Zeptáno <b>'+fmtDate(p.askedAt)+'</b></span>':'')+(ptsClosed(p)?'<span>Body <b>'+ptsLeft(p)+' / '+esc(p.ptsTotal)+'</b></span>':'<span>Body <b>'+bonusCount(p)+'</b> (neuzavřeno)</span>')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
           (cost?'<span>Náklady <b class="neg">'+kc(cost)+'</b></span><span>Zisk <b class="'+(allTotal-cost>=0?'pos':'neg')+'">'+kc(allTotal-cost)+'</b></span>':'')+
           '<span>🐣 <b>'+lab+'</b></span><span>🥟 <b>'+dum+'</b></span></div>'+
         '<div class="sites">'+
@@ -1488,7 +1496,7 @@ function applyOrder(res,o){
   var pt=splitPoint(o.point), keepId=!pt.id&&(!pt.text||sameVal(pt.text,si.point));
   p.shipInfo={name:o.name||si.name||'',phone:o.phone||si.phone||'',email:o.email||si.email||'',point:pt.text||si.point||'',
     pointId:pt.id||(keepId?si.pointId||'':''),pointCc:pt.id?pt.cc:(keepId?si.pointCc||'':''),order:res.text};
-  delete p.pktAt; delete p.pktNo;
+  delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText;
   p.ptsSpent=(Number(p.ptsSpent)||0)+res.cost;
   p.ship='todo'; p.shipAt=nowLocal(); p.askedAt='';
   touchPerson(p.id); save(); render();
@@ -1610,7 +1618,8 @@ function pktSetting(k,def){try{var v=localStorage.getItem('labubu-pkt-'+k); retu
 function openExport(){
   var ready=pktReady(), blocked=pktBlocked(), done=pktExported();
   var html='<h2>📦 Export pro Zásilkovnu</h2>';
-  html+='<div class="cat" style="margin-bottom:8px">Odesílatel: <b>'+esc(PKT_SENDER)+'</b> · lidé označení „Odeslat“ s kompletními údaji</div>';
+  html+='<div class="cat" style="margin-bottom:8px">Odesílatel: <b>'+esc(PKT_SENDER)+'</b> · lidé označení „Odeslat“ s kompletními údaji'+
+    ' · <a href="#" onclick="openPktSetup();return false">⚙ automatické zásilky ('+(pktCfg()?'propojeno':'nepropojeno')+')</a></div>';
   if(ready.length){
     html+='<div class="two"><div class="fld"><label>Hmotnost zásilky (kg)</label><input class="input" id="pk-w" inputmode="decimal" value="'+esc(pktSetting('w','2'))+'"></div>'+
       '<div class="fld"><label>Hodnota zásilky (Kč)</label><input class="input" id="pk-v" inputmode="numeric" value="'+esc(pktSetting('v','300'))+'"></div></div>'+
@@ -1629,9 +1638,16 @@ function openExport(){
   html+='<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button></div>';
   openModal(html);
 }
+// Předpona dnešních čísel zásilek a nejvyšší už použité pořadí (u Tomáše s písmenem T, ať se čísla nepletou).
+function pktNoInfo(){
+  var d=new Date(), prefix='LS-'+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+'-'+(profile==='tomas'?'T':''), max=0;
+  data.people.forEach(function(p){
+    if(p.pktNo&&p.pktNo.indexOf(prefix)===0){var n=parseInt(p.pktNo.slice(prefix.length),10)||0; if(n>max) max=n;}
+  });
+  return {prefix:prefix,max:max};
+}
 function pktBuildCsv(list,weight,value){
-  var d=new Date(), prefix='LS-'+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+'-';
-  var used=data.people.filter(function(p){return p.pktNo&&p.pktNo.indexOf(prefix)===0;}).length;
+  var ni=pktNoInfo(), prefix=ni.prefix, used=ni.max;
   var rows=[['','Cislo','Cele jmeno','E-mail','Telefon','Hodnota','Mena','Hmotnost','Vydejni misto','Odesilatel','Poznamka']];
   list.forEach(function(p,i){
     var si=p.shipInfo, no=prefix+pad(used+i+1);
@@ -1665,6 +1681,108 @@ function markExportedSent(){
   });
   save(); closeModal(); render();
   toast('✅ Odesláno: '+list.length);
+}
+
+// ── AUTOMATICKÁ ZÁSILKA ──
+// Appka pošle údaje do vlastního skriptu v Google Apps Script. Ten má uložené tajné API heslo Zásilkovny,
+// vytvoří zásilku a vrátí její kód. Do appky ani na web se heslo nikdy nedostane.
+var PKT_SCRIPT="// LabuShop → Zásilkovna: vytvoří zásilku a vrátí její kód.\n// API heslo je uložené jen ve „Vlastnostech skriptu“ (PACKETA_PASSWORD), do appky ani na web se nikdy nedostane.\nfunction doPost(e) {\n  try {\n    var props = PropertiesService.getScriptProperties();\n    var req = JSON.parse(e.postData.contents);\n    var token = props.getProperty('TOKEN');\n    if (!token || req.token !== token) return out_({ ok: false, error: 'Špatný token (musí být stejný v appce i ve vlastnostech skriptu).' });\n    var pw = props.getProperty('PACKETA_PASSWORD');\n    if (!pw) return out_({ ok: false, error: 'Ve vlastnostech skriptu chybí PACKETA_PASSWORD.' });\n\n    var attrs = '';\n    ['number', 'name', 'surname', 'email', 'phone', 'addressId', 'value', 'currency', 'weight', 'eshop'].forEach(function (k) {\n      if (req[k] !== undefined && req[k] !== null && String(req[k]) !== '') attrs += '<' + k + '>' + esc_(req[k]) + '</' + k + '>';\n    });\n    var xml = '<createPacket><apiPassword>' + esc_(pw) + '</apiPassword><packetAttributes>' + attrs + '</packetAttributes></createPacket>';\n    var r = UrlFetchApp.fetch('https://www.zasilkovna.cz/api/rest', {\n      method: 'post', contentType: 'application/xml', payload: xml, muteHttpExceptions: true\n    });\n\n    var root = XmlService.parse(r.getContentText()).getRootElement();\n    if (root.getChildText('status') === 'ok') {\n      var res = root.getChild('result');\n      return out_({ ok: true, id: res.getChildText('id'), barcode: res.getChildText('barcode'), barcodeText: res.getChildText('barcodeText') });\n    }\n    var det = [];\n    var walk = function (el) {\n      var kids = el.getChildren();\n      if (!kids.length) { if (el.getText()) det.push(el.getName() + ': ' + el.getText()); return; }\n      kids.forEach(walk);\n    };\n    var d = root.getChild('detail');\n    if (d) walk(d);\n    return out_({ ok: false, error: [root.getChildText('fault'), root.getChildText('string'), det.join(', ')].filter(Boolean).join(' – ') || 'Zásilkovna vrátila chybu.' });\n  } catch (err) {\n    return out_({ ok: false, error: String(err && err.message || err) });\n  }\n}\n\nfunction out_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction esc_(v) {\n  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\n}\n";
+var _pktBusy=false;
+function pktCfg(){var c=root.pktCfg; return c&&c.url&&c.token?c:null;}
+function pktSplitName(full){
+  var w=String(full||'').trim().split(/\s+/).filter(Boolean);
+  if(w.length<2) return null;
+  return {name:w.slice(0,-1).join(' ').slice(0,32),surname:w[w.length-1].slice(0,32)};
+}
+function pktApiProblems(p){
+  var si=p.shipInfo||{}, pr=pktProblems(p);
+  if(si.name&&!pktSplitName(si.name)) pr.push('jméno musí mít jméno i příjmení');
+  return pr;
+}
+function pktBlockHTML(p){
+  var id=esc(p.id);
+  if(p.pktBarcode){
+    return '<div class="pktbox done"><b>✅ Zásilka vytvořena</b><div class="pktcode">'+esc(p.pktBarcode)+'</div><div class="pktrow">'+
+      '<button class="btn btn-sm btn-primary" data-id="'+id+'" onclick="pktCopyCode(this.dataset.id)">Kopírovat kód</button>'+
+      (shipOf(p)!=='done'?'<button class="btn btn-sm" data-id="'+id+'" onclick="pktMarkSent(this.dataset.id)">✅ Označit jako Odesláno</button>':'<span class="cat">Odesláno</span>')+
+      '</div><div class="pktmsg" id="si-pktmsg"></div></div>';
+  }
+  if(!pktCfg()){
+    return '<div class="pktbox"><b>📦 Zásilka ve Zásilkovně jedním klikem</b><div class="cat" style="margin:4px 0 8px">Nejdřív je potřeba jednorázově propojit Zásilkovnu.</div>'+
+      '<button class="btn btn-sm btn-primary" onclick="openPktSetup()">⚙ Propojit Zásilkovnu</button></div>';
+  }
+  var pr=pktApiProblems(p);
+  return '<div class="pktbox"><div class="pktrow"><button class="btn btn-primary" id="si-pktbtn" data-id="'+id+'" onclick="pktCreate(this.dataset.id)"'+(_pktBusy?' disabled':'')+'>'+(_pktBusy?'⏳ Vytvářím…':'📦 Vytvořit zásilku ve Zásilkovně')+'</button>'+
+    '<button class="btn btn-sm" onclick="openPktSetup()" title="Nastavení propojení">⚙</button></div>'+
+    '<div class="pktmsg" id="si-pktmsg">'+(pr.length?'Zatím chybí: '+esc(pr.join(', '))+'.':'')+'</div></div>';
+}
+function pktRefresh(p){var el=$('si-pkt'); if(el&&_siPerson===p.id) el.innerHTML=pktBlockHTML(p);}
+function pktMsg(txt){var el=$('si-pktmsg'); if(el) el.textContent=txt; else toast(txt);}
+function pktCopyCode(id){
+  var p=find(data.people,id); if(!p||!p.pktBarcode) return;
+  copyText(p.pktBarcode).then(function(){toast('✓ Kód zkopírován: '+p.pktBarcode);},function(){toast('Kopírování se nepovedlo');});
+}
+function pktMarkSent(id){
+  setShip(id,'done');
+  var p=find(data.people,id); if(p) pktRefresh(p);
+}
+function pktCreate(id){
+  var p=find(data.people,id); if(!p||_pktBusy||p.pktBarcode) return;
+  if(_siPerson===id&&$('si-name')) saveShipInfo(false);          // zohlední i to, co je právě v okně přepsané
+  var cfg=pktCfg(); if(!cfg){openPktSetup(); return;}
+  var pr=pktApiProblems(p);
+  if(pr.length){pktRefresh(p); pktMsg('Zatím chybí: '+pr.join(', ')+'.'); return;}
+  var si=p.shipInfo, nm=pktSplitName(si.name), ni=pktNoInfo(), no=p.pktNo||(ni.prefix+pad(ni.max+1));
+  var w=parseFloat(String(pktSetting('w','2')).replace(',','.'))||2, v=parseFloat(String(pktSetting('v','300')).replace(',','.'))||300;
+  var body={token:cfg.token,number:no,name:nm.name,surname:nm.surname,email:si.email||'',phone:pktPhone(si.phone,si.pointCc),
+    addressId:parseInt(si.pointId,10),value:v,weight:w,currency:'CZK',eshop:PKT_SENDER};
+  _pktBusy=true; pktRefresh(p);
+  fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'})
+    .then(function(r){return r.json();})
+    .then(function(res){
+      _pktBusy=false;
+      if(!res||!res.ok||!res.barcode){pktRefresh(p); pktMsg('Zásilkovna: '+((res&&res.error)||'neznámá chyba')); return;}
+      p.pktNo=no; p.pktId=String(res.id||''); p.pktBarcode=String(res.barcode); p.pktText=String(res.barcodeText||res.barcode); p.pktAt=nowLocal();
+      if(!shipOf(p)){p.ship='todo'; p.shipAt=nowLocal();}
+      touchPerson(id); save(); render(); pktRefresh(p);
+      copyText(p.pktBarcode).then(function(){toast('📦 Zásilka vytvořena, kód zkopírován: '+p.pktBarcode);},function(){toast('📦 Zásilka vytvořena: '+p.pktBarcode);});
+    })
+    .catch(function(){
+      _pktBusy=false; pktRefresh(p);
+      pktMsg('Spojení se skriptem se nepovedlo. Než to zkusíš znovu, podívej se v klientské sekci Zásilkovny, jestli zásilka nevznikla.');
+    });
+}
+function genToken(){
+  var a=new Uint8Array(16); (window.crypto||window.msCrypto).getRandomValues(a);
+  return Array.prototype.map.call(a,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');
+}
+function openPktSetup(){
+  var c=root.pktCfg||{}, tok=c.token||genToken();
+  openModal('<h2>⚙ Propojení se Zásilkovnou</h2>'+
+    '<div class="cat" style="margin-bottom:6px">Jednorázové nastavení (asi 5 minut). API heslo Zásilkovny zůstane jen ve tvém skriptu na Googlu, do appky se nikdy nezadává.</div>'+
+    '<ol class="pktsteps">'+
+    '<li>Otevři <b>script.google.com</b> → <b>Nový projekt</b>, smaž všechen kód a vlož tento:<div style="margin-top:6px"><button class="btn btn-sm btn-primary" onclick="pktCopyScript()">Kopírovat kód skriptu</button></div></li>'+
+    '<li>Vlevo <b>⚙ Nastavení projektu</b> → dole <b>Vlastnosti skriptu</b> → přidej dvě:<br><b>PACKETA_PASSWORD</b> = API heslo ze Zásilkovny (client.packeta.com → Podpora → API, celých 32 znaků)<br><b>TOKEN</b> = <input class="input" id="pk-token" value="'+esc(tok)+'" onfocus="this.select()" style="margin-top:4px"></li>'+
+    '<li>Vpravo nahoře <b>Nasadit → Nové nasazení</b> → typ <b>Webová aplikace</b> → Spustit jako: <b>Já</b>, Přístup: <b>Kdokoli</b> → Nasadit (a povol oprávnění).</li>'+
+    '<li>Zkopíruj <b>URL webové aplikace</b> (končí na /exec) a vlož sem:<input class="input" id="pk-url" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(c.url||'')+'" style="margin-top:6px"></li>'+
+    '</ol>'+
+    '<div class="modal-foot"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    (c.url?'<button class="btn" onclick="savePktCfg(true)">Odpojit</button>':'')+
+    '<button class="btn btn-primary" onclick="savePktCfg(false)">Uložit</button></div>');
+}
+function pktCopyScript(){
+  copyText(PKT_SCRIPT).then(function(){toast('✓ Kód skriptu zkopírován');},function(){toast('Kopírování se nepovedlo');});
+}
+function savePktCfg(remove){
+  var url=$('pk-url').value.trim(), tok=$('pk-token').value.trim();
+  if(remove){root.pktCfg=null;}
+  else{
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\s]+\/exec$/.test(url)){alert('URL musí začínat https://script.google.com/macros/s/ a končit /exec.'); return;}
+    if(tok.length<8){alert('Token je moc krátký.'); return;}
+    root.pktCfg={url:url,token:tok};
+  }
+  save(); closeModal(); render();
+  toast(remove?'Zásilkovna odpojena':'✓ Zásilkovna propojena');
 }
 
 // ── ZEPTAT SE, JESTLI DORAZILO ──
@@ -1759,6 +1877,7 @@ function openShipInfo(id,ev){
   _siPerson=id;
   var i=p.shipInfo||{};
   openModal('<h2>Údaje pro zásilku · '+esc(p.name)+'</h2>'+
+    '<div id="si-pkt">'+pktBlockHTML(p)+'</div>'+
     '<div class="fld"><label>Co chce v objednávce</label>'+
     '<textarea class="input" id="si-order" rows="2" placeholder="např. Labubu zelený + 2× dumpling" onblur="saveShipInfo(false)">'+esc(i.order||'')+'</textarea>'+
     '<div class="orderchips"><button class="chip" data-t="Labubu" onclick="addOrder(this.dataset.t)">＋ Labubu</button>'+
