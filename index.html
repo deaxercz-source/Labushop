@@ -144,6 +144,17 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 #pkt-n:not(:empty){background:var(--green);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;margin-left:2px;vertical-align:top}
 .setrow{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin:0 0 8px;font-size:15px}
 .setrow span{color:var(--muted);font-size:13px}
+.stat-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 12px}
+.stat-tile{background:#f7faf6;border:1px solid var(--line);border-radius:14px;padding:10px 10px 8px;text-align:center}
+.stat-tile .v{font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px;line-height:1.1}
+.stat-tile .k{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.25}
+.stat-h{font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+.sbar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}
+.sbar .l{flex:0 0 38%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.sbar .t{flex:1;height:9px;background:#eef3ed;border-radius:999px;overflow:hidden}
+.sbar .t i{display:block;height:100%;background:var(--green);border-radius:999px}
+.sbar .n{flex:0 0 26px;text-align:right;font-weight:700}
+.stat-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
 .stocklist{border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .fld .stockrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;color:var(--text);margin:0;cursor:pointer}
 .stockitem:first-child .stockrow{border-top:none}
@@ -402,6 +413,10 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
       </div>
       <div class="card"><div class="card-h"><span class="name" style="font-size:15px">Poslední aktivita</span></div>
         <div id="activity"></div></div>
+      <div class="card" id="stats-card"><div class="card-h"><span class="name" style="font-size:15px">📊 Statistiky objednávek</span>
+        <select class="input" id="st-scope" onchange="setStatsPref()" style="width:auto"><option value="me">Jen já</option><option value="all">Všichni</option></select>
+        <select class="input" id="st-period" onchange="setStatsPref()" style="width:auto"><option value="30">30 dní</option><option value="90">90 dní</option><option value="all">Vše</option></select></div>
+        <div id="stats"></div></div>
     </section>
 
     <!-- LIDÉ -->
@@ -851,6 +866,87 @@ function renderOverview(){
       '<span class="dt">'+fmtDate(r.e.d)+'</span></div>';
   }).join(''):'<div class="empty">Zatím žádná aktivita 🐣</div>';
   renderChart();
+  renderStats();
+}
+
+// ── STATISTIKY OBJEDNÁVEK ──
+(function(){
+  try{var sc=localStorage.getItem('labubu-stats-scope'), sp=localStorage.getItem('labubu-stats-period');
+    if(sc==='me'||sc==='all') $('st-scope').value=sc; if(sp==='30'||sp==='90'||sp==='all') $('st-period').value=sp;}catch(e){}
+})();
+function setStatsPref(){
+  try{localStorage.setItem('labubu-stats-scope',$('st-scope').value); localStorage.setItem('labubu-stats-period',$('st-period').value);}catch(e){}
+  renderStats();
+}
+function histDate(str){var d=new Date(String(str||'').replace(' ','T')); return isNaN(d.getTime())?null:d;}
+function weekStartISO(str){
+  var d=histDate(str); if(!d) return ''; d=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return isoDay(d);
+}
+function fmtHours(h){
+  if(!isFinite(h)) return '–';
+  if(h<24) return Math.round(h)+' h';
+  var d=Math.floor(h/24), r=Math.round(h-d*24); return d+' d'+(r?' '+r+' h':'');
+}
+function computeStats(scope,period){
+  var people=[];
+  if(scope==='all') PROFILES.forEach(function(pr){people=people.concat(profileDataFor(pr.id).people||[]);});
+  else people=data.people;
+  var from=period==='all'?'':daysAgoISO(parseInt(period,10)||30), sent=[], ordered=[], waits=[], open=0, weeks={};
+  people.forEach(function(p){
+    histOf(p).forEach(function(e){
+      var sd=String(e.s||'').slice(0,10), od=String(e.o||e.s||'').slice(0,10);
+      if(e.s){var wk0=weekStartISO(e.s); if(wk0) weeks[wk0]=(weeks[wk0]||0)+1;}          // graf týdnů ukazuje vždy posledních 8 týdnů
+      if(e.s&&(!from||sd>=from)){
+        sent.push(e);
+        var a=histDate(e.o), b=histDate(e.s);
+        if(a&&b&&b>=a) waits.push((b-a)/3600000);
+      }
+      if(e.i&&e.i.length&&(!from||od>=from)) ordered.push(e);
+      if(!e.s) open++;
+    });
+  });
+  var boxes={}, colors={}, items={};
+  ordered.forEach(function(e){e.i.forEach(function(it){
+    var def=ORDER_ITEMS.filter(function(x){return x.k===it.k;})[0]; if(!def) return;
+    items[def.label]=(items[def.label]||0)+1;
+    if(it.k==='labubu'){var sr=ORDER_LABUBU.filter(function(x){return x.id===it.series;})[0]; var nm=sr?sr.name:'bez krabičky'; boxes[nm]=(boxes[nm]||0)+1;}
+    if(it.color) colors[it.color]=(colors[it.color]||0)+1;
+  });});
+  var wk=[], d0=new Date(); d0=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()); d0.setDate(d0.getDate()-((d0.getDay()+6)%7));
+  for(var i=7;i>=0;i--){var w=new Date(d0.getTime()); w.setDate(w.getDate()-i*7); var k=isoDay(w); wk.push({k:k,n:weeks[k]||0});}
+  var earliest=null; sent.forEach(function(e){var d=histDate(e.s); if(d&&(!earliest||d<earliest)) earliest=d;});
+  var spanDays=period==='all'?(earliest?Math.max(7,Math.round((new Date()-earliest)/86400000)):7):(parseInt(period,10)||30);
+  var avgWait=waits.length?waits.reduce(function(a,b){return a+b;},0)/waits.length:null;
+  return {sent:sent.length,perWeek:sent.length/(Math.max(7,spanDays)/7),avgWait:avgWait,waitN:waits.length,open:open,boxes:boxes,colors:colors,items:items,weeks:wk,orders:ordered.length};
+}
+function barRows(map,max){
+  var keys=Object.keys(map).sort(function(a,b){return map[b]-map[a];});
+  if(!keys.length) return '<div class="cat">zatím žádná data</div>';
+  var top=map[keys[0]]||1;
+  return keys.map(function(k){
+    return '<div class="sbar"><span class="l" title="'+esc(k)+'">'+esc(k)+'</span><span class="t"><i style="width:'+Math.round(map[k]/top*100)+'%"></i></span><span class="n">'+map[k]+'</span></div>';
+  }).join('');
+}
+function renderStats(){
+  var el=$('stats'); if(!el) return;
+  var st=computeStats($('st-scope').value,$('st-period').value);
+  $('st-scope').options[0].text='Jen '+profileName(profile);
+  var wkRows=st.weeks.map(function(w){
+    var top=Math.max.apply(null,st.weeks.map(function(x){return x.n;}))||1;
+    return '<div class="sbar"><span class="l">od '+esc(fmtDate(w.k))+'</span><span class="t"><i style="width:'+Math.round(w.n/top*100)+'%"></i></span><span class="n">'+w.n+'</span></div>';
+  }).join('');
+  el.innerHTML=
+    '<div class="stat-tiles">'+
+      '<div class="stat-tile"><div class="v">'+st.sent+'</div><div class="k">odeslaných zásilek</div></div>'+
+      '<div class="stat-tile"><div class="v">'+(st.sent?st.perWeek.toFixed(1).replace('.',','):'0')+'</div><div class="k">zásilek týdně v průměru</div></div>'+
+      '<div class="stat-tile"><div class="v">'+(st.avgWait==null?'–':fmtHours(st.avgWait))+'</div><div class="k">objednávka → odeslání'+(st.waitN?' ('+st.waitN+')':'')+'</div></div>'+
+    '</div>'+
+    '<div class="stat-h">Zásilky po týdnech</div>'+wkRows+
+    '<div class="stat-h">Krabičky Labubu</div>'+barRows(st.boxes)+
+    '<div class="stat-h">Barvy kraviček</div>'+barRows(st.colors)+
+    '<div class="stat-h">Odměny celkem</div>'+barRows(st.items)+
+    '<div class="stat-note">Počítá se z objednávek od zákazníků a z lidí označených jako Odesláno. U starších zásilek bez objednávky nejsou položky známé a doba od objednávky se u nich nepočítá. Hodí se při nákupu zásob.</div>';
 }
 
 var _chart=null;
@@ -1066,17 +1162,62 @@ function clearFilters(){
   noteFilter=false; askFilter=false; ptsFilter=false; filtersOpen=false;
   renderPeopleList();
 }
+// ── HISTORIE ZÁSILEK (pro statistiky) ──
+// p.hist = [{o: kdy objednáno / dáno k odeslání, s: kdy odesláno, i: [{k,series,color}]}]. Starší lidé se dopočítají ze současného stavu.
+function parseOrderText(txt){
+  var out=[];
+  String(txt||'').split(/,\s*(?![^()]*\))/).forEach(function(part){
+    part=part.trim(); if(!part) return;
+    var m=/^(.*?)\s*(?:\((.*)\))?$/.exec(part), name=(m[1]||'').trim().toLowerCase(), par=(m[2]||'').trim();
+    var def=ORDER_ITEMS.filter(function(x){return x.label.toLowerCase()===name;})[0]; if(!def) return;
+    var it={k:def.k};
+    if(def.color&&ORDER_COLORS.indexOf(par)>=0) it.color=par;
+    if(def.pick){var sr=ORDER_LABUBU.filter(function(x){return x.name===par;})[0]; if(sr) it.series=sr.id;}
+    out.push(it);
+  });
+  return out;
+}
+function legacyHist(p){
+  var st=p.ship, at=p.shipAt||'';
+  if(st!=='todo'&&st!=='done') return [];
+  var items=parseOrderText(p.shipInfo&&p.shipInfo.order);
+  return st==='done'?[{o:'',s:at,i:items}]:[{o:at,s:'',i:items}];
+}
+function histOf(p){return Array.isArray(p.hist)?p.hist:legacyHist(p);}
+function ensureHist(p){if(!Array.isArray(p.hist)) p.hist=legacyHist(p); return p.hist;}
+function histOpen(p){var h=ensureHist(p); for(var i=h.length-1;i>=0;i--){if(!h[i].s) return h[i];} return null;}
+function histOrder(p,items){                       // objednávka přijata: položky do otevřené zásilky (nebo nová)
+  var e=histOpen(p);
+  if(e&&!(e.i&&e.i.length)){e.i=items||[]; if(!e.o) e.o=nowLocal();}
+  else p.hist.push({o:nowLocal(),s:'',i:items||[]});
+}
+function histSent(p){var e=histOpen(p); if(e) e.s=nowLocal(); else p.hist.push({o:'',s:nowLocal(),i:[]});}
+function histUnsent(p){                            // zásilka se vrací do „k odeslání“
+  var h=ensureHist(p);
+  for(var i=h.length-1;i>=0;i--){if(h[i].s){ if(h[i].o) h[i].s=''; else h.splice(i,1); return;}}
+}
+function histDropLast(p){var h=ensureHist(p); if(h.length) h.pop();}
+function histShip(p,prev,state){                   // změna stavu Odeslat / Odesláno / zrušeno
+  ensureHist(p);
+  if(state==='todo'){ if(!histOpen(p)) p.hist.push({o:nowLocal(),s:'',i:[]}); }
+  else if(state==='done'){ if(prev!=='done') histSent(p); }
+  else histDropLast(p);
+}
 function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
   var p=find(data.people,id); if(!p) return;
-  var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated, prevAsk=p.askedAt||'';
+  var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated, prevAsk=p.askedAt||'', prevHist=p.hist==null?null:JSON.stringify(p.hist);
+  ensureHist(p);                                   // historie se dopočítá ještě ze starého stavu
   p.ship=state; p.shipAt=state?nowLocal():''; p.askedAt='';
+  histShip(p,prev,state);
   if(state==='todo'){delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;}
   touchPerson(id);
   save(); render();
   var label={todo:'Odeslat',done:'Odesláno'}[state]||'bez stavu';
   toast(p.name+' → '+label,function(){
-    p.ship=prev; p.shipAt=prevAt; p.updated=prevUpd; p.askedAt=prevAsk; save(); render();
+    p.ship=prev; p.shipAt=prevAt; p.updated=prevUpd; p.askedAt=prevAsk;
+    if(prevHist==null) delete p.hist; else p.hist=JSON.parse(prevHist);
+    save(); render();
   });
 }
 function cycleShip(id,ev){
@@ -1612,7 +1753,7 @@ function stockGone(items){
 }
 // Posouzení objednávky z vlastních dat. force = potvrzení ručně (jen jméno a položky musí sedět).
 function evaluateOrder(o,force){
-  var lines=[], cost=0, bad=false;
+  var lines=[], cost=0, bad=false, items=[];
   (Array.isArray(o.items)?o.items:[]).slice(0,10).forEach(function(it){
     var def=ORDER_ITEMS.filter(function(x){return x.k===(it&&it.k);})[0];
     if(!def){bad=true; return;}
@@ -1625,13 +1766,14 @@ function evaluateOrder(o,force){
       lab=ser.name;
     }
     cost+=def.cost; lines.push(def.label+(color?' ('+color+')':'')+(lab?' ('+lab+')':''));
+    var rec={k:def.k}; if(color) rec.color=color; if(lab) rec.series=it.series; items.push(rec);
   });
   var text=lines.join(', ');
   if(!lines.length||bad) return {ok:false,reason:'Neplatná položka v objednávce',text:text,cost:cost};
   var h=normHandle(o.handle);
   var p=data.people.filter(function(x){return normHandle(x.name)===h;})[0];
   if(!p) return {ok:false,reason:'Jméno nenalezeno v profilu '+profileName(profile),text:text,cost:cost};
-  var base={person:p,text:text,cost:cost};
+  var base={person:p,text:text,cost:cost,items:items};
   if(!force){
     var gone=stockGone(o.items);
     if(gone.length) return Object.assign({ok:false,reason:'Došlo: '+gone.join(', ')},base);
@@ -1647,12 +1789,14 @@ function evaluateOrder(o,force){
 // Zapíše objednávku člověku: údaje pro zásilku, co chce, odečte body a nastaví „Odeslat“.
 function applyOrder(res,o){
   var p=res.person, si=p.shipInfo||{};
+  ensureHist(p);                                   // historie ze starého stavu, než se změní
   var pt=splitPoint(o.point), keepId=!pt.id&&(!pt.text||sameVal(pt.text,si.point));
   p.shipInfo={name:o.name||si.name||'',phone:o.phone||si.phone||'',email:o.email||si.email||'',point:pt.text||si.point||'',
     pointId:pt.id||(keepId?si.pointId||'':''),pointCc:pt.id?pt.cc:(keepId?si.pointCc||'':''),order:res.text};
   delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;
   p.ptsSpent=(Number(p.ptsSpent)||0)+res.cost;
   p.ship='todo'; p.shipAt=nowLocal(); p.askedAt='';
+  histOrder(p,res.items);
   touchPerson(p.id); save(); render();
   toast('📥 '+p.name+': '+res.text);
 }
@@ -1696,7 +1840,7 @@ function cancelOrder(id){
   var h=normHandle(o.handle), p=data.people.filter(function(x){return normHandle(x.name)===h;})[0];
   if(p){
     p.ptsSpent=Math.max(0,(Number(p.ptsSpent)||0)-(Number(o.cost)||0));
-    if(p.shipInfo&&p.shipInfo.order===o.text){ p.shipInfo.order=''; }
+    if(p.shipInfo&&p.shipInfo.order===o.text){ p.shipInfo.order=''; var oe=histOpen(p); if(oe&&oe.i&&oe.i.length) oe.i=[]; }
     touchPerson(p.id); save(); render();
   }
   db.collection('labubu-orders').doc(id).update({status:'cancelled'}).catch(function(e){console.error(e);});
@@ -1832,7 +1976,7 @@ function markExportedSent(){
   var list=pktExported(); if(!list.length) return;
   if(!confirm('Označit '+list.length+' lidí jako Odesláno?')) return;
   list.forEach(function(p){
-    p.ship='done'; p.shipAt=nowLocal(); p.askedAt=''; touchPerson(p.id);
+    histShip(p,'todo','done'); p.ship='done'; p.shipAt=nowLocal(); p.askedAt=''; touchPerson(p.id);
   });
   save(); closeModal(); render();
   toast('✅ Odesláno: '+list.length);
@@ -1939,7 +2083,7 @@ function pktApply(p,r){
   if(r.consignPassword&&String(r.consignPassword)!==p.pktCode){p.pktCode=String(r.consignPassword); out.changed=true;}
   if(r.ok&&r.statusCode&&r.statusCode!==p.pktStatus){
     p.pktStatus=r.statusCode; out.changed=true;
-    if(PKT_SENT.indexOf(r.statusCode)>=0&&shipOf(p)==='todo'){p.ship='done'; p.shipAt=nowLocal(); p.askedAt=''; out.sent=true;}
+    if(PKT_SENT.indexOf(r.statusCode)>=0&&shipOf(p)==='todo'){histShip(p,'todo','done'); p.ship='done'; p.shipAt=nowLocal(); p.askedAt=''; out.sent=true;}
     if(r.statusCode===7&&!p.pktDeliveredAt){p.pktDeliveredAt=nowLocal(); out.delivered=true;}
   }
   return out;
@@ -1992,7 +2136,7 @@ function pktCancel(id){
       _pktBusy=false;
       if(!res||!res.ok){pktRefresh(p); pktMsg('Zásilkovna: '+((res&&res.error)||'neznámá chyba')); return;}
       delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktAt; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;   // pktNo zůstává, ať se číslo znovu nepoužije
-      if(shipOf(p)==='done'){p.ship='todo'; p.shipAt=nowLocal();}
+      if(shipOf(p)==='done'){p.ship='todo'; p.shipAt=nowLocal(); histUnsent(p);}
       touchPerson(id); save(); render(); pktRefresh(p);
       toast('🗑 Zásilka '+code+' stornována');
     })

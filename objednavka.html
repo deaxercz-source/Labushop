@@ -123,6 +123,16 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .series button:disabled{opacity:.45;cursor:default}
 .series button small{font-weight:500;color:var(--muted)}
 .series button img{width:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;display:block;margin-bottom:6px}
+.pbar{position:fixed;left:0;right:0;bottom:0;z-index:15;display:flex;justify-content:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));pointer-events:none;transform:translateY(130%);transition:transform .22s ease}
+.pbar.show{transform:none}
+.pbar-in{pointer-events:auto;width:100%;max-width:520px;background:#fff;border:1.5px solid var(--line);border-radius:22px;padding:10px 12px 10px 16px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 16px 34px -14px rgba(120,90,200,.55),0 2px 6px rgba(167,139,250,.15)}
+.pbar-t{flex:1;min-width:0}
+.pbar-t b{display:block;font-size:14px;font-weight:700;line-height:1.2}
+.pbar-track{height:7px;background:#f1e8fb;border-radius:999px;overflow:hidden;margin-top:6px}
+.pbar-track i{display:block;height:100%;width:0;background:var(--grad);border-radius:999px;transition:width .2s}
+.pbar .btn{width:auto;flex:none;padding:12px 18px;font-size:15px}
+.pbar .btn.hidden{display:none}
 .swatches{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 8px}
 .sw{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px 7px 8px;font-weight:600;font-size:14px;cursor:pointer;transition:border-color .12s,background .12s,box-shadow .12s}
 .sw .dot{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(43,33,64,.2);flex:none}
@@ -180,7 +190,7 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
   </div>
 
   <div id="step2" class="hidden">
-    <div class="card">
+    <div class="card" id="pts-card">
       <div class="points"><div class="badge" id="pts-left">0</div>
         <div class="txt"><b id="pts-title">Vaše body</b><span id="pts-word">bodů</span><span id="pts-rule" data-i18n="pts_rule"> · 1 bod = 1 splněný bonus</span></div></div>
       <div class="bar"><i id="bar"></i></div>
@@ -219,6 +229,10 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 
 <div id="pick-bg" class="sheet-bg hidden" onclick="closePick(event)"><div class="sheet" id="pick"></div></div>
 <div id="sum-bg" class="sheet-bg hidden" onclick="closeSummary(event)"><div class="sheet" id="sum"></div></div>
+<div class="pbar" id="pbar" aria-live="polite"><div class="pbar-in">
+  <div class="pbar-t"><b id="pbar-t"></b><div class="pbar-track"><i id="pbar-i"></i></div></div>
+  <button type="button" class="btn" id="pbar-go" onclick="goToForm()" data-i18n="bar_go">Pokračovat k odeslání</button>
+</div></div>
 
 <script>
 // ── Firebase (stejný projekt jako appka; bez přihlášení se dá jen číst jeden záznam s body a vytvořit objednávka) ──
@@ -275,7 +289,8 @@ cs:{h1a:'Vaše',h1b:'objednávka',lead:'Zadejte své Instagram jméno, hned uvid
  w_ptype:'Vyberte prosím výdejní místo nebo Z-BOX Zásilkovny.',
  sum_t:'Zkontrolujte objednávku',sum_sub:'Ještě se to dá upravit. Potom už objednávku odešlete.',sum_what:'Objednáváte',sum_use:'Použijete {c} z {n} {w}',
  sum_to:'Pošleme na',sum_edit:'Upravit',sum_ok:'Potvrdit a odeslat',m_gone:'Tohle mezitím došlo: {x}. Upravte prosím objednávku.',
- m_senderr:'Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.'},
+ m_senderr:'Objednávku se nepodařilo odeslat. Zkuste to prosím znovu, nebo nám napište na Instagramu.',
+ bar_go:'Pokračovat k odeslání'},
 sk:{h1a:'Vaša',h1b:'objednávka',lead:'Zadajte svoje Instagram meno, hneď uvidíte, koľko máte bodov, a vyberte si, čo chcete.',
  s1t:'Kto ste?',ig_l:'Instagram meno',ig_ph:'napr. jana.novakova',btn_lookup:'Zobraziť moje body 💌',
  pts_t:'Vaše body',pts_t_open:'Vaše body zatiaľ',pts_rule:' · 1 bod = 1 splnený bonus',
@@ -297,7 +312,8 @@ sk:{h1a:'Vaša',h1b:'objednávka',lead:'Zadajte svoje Instagram meno, hneď uvid
  w_ptype:'Vyberte, prosím, výdajné miesto alebo Z-BOX Packeta.',
  sum_t:'Skontrolujte objednávku',sum_sub:'Ešte sa to dá upraviť. Potom už objednávku odošlite.',sum_what:'Objednávate',sum_use:'Použijete {c} z {n} {w}',
  sum_to:'Pošleme na',sum_edit:'Upraviť',sum_ok:'Potvrdiť a odoslať',m_gone:'Toto sa medzitým minulo: {x}. Upravte, prosím, objednávku.',
- m_senderr:'Objednávku sa nepodarilo odoslať. Skúste to, prosím, znova, alebo nám napíšte na Instagrame.'}
+ m_senderr:'Objednávku sa nepodarilo odoslať. Skúste to, prosím, znova, alebo nám napíšte na Instagrame.',
+ bar_go:'Pokračovať k odoslaniu'}
 };
 var COLORS_SK={'Bílá':'Biela','Růžová':'Ružová','Hnědá':'Hnedá','Béžová':'Béžová'};   // hodnota se odesílá česky, jen se jinak zobrazí
 function detectLang(){
@@ -433,6 +449,7 @@ function renderItems(){
   var u=used();
   $('used').textContent=t('used',{u:u,n:st.left,w:plBodu(st.left)});
   $('bar').style.width=Math.min(100,Math.round(u/st.left*100))+'%';
+  updateBar(u);
   $('items').innerHTML=ITEMS.map(function(it){
     var n=st.qty[it.k]||0;
     var gone=itemOut(it);
@@ -479,6 +496,25 @@ $('items').addEventListener('click',function(e){
   renderItems();
   if(it.pick&&d>0) openPick(n-1);                  // po přidání Labubu se rovnou nabídne výběr
 });
+
+// ── lišta s body dole: ukáže se, když je karta s body i formulář mimo obrazovku ──
+var ptsVisible=true, formVisible=false;
+function updateBar(u){
+  $('pbar-t').textContent=t('used',{u:u,n:st.left,w:plBodu(st.left)});
+  $('pbar-i').style.width=Math.min(100,Math.round(u/st.left*100))+'%';
+  show('pbar-go',!st.open&&u>0);                       // u náhledu neuzavřených bodů se objednávat nedá
+  refreshBar();
+}
+function refreshBar(){
+  var on=!$('step2').classList.contains('hidden')&&!ptsVisible&&!formVisible;
+  $('pbar').classList.toggle('show',on);
+}
+function goToForm(){$('order-form').scrollIntoView({behavior:'smooth',block:'start'});}
+if('IntersectionObserver' in window){
+  // ukazatel bodů = řádek „Vybráno X z Y“; formulář se počítá jako vidět, když je na obrazovce aspoň třetina
+  new IntersectionObserver(function(es){ptsVisible=es[es.length-1].isIntersecting; refreshBar();}).observe($('used'));
+  new IntersectionObserver(function(es){formVisible=es[es.length-1].intersectionRatio>=0.35; refreshBar();},{threshold:[0,0.1,0.2,0.35,0.5,0.75,1]}).observe($('order-form'));
+}
 
 // ── výběr barvy (kolečka) ──
 $('items').addEventListener('click',function(e){
