@@ -49,12 +49,33 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 .hero .hb{width:60px;height:60px;border-radius:50%;background:#fff;border:2px solid #f0e6fb;display:grid;place-items:center;flex:none;
   box-shadow:0 14px 22px -12px rgba(167,139,250,.75),0 2px 4px rgba(167,139,250,.12)}
 .hero .hb img{width:46px;height:46px;object-fit:contain;display:block}
-.hero .hb.b1{transform:rotate(-7deg)}
-.hero .hb.b2{transform:translateY(-7px) rotate(5deg)}
-.hero .hb.b3{transform:rotate(-4deg)}
-.hero .hb.b4{transform:translateY(-5px) rotate(7deg)}
+.hero .hb{--r:0deg;--y:0px;transform:translateY(var(--y)) rotate(var(--r))}
+.hero .hb.b1{--r:-7deg;--y:0px}
+.hero .hb.b2{--r:5deg;--y:-7px}
+.hero .hb.b3{--r:-4deg;--y:0px}
+.hero .hb.b4{--r:7deg;--y:-5px}
 @keyframes twinkle{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.15)}}
 @media(prefers-reduced-motion:reduce){.hero .sp{animation:none}}
+/* úvodní animace: ikonky vyskočí jedna po druhé a pak se jemně vznášejí, nadpis dojede z obou stran, karta vyjede zespodu */
+@keyframes hbPop{0%{opacity:0;transform:translateY(30px) scale(.3) rotate(calc(var(--r) - 35deg))}55%{opacity:1}
+  100%{opacity:1;transform:translateY(var(--y)) scale(1) rotate(var(--r))}}
+@keyframes hbFloat{0%,100%{transform:translateY(var(--y)) rotate(var(--r))}50%{transform:translateY(calc(var(--y) - 6px)) rotate(calc(var(--r) + 2.5deg))}}
+@keyframes slideL{from{opacity:0;transform:translateX(-34px)}to{opacity:1;transform:none}}
+@keyframes slideR{from{opacity:0;transform:translateX(34px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:no-preference){
+  .hero .hb{opacity:0;animation:hbPop .65s cubic-bezier(.34,1.56,.64,1) forwards,hbFloat 3.8s ease-in-out infinite}
+  .hero .hb.b1{animation-delay:.05s,1s}
+  .hero .hb.b2{animation-delay:.17s,1.5s}
+  .hero .hb.b3{animation-delay:.29s,2s}
+  .hero .hb.b4{animation-delay:.41s,2.5s}
+  .hero .sp{opacity:0;animation:twinkle 2.6s ease-in-out infinite;animation-delay:.6s}
+  .hero .sp.s2{animation-delay:1.9s}
+  .hero h1 .f{display:inline-block;animation:slideL .6s cubic-bezier(.22,1,.36,1) both .5s}
+  .hero h1 .o{display:inline-block;animation:slideR .6s cubic-bezier(.22,1,.36,1) both .6s}
+  .hero .lead{animation:rise .6s ease both .8s}
+  #step1{animation:rise .6s cubic-bezier(.22,1,.36,1) both .95s}
+}
 .hero h1{font-family:'Fredoka',sans-serif;font-weight:700;font-size:38px;line-height:1.05;margin:6px 0 8px;letter-spacing:-.01em}
 .hero h1 .f{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero h1 .o{color:var(--ink)}
