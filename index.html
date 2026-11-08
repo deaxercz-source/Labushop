@@ -145,8 +145,12 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .setrow{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin:0 0 8px;font-size:15px}
 .setrow span{color:var(--muted);font-size:13px}
 .stocklist{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.stockrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;color:var(--text);margin:0;cursor:pointer}
-.stockrow:first-child{border-top:none}
+.fld .stockrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;color:var(--text);margin:0;cursor:pointer}
+.stockitem:first-child .stockrow{border-top:none}
+.stockcolors{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px 40px}
+.fld .stockchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 8px;font-size:13px;cursor:pointer;margin:0;color:var(--text);background:#fff}
+.stockchip input{width:15px;height:15px;accent-color:var(--green)}
+.fld .stockchip:has(input:not(:checked)){background:#fdecea;border-color:#f1c2bd;color:var(--red);text-decoration:line-through}
 .stockrow input{width:18px;height:18px;accent-color:var(--green);flex:none}
 .stockrow span{flex:1}
 .stockrow em{font-style:normal;font-size:12px;color:var(--green);font-weight:600}
@@ -1601,6 +1605,7 @@ function stockGone(items){
     else if(it.series&&out.indexOf('labubu:'+it.series)>=0){
       var ser=ORDER_LABUBU.filter(function(x){return x.id===it.series;})[0]; gone.push(label+' – '+(ser?ser.name:it.series));
     }
+    else if(it.color&&out.indexOf(it.k+':'+it.color)>=0) gone.push(label+' ('+it.color+')');
   });
   return gone.filter(function(g,i){return gone.indexOf(g)===i;});
 }
@@ -2277,11 +2282,18 @@ function stockRowsHTML(){
   var out=stockOutKeys(), rows=[];
   ORDER_ITEMS.forEach(function(it){
     if(it.pick) ORDER_LABUBU.forEach(function(sr){rows.push({k:'labubu:'+sr.id,t:'Labubu · '+sr.name});});
-    else rows.push({k:it.k,t:it.label});
+    else rows.push({k:it.k,t:it.label,colors:!!it.color});
   });
   return '<div class="stocklist">'+rows.map(function(r){
     var on=out.indexOf(r.k)<0;
-    return '<label class="stockrow"><input type="checkbox" data-k="'+esc(r.k)+'" onchange="toggleStock(this)"'+(on?' checked':'')+'><span>'+esc(r.t)+'</span><em>'+(on?'skladem':'došlo')+'</em></label>';
+    var html='<div class="stockitem"><label class="stockrow"><input type="checkbox" data-k="'+esc(r.k)+'" onchange="toggleStock(this)"'+(on?' checked':'')+'><span>'+esc(r.t)+'</span><em>'+(on?'skladem':'došlo')+'</em></label>';
+    if(r.colors){                                   // jednotlivé barvy (klíč „kravička:barva“)
+      html+='<div class="stockcolors">'+ORDER_COLORS.map(function(c){
+        var k=r.k+':'+c;
+        return '<label class="stockchip"><input type="checkbox" data-k="'+esc(k)+'" onchange="toggleStock(this)"'+(out.indexOf(k)<0?' checked':'')+'><span>'+esc(c)+'</span></label>';
+      }).join('')+'</div>';
+    }
+    return html+'</div>';
   }).join('')+'</div>';
 }
 function toggleStock(el){
@@ -2299,7 +2311,12 @@ var DOC_LIMIT=1048576;              // dokument ve Firestore smí mít zhruba 1 
 var _sizeWarned=false;
 function dataSizeBytes(){try{return new Blob([JSON.stringify(root)]).size;}catch(e){return 0;}}
 var _stockPub=false;
-function publishStockOnce(){if(_stockPub||!_loaded||!Array.isArray(root.stockOut)) return; _stockPub=true; publishStock();}
+// Výchozí stav, než se dostupnost poprvé nastaví: malé kravičky (16 cm) nejsou v hnědé.
+function seedStock(){
+  if(!_loaded||Array.isArray(root.stockOut)) return;
+  root.stockOut=['cow16:Hnědá']; save();
+}
+function publishStockOnce(){seedStock(); if(_stockPub||!_loaded||!Array.isArray(root.stockOut)) return; _stockPub=true; publishStock();}
 function checkDataSize(){
   if(_sizeWarned||!_loaded) return;
   var pct=Math.round(dataSizeBytes()/DOC_LIMIT*100);

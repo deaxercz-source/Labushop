@@ -407,10 +407,13 @@ function priceLine(){
   ITEMS.forEach(function(it){(by[it.cost]=by[it.cost]||[]).push(it.label);});
   return Object.keys(by).sort().map(function(c){return '<b>'+c+' '+plBody(Number(c))+':</b> '+esc(by[c].join(', '));}).join('<br>');
 }
-// Došlo = položka je v seznamu nebo (u Labubu) jsou vyprodané všechny krabičky.
+// Došlo = položka je v seznamu, vyprodané jsou všechny její barvy, nebo (u Labubu) všechny krabičky.
+// Jednotlivá barva je v seznamu jako '<položka>:<barva>', třeba 'cow16:Hnědá'.
+function colorOut(it,c){return (st.out||[]).indexOf(it.k+':'+c)>=0;}
 function itemOut(it){
   var out=(st.out||[]);
   if(out.indexOf(it.k)>=0) return true;
+  if(it.color&&COLORS.every(function(c){return colorOut(it,c);})) return true;
   return !!it.pick&&LABUBU.every(function(sr){return SOLD_OUT.indexOf(sr.id)>=0;});
 }
 function used(){
@@ -442,8 +445,12 @@ function renderItems(){
       html+='<div class="colors">';
       for(var i=0;i<n;i++){
         var cur=(st.colors[it.k]||[])[i]||'';
+        if(cur&&colorOut(it,cur)){cur=''; st.colors[it.k][i]='';}          // vybraná barva mezitím došla
         html+='<label>'+esc(t('col_l',{l:it.label,n:(n>1?t('num',{n:i+1}).replace(' · ',' '):'')}))+'</label><select class="input" data-k="'+it.k+'" data-i="'+i+'">'+
-          '<option value="">'+esc(t('col_ph'))+'</option>'+COLORS.map(function(c){return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(colorName(c))+'</option>';}).join('')+'</select>';
+          '<option value="">'+esc(t('col_ph'))+'</option>'+COLORS.map(function(c){
+            var out=colorOut(it,c);
+            return '<option value="'+esc(c)+'"'+(out?' disabled':'')+(c===cur?' selected':'')+'>'+esc(colorName(c))+(out?' ('+esc(t('gone').toLowerCase())+')':'')+'</option>';
+          }).join('')+'</select>';
       }
       html+='</div>';
     }
@@ -564,7 +571,7 @@ function confirmSend(){
   var o=pendingOrder; if(!o) return;
   $('btn-confirm').disabled=true; msg('msg3','','');
   fetchStock().then(function(out){                      // mezitím mohlo něco dojít
-    var gone=o.items.filter(function(it){return out.indexOf(it.k)>=0||(it.series&&out.indexOf('labubu:'+it.series)>=0);});
+    var gone=o.items.filter(function(it){return out.indexOf(it.k)>=0||(it.series&&out.indexOf('labubu:'+it.series)>=0)||(it.color&&out.indexOf(it.k+':'+it.color)>=0);});
     if(gone.length){
       st.out=out; SOLD_OUT=LABUBU.filter(function(sr){return out.indexOf('labubu:'+sr.id)>=0;}).map(function(sr){return sr.id;});
       $('btn-confirm').disabled=false;
