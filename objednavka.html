@@ -123,6 +123,14 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .series button:disabled{opacity:.45;cursor:default}
 .series button small{font-weight:500;color:var(--muted)}
 .series button img{width:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;display:block;margin-bottom:6px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 8px}
+.sw{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px 7px 8px;font-weight:600;font-size:14px;cursor:pointer;transition:border-color .12s,background .12s,box-shadow .12s}
+.sw .dot{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(43,33,64,.2);flex:none}
+.sw:active{transform:scale(.97)}
+.sw.sel{border-color:#a78bfa;background:#f6efff;box-shadow:0 0 0 3px rgba(167,139,250,.2)}
+.sw.out{opacity:.5;cursor:default;text-decoration:line-through}
+.sw small{font-size:11px;font-weight:700;color:#c0392b;text-decoration:none;display:inline-block;margin-left:1px}
+.swhint{font-size:12px;color:var(--muted);margin:-2px 0 6px 4px}
 .item.gone{opacity:.55}
 .item.gone .cost{color:#c0392b;font-weight:700}
 .priceinfo{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--muted);line-height:1.6}
@@ -232,6 +240,7 @@ var ITEMS=[
   {k:'labubu',label:'Labubu',cost:1,em:'🐰',pick:true,img:'img/icon-labubu.png'}
 ];
 var COLORS=['Bílá','Růžová','Hnědá','Béžová'];
+var COLOR_HEX={'Bílá':'#ffffff','Růžová':'#f6b3cc','Hnědá':'#9a6a4a','Béžová':'#e6cfa8'};   // jen pro kolečko u názvu barvy
 // Řady Labubu (blind boxy; postavička uvnitř je náhodná). Musí odpovídat appce: index.html ORDER_LABUBU.
 // Dočasně nedostupná řada: SOLD_OUT.push('macaron').
 var LABUBU=[
@@ -446,11 +455,11 @@ function renderItems(){
       for(var i=0;i<n;i++){
         var cur=(st.colors[it.k]||[])[i]||'';
         if(cur&&colorOut(it,cur)){cur=''; st.colors[it.k][i]='';}          // vybraná barva mezitím došla
-        html+='<label>'+esc(t('col_l',{l:it.label,n:(n>1?t('num',{n:i+1}).replace(' · ',' '):'')}))+'</label><select class="input" data-k="'+it.k+'" data-i="'+i+'">'+
-          '<option value="">'+esc(t('col_ph'))+'</option>'+COLORS.map(function(c){
-            var out=colorOut(it,c);
-            return '<option value="'+esc(c)+'"'+(out?' disabled':'')+(c===cur?' selected':'')+'>'+esc(colorName(c))+(out?' ('+esc(t('gone').toLowerCase())+')':'')+'</option>';
-          }).join('')+'</select>';
+        html+='<label>'+esc(t('col_l',{l:it.label,n:(n>1?t('num',{n:i+1}).replace(' · ',' '):'')}))+'</label><div class="swatches">'+COLORS.map(function(c){
+            var out=colorOut(it,c), sel=c===cur;
+            return '<button type="button" class="sw'+(sel?' sel':'')+(out?' out':'')+'" data-sk="'+it.k+'" data-i="'+i+'" data-c="'+esc(c)+'"'+(out?' disabled':'')+' aria-pressed="'+(sel?'true':'false')+'">'+
+              '<span class="dot" style="background:'+(COLOR_HEX[c]||'#ddd')+'"></span>'+esc(colorName(c))+(out?'<small>'+esc(t('gone'))+'</small>':'')+'</button>';
+          }).join('')+'</div>'+(cur?'':'<div class="swhint">'+esc(t('col_ph'))+'</div>');
       }
       html+='</div>';
     }
@@ -468,6 +477,14 @@ $('items').addEventListener('click',function(e){
   if(it.pick) st.labubu=(st.labubu||[]).slice(0,n);
   renderItems();
   if(it.pick&&d>0) openPick(n-1);                  // po přidání Labubu se rovnou nabídne výběr
+});
+
+// ── výběr barvy (kolečka) ──
+$('items').addEventListener('click',function(e){
+  var sw=e.target.closest('button[data-sk]'); if(!sw||sw.disabled) return;
+  var k=sw.getAttribute('data-sk'), i=parseInt(sw.getAttribute('data-i'),10);
+  (st.colors[k]=st.colors[k]||[])[i]=sw.getAttribute('data-c');
+  renderItems();
 });
 
 // ── výběr Labubu: krabička ──
