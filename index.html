@@ -1898,7 +1898,13 @@ function pktPhone(v,cc){
   if(dig.indexOf('00')===0) return '+'+dig.slice(2);
   if(/^(420|421)\d{9}$/.test(dig)) return '+'+dig;
   if(dig.length===10&&dig.charAt(0)==='0') dig=dig.slice(1);      // 0905 123 456 -> 905123456
-  if(dig.length===9) return (cc==='sk'?'+421':'+420')+dig;
+  if(dig.length===9){
+    // Předvolba podle čísla: slovenské mobily začínají 9, české 6 a 7. Jen u pevných linek (2–5) rozhodne země výdejního místa.
+    var f=dig.charAt(0);
+    if(f==='9') return '+421'+dig;
+    if(f==='6'||f==='7') return '+420'+dig;
+    return (cc==='sk'?'+421':'+420')+dig;
+  }
   return dig?'+'+dig:'';
 }
 function pktProblems(p){
