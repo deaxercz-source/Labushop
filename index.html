@@ -2059,10 +2059,14 @@ function pktCreate(id){
       p.pktNo=no; p.pktId=String(res.id||''); p.pktBarcode=String(res.barcode); p.pktText=String(res.barcodeText||res.barcode); p.pktAt=nowLocal();
       p.pktCode=String(res.consignPassword||''); p.pktStatus=1;
       if(!p.pktCode) delete p.pktCode;
-      if(!shipOf(p)){p.ship='todo'; p.shipAt=nowLocal();}
+      if(shipOf(p)!=='done'){                          // vytvořená zásilka (kód) = rovnou „Odesláno“
+        var wasShip=shipOf(p);
+        histShip(p,wasShip,'done');                    // historie se dopočítá ještě ze starého stavu
+        p.ship='done'; p.shipAt=nowLocal(); p.askedAt='';
+      }
       touchPerson(id); save(); render(); pktRefresh(p);
       var cv=p.pktCode?String(p.pktCode).replace(/\D/g,''):p.pktBarcode;
-      copyText(cv).then(function(){toast('📦 Zásilka vytvořena, '+(p.pktCode?'podací kód':'kód')+' zkopírován: '+cv);},function(){toast('📦 Zásilka vytvořena: '+cv);});
+      copyText(cv).then(function(){toast('📦 Zásilka vytvořena, '+(p.pktCode?'podací kód':'kód')+' zkopírován: '+cv+' · Odesláno');},function(){toast('📦 Zásilka vytvořena: '+cv+' · Odesláno');});
     })
     .catch(function(){
       _pktBusy=false; pktRefresh(p);
