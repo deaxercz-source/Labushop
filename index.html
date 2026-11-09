@@ -402,14 +402,29 @@ body{background:linear-gradient(#f4f8f3,#eaf1ea) fixed}
       <div id="tpl-bar-overview"></div>
       <div class="tiles" id="tiles"></div>
       <div class="card">
-        <div class="card-h"><span class="name" style="font-size:15px">Bonusy po dnech</span>
-          <select class="input" id="chart-scope" onchange="setChartScope()" style="width:auto">
+        <div class="card-h"><span class="name" style="font-size:15px" id="chart-title">Bonusy po dnech</span>
+          <select class="input" id="chart-scope" onchange="setChartPref()" style="width:auto">
             <option value="me">Jen já</option><option value="all">Všichni</option>
-          </select>
-          <select class="input" id="chart-period" onchange="renderChart()" style="width:auto">
-            <option value="7" selected>7 dní</option><option value="30">30 dní</option><option value="90">90 dní</option>
           </select></div>
+        <div class="bar" style="margin:0 0 8px;flex-wrap:wrap">
+          <select class="input" id="chart-metric" onchange="setChartPref()" style="width:auto">
+            <option value="bonus">Bonusy</option><option value="profit">Zisk</option>
+          </select>
+          <select class="input grow" id="chart-period" onchange="setChartPref()">
+            <option value="7" selected>7 dní</option><option value="14">14 dní</option><option value="30">30 dní</option><option value="90">90 dní</option>
+            <option value="month">Tento měsíc</option><option value="lastmonth">Minulý měsíc</option><option value="year">Tento rok</option>
+            <option value="all">Celé období</option><option value="custom">Vlastní od–do…</option>
+          </select>
+          <select class="input" id="chart-group" onchange="setChartPref()" style="width:auto">
+            <option value="auto">Auto</option><option value="day">Po dnech</option><option value="week">Po týdnech</option><option value="month">Po měsících</option>
+          </select></div>
+        <div class="bar" id="chart-custom" style="margin:0 0 8px;display:none;align-items:center">
+          <span class="cat">od</span><input class="input grow" type="date" id="chart-from" onchange="setChartPref()">
+          <span class="cat">do</span><input class="input grow" type="date" id="chart-to" onchange="setChartPref()"></div>
+        <div class="cat" id="chart-range" style="margin:0 0 6px"></div>
         <div id="chart-wrap" style="position:relative;height:220px"><canvas id="chart"></canvas></div>
+        <div class="stat-tiles" id="chart-sum" style="margin-top:12px"></div>
+        <details id="chart-list" style="margin-top:4px"><summary class="cat" style="cursor:pointer;font-weight:600">Rozpis</summary><div id="chart-rows" style="margin-top:6px"></div></details>
       </div>
       <div class="card"><div class="card-h"><span class="name" style="font-size:15px">Poslední aktivita</span></div>
         <div id="activity"></div></div>
@@ -954,54 +969,159 @@ function renderStats(){
 var _chart=null;
 // Data profilu podle id (Pepa = celý dokument, Tomáš = root.profiles.tomas), nezávisle na přihlášeném profilu.
 function profileDataFor(id){return id==='tomas'?((root.profiles&&root.profiles.tomas)||{}):root;}
-function setChartScope(){
-  try{localStorage.setItem('labubu-chart-scope',$('chart-scope').value);}catch(e){}
+var CHART_MONTHS=['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
+var CHART_MONTHS_FULL=['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+var CHART_WEEKDAYS=['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'];
+function setChartPref(){
+  var pr={scope:$('chart-scope').value,metric:$('chart-metric').value,period:$('chart-period').value,group:$('chart-group').value,from:$('chart-from').value,to:$('chart-to').value};
+  if(pr.period==='custom'){
+    if(!pr.to){pr.to=todayISO(); $('chart-to').value=pr.to;}
+    if(!pr.from){pr.from=daysAgoISO(29); $('chart-from').value=pr.from;}
+  }
+  try{localStorage.setItem('labubu-chart-prefs',JSON.stringify(pr));}catch(e){}
   renderChart();
 }
 (function(){
-  try{var v=localStorage.getItem('labubu-chart-scope'); if(v==='me'||v==='all') $('chart-scope').value=v;}catch(e){}
+  var pr={}, old='';
+  try{pr=JSON.parse(localStorage.getItem('labubu-chart-prefs')||'{}')||{}; old=localStorage.getItem('labubu-chart-scope')||'';}catch(e){}
+  function set(id,v){ if(v&&[].some.call($(id).options,function(o){return o.value===v;})) $(id).value=v; }
+  set('chart-scope',pr.scope||old); set('chart-metric',pr.metric); set('chart-period',pr.period); set('chart-group',pr.group);
+  if(pr.from) $('chart-from').value=pr.from;
+  if(pr.to) $('chart-to').value=pr.to;
 })();
-function renderChart(){
-  var n=parseInt($('chart-period').value)||7, days=[];
-  for(var i=n-1;i>=0;i--) days.push(daysAgoISO(i));
-  var all=$('chart-scope').value==='all';
-  $('chart-scope').options[0].text='Jen '+profileName(profile);
-  // jen přihlášený profil, nebo oba (Pepa + Tomáš) dohromady
-  var srcs=all?PROFILES.map(function(p){return {name:p.name,d:profileDataFor(p.id)};}):[{name:profileName(profile),d:data}];
+function chartSources(all){return all?PROFILES.map(function(p){return {name:p.name,d:profileDataFor(p.id)};}):[{name:profileName(profile),d:data}];}
+// Nejstarší datum, ke kterému v datech něco je (bonus, výdaj, náklad).
+function chartEarliest(srcs){
+  var min='';
+  function up(d){d=String(d||'').slice(0,10); if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&(!min||d<min)) min=d;}
+  srcs.forEach(function(src){
+    var d=src.d||{};
+    (d.bonuses||[]).forEach(function(b){bonusEntries(b).forEach(function(e){up(e.d);});});
+    (d.expenses||[]).forEach(function(e){up(e.date);});
+    (d.costs||[]).forEach(function(c){up(c.date);});
+  });
+  return min;
+}
+function chartRange(period,srcs){
+  var today=todayISO(), now=new Date(), from, to=today;
+  if(period==='month') from=today.slice(0,7)+'-01';
+  else if(period==='lastmonth'){from=isoDay(new Date(now.getFullYear(),now.getMonth()-1,1)); to=isoDay(new Date(now.getFullYear(),now.getMonth(),0));}
+  else if(period==='year') from=now.getFullYear()+'-01-01';
+  else if(period==='all') from=chartEarliest(srcs)||daysAgoISO(6);
+  else if(period==='custom'){
+    from=$('chart-from').value||daysAgoISO(29); to=$('chart-to').value||today;
+    if(from>to){var t=from; from=to; to=t;}
+  } else from=daysAgoISO((parseInt(period,10)||7)-1);
+  return {from:from,to:to};
+}
+function isoToDate(iso){var a=String(iso).slice(0,10).split('-'); return new Date(+a[0],+a[1]-1,+a[2]);}
+function addDaysISO(iso,n){var d=isoToDate(iso); d.setDate(d.getDate()+n); return isoDay(d);}
+function weekStartOf(iso){var d=isoToDate(iso); d.setDate(d.getDate()-((d.getDay()+6)%7)); return isoDay(d);}
+function chartKey(iso,g){return g==='month'?iso.slice(0,7):(g==='week'?weekStartOf(iso):iso);}
+function chartBuckets(from,to,g){
+  var out=[], seen={};
+  for(var d=isoToDate(from);isoDay(d)<=to;d.setDate(d.getDate()+1)){
+    var k=chartKey(isoDay(d),g); if(!seen[k]){seen[k]=1; out.push(k);}
+  }
+  return out;
+}
+function fmtFull(iso){var p=String(iso).slice(0,10).split('-'); return (+p[2])+'. '+(+p[1])+'. '+p[0];}
+function chartLabel(k,g,yr){
+  var p=k.split('-');
+  if(g==='month') return CHART_MONTHS[+p[1]-1]+' '+p[0].slice(2);
+  return (+p[2])+'. '+(+p[1])+'.'+(yr?' '+p[0].slice(2):'');
+}
+function chartTitleOf(k,g){
+  if(g==='month'){var p=k.split('-'); return CHART_MONTHS_FULL[+p[1]-1]+' '+p[0];}
+  if(g==='week') return fmtFull(k)+' – '+fmtFull(addDaysISO(k,6));
+  return CHART_WEEKDAYS[isoToDate(k).getDay()]+' '+fmtFull(k);
+}
+function chartCompute(srcs,from,to,g,metric){
+  var buckets=chartBuckets(from,to,g), idx={}, n=buckets.length, days={}, bset={};
+  buckets.forEach(function(k,i){idx[k]=i;});
+  var zero=function(){var a=[]; for(var i=0;i<n;i++) a.push(0); return a;};
+  var bon=zero(), spend=zero();
   var per=srcs.map(function(src){
-    var map={}; days.forEach(function(d){map[d]=0;});
-    (src.d.bonuses||[]).forEach(function(b){
+    var d=src.d||{}, mine=zero(), sp=zero();
+    function at(date){var k=String(date||'').slice(0,10); return (k>=from&&k<=to)?idx[chartKey(k,g)]:-1;}
+    (d.bonuses||[]).forEach(function(b){
       bonusEntries(b).forEach(function(e){
-        var k=e.d?String(e.d).slice(0,10):'';
-        if(map[k]!==undefined) map[k]+=e.a;
+        var i=at(e.d); if(i<0) return;
+        mine[i]+=e.a; bon[i]+=e.a;
+        if(e.a>0){days[String(e.d).slice(0,10)]=1; bset[src.name+'|'+b.id]=1;}
       });
     });
-    return days.map(function(d){return map[d];});
+    (d.expenses||[]).forEach(function(x){var i=at(x.date); if(i>=0){var v=Number(x.amount)||0; sp[i]+=v; spend[i]+=v;}});
+    (d.costs||[]).forEach(function(c){var i=at(c.date); if(i>=0){var v=(parseFloat(c.gift)||0)+(parseFloat(c.postage)||0)+(parseFloat(c.other)||0); sp[i]+=v; spend[i]+=v;}});
+    return metric==='profit'?mine.map(function(v,i){return v-sp[i];}):mine;
   });
-  var vals=days.map(function(d,i){return per.reduce(function(sum,a){return sum+a[i];},0);});
+  var vals=bon.map(function(v,i){return metric==='profit'?v-spend[i]:v;});
+  return {buckets:buckets,vals:vals,bon:bon,spend:spend,per:per,activeDays:Object.keys(days).length,nBonuses:Object.keys(bset).length};
+}
+function chartTile(v,k,cls){return '<div class="stat-tile"><div class="v'+(cls?' '+cls:'')+'" style="font-size:'+(String(v).length>9?'17':'22')+'px">'+v+'</div><div class="k">'+k+'</div></div>';}
+function renderChart(){
+  var period=$('chart-period').value, metric=$('chart-metric').value, grp=$('chart-group').value, all=$('chart-scope').value==='all';
+  $('chart-scope').options[0].text='Jen '+profileName(profile);
+  $('chart-custom').style.display=period==='custom'?'flex':'none';
+  var srcs=chartSources(all), rg=chartRange(period,srcs), from=rg.from, to=rg.to;
+  var span=Math.round((isoToDate(to)-isoToDate(from))/86400000)+1;
+  var g=grp==='auto'?(span<=45?'day':(span<=200?'week':'month')):grp;
+  if(g==='day'&&span>400) g='week';                       // víc než ~rok po dnech je nečitelné
+  var c=chartCompute(srcs,from,to,g,metric), vals=c.vals, per=c.per, buckets=c.buckets;
+  var yr=from.slice(0,4)!==to.slice(0,4)||span>300;
+  var total=vals.reduce(function(a,b){return a+b;},0);
+  $('chart-title').textContent=(metric==='profit'?'Zisk':'Bonusy')+' po '+{day:'dnech',week:'týdnech',month:'měsících'}[g];
+  $('chart-range').textContent=fmtFull(from)+' – '+fmtFull(to)+' · '+span+' '+(span===1?'den':(span<=4?'dny':'dní'));
+
+  // souhrn
+  var best=0; vals.forEach(function(v,i){if(v>vals[best]) best=i;});
+  var totSpend=c.spend.reduce(function(a,b){return a+b;},0), totBon=c.bon.reduce(function(a,b){return a+b;},0);
+  var tiles=metric==='profit'
+    ?chartTile(kc(total),'zisk celkem',total>=0?'pos':'neg')+chartTile(kc(totBon),'bonusy')+chartTile(kc(totSpend),'výdaje a náklady','neg')
+    :chartTile(kc(total),'bonusy celkem')+chartTile(kc(total/span),'průměr za den')+chartTile(kc(total/span*7),'průměr za týden');
+  tiles+=chartTile(vals.length&&vals[best]>0?kc(vals[best]):'–','nejlepší '+{day:'den',week:'týden',month:'měsíc'}[g]+(vals.length&&vals[best]>0?'<br>'+esc(g==='day'?fmtFull(buckets[best]):chartTitleOf(buckets[best],g)):''));
+  tiles+=chartTile(c.activeDays+' z '+span,'dní s bonusem')+(metric==='profit'?chartTile(kc(total/span),'průměr zisku za den'):chartTile(c.nBonuses,'bonusů (ks)'));
+  $('chart-sum').innerHTML=tiles;
+
+  // rozpis: jen období, ve kterých něco je, od nejnovějšího
+  var rows=[], top=1; vals.forEach(function(v){if(Math.abs(v)>top) top=Math.abs(v);});
+  for(var i=buckets.length-1;i>=0;i--){
+    if(Math.abs(vals[i])<0.001) continue;
+    rows.push('<div class="sbar"><span class="l" title="'+esc(chartTitleOf(buckets[i],g))+'">'+esc(g==='week'?chartLabel(buckets[i],'day',yr)+' – '+chartLabel(addDaysISO(buckets[i],6),'day',yr):chartLabel(buckets[i],g,yr))+'</span>'+
+      '<span class="t"><i style="width:'+Math.round(Math.abs(vals[i])/top*100)+'%'+(vals[i]<0?';background:var(--red)':'')+'"></i></span><span class="n" style="flex:0 0 84px">'+kc(vals[i])+'</span></div>');
+  }
+  $('chart-list').querySelector('summary').textContent='Rozpis ('+rows.length+')';
+  $('chart-rows').innerHTML=rows.length?rows.join(''):'<div class="cat">V tomhle období nic není.</div>';
+
   if(_chart){_chart.destroy();_chart=null;}
-  // Varianta C: tenká čára, bílé tečky a částka u každého dne (u delších období bez popisků, ať se nepřekrývají).
-  var showLabels=n<=14;
+  // Tenká čára (dny) nebo sloupce (týdny, měsíce); částka u každého bodu, když jich je málo.
+  var showLabels=buckets.length<=14;
   var valueLabels={id:'valueLabels',afterDatasetsDraw:function(chart){
-    if(!showLabels) return;
     var ctx=chart.ctx, pts=chart.getDatasetMeta(0).data, v=chart.data.datasets[0].data;
+    if(!showLabels||chart.width/Math.max(1,pts.length)<40) return;      // úzký graf: popisky by se překrývaly
     ctx.save(); ctx.font="600 11px 'Outfit',sans-serif"; ctx.fillStyle='#1c2320'; ctx.textAlign='center';
-    pts.forEach(function(pt,i){ if(v[i]>0) ctx.fillText(Math.round(v[i]).toLocaleString('cs-CZ'),pt.x,pt.y-10); });
+    pts.forEach(function(pt,i){ if(Math.abs(v[i])>0.001) ctx.fillText(Math.round(v[i]).toLocaleString('cs-CZ'),pt.x,v[i]>0?pt.y-10:pt.y+16); });
     ctx.restore();
   }};
+  var bar=g!=='day', col=vals.map(function(v){return v<0?'#d6453d':'#1a9e5c';});
   _chart=new Chart($('chart'),{
-    type:'line',
-    data:{labels:days.map(function(d){return fmtDate(d);}),datasets:[{data:vals,borderColor:'#1a9e5c',borderWidth:1.5,tension:0,
-      pointRadius:showLabels?4:2,pointHoverRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#1a9e5c',pointBorderWidth:2,fill:false}]},
+    type:bar?'bar':'line',
+    data:{labels:buckets.map(function(k){return chartLabel(k,g,yr);}),datasets:[bar
+      ?{data:vals,backgroundColor:col,borderRadius:4,maxBarThickness:46}
+      :{data:vals,borderColor:'#1a9e5c',borderWidth:1.5,tension:0,pointRadius:showLabels?4:2,pointHoverRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#1a9e5c',pointBorderWidth:2,fill:false}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},
-      tooltip:{backgroundColor:'#1c2320',padding:10,cornerRadius:8,displayColors:false,callbacks:{label:function(c){return ' '+kc(c.parsed.y);},
+      tooltip:{backgroundColor:'#1c2320',padding:10,cornerRadius:8,displayColors:false,callbacks:{
+        title:function(items){return items.length?chartTitleOf(buckets[items[0].dataIndex],g):'';},
+        label:function(it){return ' '+kc(it.parsed.y);},
         afterBody:function(items){
-          if(!all||!items.length) return [];
-          var i=items[0].dataIndex;
-          return srcs.map(function(src,k){return ' '+src.name+': '+kc(per[k][i]);});
+          if(!items.length) return [];
+          var i=items[0].dataIndex, out=[];
+          if(all) srcs.forEach(function(src,k){out.push(' '+src.name+': '+kc(per[k][i]));});
+          if(metric==='profit') out.push(' bonusy '+kc(c.bon[i])+' · výdaje '+kc(c.spend[i]));
+          return out;
         }}}},
-      scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:8}},
-        y:{beginAtZero:true,grid:{color:'#eceee9'},border:{display:false},ticks:{maxTicksLimit:5,callback:function(v){return v>=1000?(v/1000)+' tis.':v;}}}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{maxTicksLimit:bar?12:8}},
+        y:{beginAtZero:true,grid:{color:'#eceee9'},border:{display:false},ticks:{maxTicksLimit:5,callback:function(v){return Math.abs(v)>=1000?(v/1000)+' tis.':v;}}}}},
     plugins:[valueLabels]
   });
 }
