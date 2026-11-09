@@ -155,6 +155,19 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .sbar .t i{display:block;height:100%;background:var(--green);border-radius:999px}
 .sbar .n{flex:0 0 26px;text-align:right;font-weight:700}
 .stat-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+.pktgo{border:none;background:var(--green);color:#fff;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 6px 12px -6px rgba(26,158,92,.8)}
+.pktgo.done{background:var(--green-bg);color:var(--green);box-shadow:none;border:1px solid var(--green)}
+.improw{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.improw.off{opacity:.5}
+.improw .impchk{display:flex;align-items:center;gap:8px;font-size:15px;margin:0;color:var(--text);cursor:pointer}
+.improw .impchk input{width:18px;height:18px;accent-color:var(--green)}
+.imp-line{display:flex;align-items:center;gap:8px;margin:6px 0 2px}
+.imp-line .input{padding:6px 9px;font-size:14px}
+.impbadge{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.impbadge.new{background:var(--green-bg);color:var(--green)}.impbadge.old{background:#fff4d6;color:#7a5b00}
+.imp-pt{font-size:13px;margin-top:6px;line-height:1.4}
+.imp-pt.ok{color:var(--green)}.imp-pt.ask{color:#7a5b00}.imp-pt.none{color:var(--red)}
+.imp-pt select{margin-top:4px;padding:6px 8px;font-size:13px}
 .stocklist{border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .fld .stockrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-size:14px;color:var(--text);margin:0;cursor:pointer}
 .stockitem:first-child .stockrow{border-top:none}
@@ -1309,7 +1322,7 @@ function renderPeopleList(){
         '<div class="pc-sub">'+all.length+' bonus'+(all.length===1?'':'ů')+' · '+
           (rem.length?'<span class="rem">'+rem.length+' stránek zbývá</span>':'<span class="ok">✓ všechny stránky</span>')+ptsBadge(p)+'</div>'+orderLine(p)+'</div>'+
         '<div class="pc-right"><span class="total">'+kc(total)+'</span><span class="shipline">'+
-          '<button class="sibtn'+(hasShipInfo(p)?' has':'')+'" data-id="'+esc(p.id)+'" onclick="openShipInfo(this.dataset.id,event)" title="Údaje pro zásilku">📋</button>'+
+          '<button class="sibtn'+(hasShipInfo(p)?' has':'')+'" data-id="'+esc(p.id)+'" onclick="openShipInfo(this.dataset.id,event)" title="Údaje pro zásilku">📋</button>'+pktQuickBtn(p)+
           (shipOf(p)?shipPillHTML(p):
             '<span class="shipq"><button data-id="'+esc(p.id)+'" data-s="todo" onclick="setShip(this.dataset.id,this.dataset.s,event)" title="Odeslat">📦</button>'+
             '<button data-id="'+esc(p.id)+'" data-s="done" onclick="setShip(this.dataset.id,this.dataset.s,event)" title="Odesláno">✅</button></span>')+
@@ -2027,6 +2040,19 @@ function pktBlockHTML(p){
 function pktRefresh(p){var el=$('si-pkt'); if(el&&_siPerson===p.id) el.innerHTML=pktBlockHTML(p);}
 function pktMsg(txt){var el=$('si-pktmsg'); if(el) el.textContent=txt; else toast(txt);}
 function pktFmtCode(c){return String(c||'').replace(/\D/g,'').replace(/(\d{3})(?=\d)/g,'$1 ');}
+
+// Rychlé tlačítko na kartě: „+ Zásilka“ (vytvoří zásilku ve Zásilkovně), po vytvoření kopíruje podací kód.
+function pktQuickBtn(p){
+  if(!pktCfg()) return '';
+  if(p.pktBarcode) return '<button class="pktgo done" data-id="'+esc(p.id)+'" onclick="event.stopPropagation();pktCopyCode(this.dataset.id)" title="Zkopírovat podací kód">📋 '+esc(p.pktCode?pktFmtCode(p.pktCode):p.pktBarcode)+'</button>';
+  if(shipOf(p)==='todo'&&!pktApiProblems(p).length) return '<button class="pktgo" data-id="'+esc(p.id)+'" onclick="pktQuick(this.dataset.id,event)" title="Vytvořit zásilku ve Zásilkovně">+ Zásilka</button>';
+  return '';
+}
+function pktQuick(id,ev){
+  if(ev) ev.stopPropagation();
+  toast('⏳ Vytvářím zásilku…');
+  pktCreate(id);
+}
 function pktCopyCode(id){
   var p=find(data.people,id); if(!p||!p.pktBarcode) return;
   var v=p.pktCode?String(p.pktCode).replace(/\D/g,''):p.pktBarcode;
@@ -2472,6 +2498,7 @@ function openSettings(){
   openModal('<h2>⚙ Nastavení</h2>'+
     '<button class="setrow" onclick="openPktSetup()"><b>📦 Zásilkovna</b><span>'+(pktCfg()?'propojeno':'nepropojeno')+'</span></button>'+
     '<button class="setrow" onclick="openTemplates()"><b>📋 Šablony zpráv</b><span>'+(root.templates||[]).length+'</span></button>'+
+    '<button class="setrow" onclick="openImport()"><b>📥 Import zákazníků ze seznamu</b><span>údaje pro zásilky</span></button>'+
     '<div class="fld" style="margin-top:14px"><label>Dostupnost zboží (odškrtnuté = „Došlo“ na stránce pro zákazníky)</label>'+stockRowsHTML()+'</div>'+
     '<div class="fld" style="margin-top:14px"><label>Odkaz pro zákazníky (objednávka)</label><div class="sirow"><input class="input" readonly value="'+esc(orderLink())+'" onfocus="this.select()">'+
       '<button class="btn btn-sm btn-primary" onclick="copyOrderLink()">Kopírovat</button></div></div>'+
@@ -2490,6 +2517,178 @@ function downloadBackup(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
   toast('⬇ Záloha stažena');
+}
+
+// ── IMPORT ZÁKAZNÍKŮ ZE SEZNAMU ──
+// Vložený text z tabulky (sloupce: [Instagram jméno] · jméno a příjmení · výdejní místo · e-mail · telefon · co chce).
+// Výdejní místo se dohledá v seznamu Zásilkovny, ať jde zásilka udělat jedním klikem.
+var _branches=null, _branchesP=null, _impRows=[], _impDup=0;
+function foldN(s){return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\/ ]+/g,' ').replace(/\s+/g,' ').trim();}
+function buildBranches(j){
+  var out=[], d=(j&&j.data)||{};
+  Object.keys(d).forEach(function(k){
+    var v=d[k]; if(!v||(v.country!=='cz'&&v.country!=='sk')) return;
+    if(v.status&&v.status.statusId&&String(v.status.statusId)!=='1') return;      // jen provozované
+    out.push({id:String(v.id),name:String(v.name||''),cc:v.country,street:foldN(v.street),city:foldN(v.city),zip:String(v.zip||'').replace(/\D/g,'')});
+  });
+  return out;
+}
+function loadBranches(){
+  if(_branches) return Promise.resolve(_branches);
+  if(_branchesP) return _branchesP;
+  _branchesP=fetch('https://www.zasilkovna.cz/api/v4/'+PACKETA_KEY+'/branch.json?lang=cs').then(function(r){
+    if(!r.ok) throw new Error('http '+r.status); return r.json();
+  }).then(function(j){_branches=buildBranches(j); return _branches;}).catch(function(e){_branchesP=null; throw e;});
+  return _branchesP;
+}
+function parseImportText(text){
+  var rows=[];
+  String(text||'').split(/\r?\n/).forEach(function(line){
+    if(!line.replace(/[\t ]/g,'')) return;
+    var f=line.split('\t').map(function(x){return x.trim();}).filter(function(x){return x!=='';});
+    var isPhone=function(x){return /^\+?[\d ]{9,17}$/.test(x)&&x.replace(/\D/g,'').length>=9;};
+    var iE=-1; f.forEach(function(x,i){if(iE<0&&/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(x)) iE=i;});
+    var iP=-1; f.forEach(function(x,i){if(iP<0&&i>iE&&isPhone(x)) iP=i;});
+    var anchor=iE>=0?iE:iP;
+    if(anchor<1||f.length<3){rows.push({raw:line,err:'Řádek nemá jméno, výdejní místo a e-mail nebo telefon'}); return;}
+    var before=f.slice(0,anchor);
+    var handle=(before.length>=3&&/^@?[A-Za-z0-9._]{2,30}$/.test(before[0]))?before[0].replace(/^@/,''):'';
+    var name=before[handle?1:0]||'', point=before.slice(handle?2:1).join(', ');
+    var after=f.slice(anchor+1), phone='', wish=[];
+    after.forEach(function(x,i){ if(!phone&&isPhone(x)) phone=x; else wish.push(x); });
+    if(iE<0){phone=f[iP]; wish=[];}
+    rows.push({handle:handle,name:name,point:point,email:iE>=0?f[iE].toLowerCase():'',phone:phone,wish:wish.join(' '),raw:line});
+  });
+  return rows;
+}
+// Najde výdejní místo podle textu adresy. Vrací {state:'sure'|'ask'|'none', b:větev, cands:[…]}.
+function matchBranch(text,B){
+  var t=foldN(text), tw=' '+t+' ', zm=/(\d{3}) ?(\d{2})(?!\d)/.exec(String(text)), zip=zm?zm[1]+zm[2]:'';
+  var res=[];
+  B.forEach(function(b){
+    var sc=0, ex=false;
+    if(b.street&&/\d/.test(b.street)&&tw.indexOf(' '+b.street+' ')>=0){sc+=6; ex=true;}
+    else if(b.street){
+      var words=b.street.split(' ').filter(function(w){return w.length>2&&!/^\d/.test(w);});
+      if(words.length&&words.every(function(w){return tw.indexOf(' '+w)>=0;})) sc+=3;
+      var nums=b.street.match(/\d+(?:\/\d+)?/g)||[];
+      if(nums.length&&nums.some(function(n){return tw.indexOf(' '+n+' ')>=0||tw.indexOf(' '+n.split('/')[0]+' ')>=0;})) sc+=2;
+    }
+    var cityHit=!!b.city&&tw.indexOf(' '+b.city+' ')>=0, zipHit=!!zip&&b.zip===zip;
+    if(cityHit) sc+=3; if(zipHit) sc+=3;
+    // stejná ulice a číslo, ale PSČ je jiné a město se v textu nevyskytuje = jiné místo (třeba Nádražní 343 v jiném městě)
+    if(ex&&zip&&b.zip&&b.zip!==zip&&!cityHit) ex=false;
+    if(sc>0) res.push({b:b,sc:sc,ex:ex,hit:cityHit||zipHit});
+  });
+  var byScore=function(a,b){return b.sc-a.sc;};
+  var ex=res.filter(function(x){return x.ex;});
+  if(ex.length===1) return {state:'sure',b:ex[0].b,cands:[ex[0].b],weak:!ex[0].hit};     // weak = potvrzeno jen ulicí a číslem, bez města/PSČ
+  if(ex.length>1){
+    var near=ex.filter(function(x){return x.hit;});
+    if(near.length===1) return {state:'sure',b:near[0].b,cands:[near[0].b]};
+    var list=(near.length?near:ex).sort(byScore).slice(0,5);
+    return {state:'ask',b:null,cands:list.map(function(x){return x.b;})};
+  }
+  var c=res.filter(function(x){return x.sc>=9;}).sort(byScore);
+  if(!c.length) return {state:'none',b:null,cands:[]};
+  if(c.length===1||c[0].sc-c[1].sc>=3) return {state:'sure',b:c[0].b,cands:[c[0].b]};
+  return {state:'ask',b:null,cands:c.slice(0,5).map(function(x){return x.b;})};
+}
+function importTarget(row){
+  var h=row.handle?normHandle(row.handle):'', p=null;
+  if(h) p=data.people.filter(function(x){return normHandle(x.name)===h;})[0]||null;
+  else{var fn=foldN(row.name); p=data.people.filter(function(x){return foldN(x.name)===fn||(x.shipInfo&&foldN(x.shipInfo.name)===fn);})[0]||null;}
+  return p;
+}
+function openImport(){
+  openModal('<h2>📥 Import zákazníků</h2>'+
+    '<div class="cat" style="margin-bottom:8px">Vlož řádky z tabulky (sloupce: Instagram jméno · jméno a příjmení · výdejní místo · e-mail · telefon · co chce). Instagram jméno může chybět. Výdejní místa se dohledají u Zásilkovny.</div>'+
+    '<textarea class="input" id="imp-text" rows="9" placeholder="zdroj z tabulky…" style="font-size:13px"></textarea>'+
+    '<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zrušit</button>'+
+    '<button class="btn btn-primary" onclick="impParse()">Zpracovat</button></div>');
+  $('imp-text').focus();
+}
+function impParse(){
+  var rows=parseImportText($('imp-text').value);
+  if(!rows.length){alert('Nenašel jsem žádné řádky.'); return;}
+  var seen={}; _impDup=0;                                  // stejná osoba dvakrát (stejný e-mail / telefon / jméno) se vloží jen jednou
+  rows=rows.filter(function(r){
+    if(r.err) return true;
+    var k=r.email||foldN(r.phone)||foldN(r.name);
+    if(seen[k]){_impDup++; return false;}
+    seen[k]=1; return true;
+  });
+  _impRows=rows.map(function(r){
+    if(r.err) return {err:r.err,raw:r.raw,include:false};
+    var p=importTarget(r);
+    return {handle:r.handle,name:r.name,point:r.point,email:r.email,phone:r.phone,wish:r.wish,include:true,existing:!!p,m:{state:'loading',cands:[]},choice:''};
+  });
+  impRender();
+  loadBranches().then(function(B){
+    _impRows.forEach(function(r){if(r.err) return; r.m=matchBranch(r.point,B); r.choice=r.m.state==='sure'?r.m.b.id:'';});
+    if($('imp-list')) impRender();
+  }).catch(function(){
+    _impRows.forEach(function(r){if(!r.err) r.m={state:'fail',cands:[]};});
+    if($('imp-list')) impRender();
+  });
+}
+function impRender(){
+  var rows=_impRows, ok=rows.filter(function(r){return !r.err&&r.include;}).length;
+  var html='<h2>📥 Import zákazníků</h2><div class="cat" style="margin-bottom:8px">'+rows.length+' řádků · <b>'+ok+'</b> k importu'+(_impDup?' · '+_impDup+' duplicit přeskočeno':'')+'. Zkontroluj údaje a Instagram jména, potom Importovat.</div><div id="imp-list">';
+  rows.forEach(function(r,i){
+    if(r.err){html+='<div class="improw off"><b>⚠ Přeskočeno</b><div class="cat">'+esc(r.err)+'</div><div class="cat">'+esc(r.raw)+'</div></div>'; return;}
+    var pt='';
+    if(r.m.state==='loading') pt='<div class="imp-pt">⏳ Hledám výdejní místo…</div>';
+    else if(r.m.state==='fail') pt='<div class="imp-pt none">✕ Seznam výdejních míst se nenačetl. Místo vyber po importu na mapě (📋 → 📍 Mapa).</div>';
+    else if(r.m.state==='none') pt='<div class="imp-pt none">✕ Výdejní místo se nenašlo ('+esc(r.point)+'). Vyber ho po importu na mapě (📋 → 📍 Mapa).</div>';
+    else{
+      var cur=r.choice?r.m.cands.filter(function(b){return b.id===r.choice;})[0]:null;
+      pt='<div class="imp-pt '+(cur?'ok':'ask')+'">'+(cur?'✓ '+esc(cur.name)+' <span class="cat">#'+esc(cur.id)+'</span>'+(r.m.weak?' <span style="color:#7a5b00">⚠ zkontroluj město</span>':''):'⚠ Víc možností, vyber správné místo ('+esc(r.point)+')')+
+        (r.m.state==='ask'?'<br><select class="input" onchange="impPick('+i+',this.value)"><option value="">— vybrat —</option>'+
+          r.m.cands.map(function(b){return '<option value="'+esc(b.id)+'"'+(b.id===r.choice?' selected':'')+'>'+esc(b.name)+'</option>';}).join('')+'</select>':'')+'</div>';
+    }
+    html+='<div class="improw'+(r.include?'':' off')+'"><label class="impchk"><input type="checkbox"'+(r.include?' checked':'')+' onchange="impSet('+i+',\'include\',this.checked)"> <b>'+esc(r.name)+'</b></label>'+
+      '<div class="imp-line"><span class="cat">IG</span><input class="input" value="'+esc(r.handle)+'" placeholder="Instagram jméno (bez něj se použije celé jméno)" oninput="impSet('+i+',\'handle\',this.value,true)">'+
+        '<span class="impbadge '+(r.existing?'old':'new')+'">'+(r.existing?'už existuje':'nový')+'</span></div>'+
+      '<div class="cat">'+esc([r.email,r.phone].filter(Boolean).join(' · '))+'</div>'+pt+
+      (r.wish?'<div class="cat" style="margin-top:4px">🎁 '+esc(r.wish)+'</div>':'')+'</div>';
+  });
+  html+='</div><div class="modal-foot" style="margin-top:10px"><button class="btn" onclick="openImport()">Zpět</button>'+
+    '<button class="btn btn-primary" onclick="impRun()">Importovat ('+ok+')</button></div>';
+  var keep=$('modal').scrollTop;
+  openModal(html); $('modal').scrollTop=keep;
+}
+function impSet(i,k,v,quiet){
+  var r=_impRows[i]; if(!r) return;
+  r[k]=v;
+  if(k==='handle'){r.existing=!!importTarget({handle:r.handle,name:r.name});}
+  if(!quiet) impRender();
+}
+function impPick(i,id){_impRows[i].choice=id; impRender();}
+function impRun(){
+  var done=0, noPoint=[], created=0, updated=0;
+  _impRows.forEach(function(r){
+    if(r.err||!r.include||!r.name) return;
+    var p=importTarget({handle:r.handle,name:r.name}), isNew=!p;
+    if(!p){p={id:uid(),name:(r.handle?String(r.handle).replace(/^@/,''):r.name).trim()}; data.people.push(p);}
+    var b=r.choice?(r.m.cands||[]).filter(function(x){return x.id===r.choice;})[0]:null;
+    var prev=shipOf(p);
+    ensureHist(p);                                        // historie ze starého stavu, než se změní
+    p.shipInfo={name:r.name,phone:r.phone,email:r.email,point:b?b.name:r.point,pointId:b?b.id:'',pointCc:b?b.cc:'',order:r.wish||((p.shipInfo&&p.shipInfo.order)||'')};
+    delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;
+    p.ship='todo'; p.shipAt=nowLocal(); p.askedAt='';
+    histShip(p,prev,'todo');
+    touchPerson(p.id);
+    done++; if(isNew) created++; else updated++;
+    if(!b) noPoint.push(p.name);
+  });
+  if(!done){alert('Není co importovat.'); return;}
+  save(); render();
+  openModal('<h2>✅ Importováno: '+done+'</h2>'+
+    '<div class="cat" style="margin-bottom:8px">'+created+' nových lidí, '+updated+' doplněno. Všichni jsou označení <b>Odeslat</b>.'+(pktCfg()?' U každého je na kartě tlačítko <b>+ Zásilka</b>.':' Propoj Zásilkovnu v ⚙ Nastavení, ať jde zásilka udělat jedním klikem.')+'</div>'+
+    (noPoint.length?'<div class="warn"><b>Bez výdejního místa ('+noPoint.length+'):</b> '+esc(noPoint.join(', '))+'<br>Otevři 📋 u člověka a vyber místo tlačítkem 📍 Mapa. Bez něj zásilka nejde vytvořit.</div>':'')+
+    '<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button>'+
+    '<button class="btn btn-primary" onclick="closeModal();goToSend()">Zobrazit k odeslání</button></div>');
 }
 
 // ── VÝDAJE ──
