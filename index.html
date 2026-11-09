@@ -2049,35 +2049,8 @@ function pktQuickBtn(p){
   if(p.pktBarcode) return '<button class="pktgo done" data-id="'+id+'" onclick="event.stopPropagation();pktCopyCode(this.dataset.id)" title="Zkopírovat podací kód">📋 '+esc(p.pktCode?pktFmtCode(p.pktCode):p.pktBarcode)+'</button>';
   if(!pktCfg()) return '<button class="pktgo warn" onclick="event.stopPropagation();openPktSetup()" title="Zásilkovna ještě není propojená, klikni a propoj ji">⚙ Propojit</button>';
   var pr=pktApiProblems(p);
-  if(pr.length) return '<button class="pktgo warn" data-id="'+id+'" onclick="pktFixPoint(this.dataset.id,event)" title="'+esc('Pro zásilku chybí: '+pr.join(', ')+'. Klikni a doplň to.')+'">⚠ '+esc(pktShortProblem(pr[0]))+(pr.length>1?' +'+(pr.length-1):'')+'</button>';
+  if(pr.length) return '<button class="pktgo warn" data-id="'+id+'" onclick="openShipInfo(this.dataset.id,event)" title="'+esc('Pro zásilku chybí: '+pr.join(', ')+'. Klikni a doplň to.')+'">⚠ doplnit</button>';
   return '<button class="pktgo" data-id="'+id+'" onclick="pktQuick(this.dataset.id,event)" title="Vytvořit zásilku ve Zásilkovně">+ Zásilka</button>';
-}
-// Krátký název chybějícího údaje na tlačítku (celý text je v nápovědě).
-function pktShortProblem(t){
-  t=String(t||'');
-  if(/ID výdejního/.test(t)) return 'ID místa';
-  if(/e-mail nebo telefon/.test(t)) return 'e-mail/tel.';
-  if(/jméno i příjmení/.test(t)) return 'příjmení';
-  if(/chybí jméno/.test(t)) return 'jméno';
-  return 'doplnit';
-}
-// Klik na „⚠“: když chybí jen ID výdejního místa a máme jeho text, zkusí ho dohledat; jinak otevře údaje.
-function pktFixPoint(id,ev){
-  if(ev) ev.stopPropagation();
-  var p=find(data.people,id); if(!p) return;
-  var pr=pktApiProblems(p);
-  if(pr.length===1&&/ID výdejního/.test(pr[0])&&p.shipInfo&&p.shipInfo.point){
-    toast('⏳ Hledám výdejní místo…');
-    loadBranches().then(function(B){
-      var m=matchBranch(p.shipInfo.point,B);
-      if(m.state==='sure'){
-        p.shipInfo.pointId=m.b.id; p.shipInfo.pointCc=m.b.cc; p.shipInfo.point=m.b.name;
-        touchPerson(id); save(); render(); toast('✓ Nalezeno: '+m.b.name);
-      } else openShipInfo(id);
-    }).catch(function(){openShipInfo(id);});
-    return;
-  }
-  openShipInfo(id);
 }
 function pktQuick(id,ev){
   if(ev) ev.stopPropagation();
@@ -2530,8 +2503,6 @@ function openSettings(){
     '<button class="setrow" onclick="openPktSetup()"><b>📦 Zásilkovna</b><span>'+(pktCfg()?'propojeno':'nepropojeno')+'</span></button>'+
     '<button class="setrow" onclick="openTemplates()"><b>📋 Šablony zpráv</b><span>'+(root.templates||[]).length+'</span></button>'+
     '<button class="setrow" onclick="openImport()"><b>📥 Import zákazníků ze seznamu</b><span>údaje pro zásilky</span></button>'+
-    '<button class="setrow" onclick="closeModal();fixAllPoints()"><b>📍 Dohledat chybějící výdejní místa</b><span>u lidí k odeslání</span></button>'+
-    '<button class="setrow" onclick="openMerge()"><b>🔀 Sloučit duplicity po importu</b><span>'+mergeSuggestions().length+'</span></button>'+
     '<div class="fld" style="margin-top:14px"><label>Dostupnost zboží (odškrtnuté = „Došlo“ na stránce pro zákazníky)</label>'+stockRowsHTML()+'</div>'+
     '<div class="fld" style="margin-top:14px"><label>Odkaz pro zákazníky (objednávka)</label><div class="sirow"><input class="input" readonly value="'+esc(orderLink())+'" onfocus="this.select()">'+
       '<button class="btn btn-sm btn-primary" onclick="copyOrderLink()">Kopírovat</button></div></div>'+
@@ -2627,98 +2598,11 @@ function matchBranch(text,B){
   if(c.length===1||c[0].sc-c[1].sc>=3) return {state:'sure',b:c[0].b,cands:[c[0].b]};
   return {state:'ask',b:null,cands:c.slice(0,5).map(function(x){return x.b;})};
 }
-// Podobnost celého jména („Eliška Ezrová“) a Instagram jména („eliska_ezrova“, „smetakova.a“, „lucieee.burdovaaa“).
-function nameScore(fullName,handle){
-  var a=foldN(String(fullName||'')).split(' ').filter(function(t){return t.length>=2;});
-  var raw=foldN(String(handle||'').replace(/[._\-]+/g,' ')).split(' ').filter(Boolean);
-  var hs=raw.filter(function(t){return t.length>=2;}), hj=raw.join('');
-  if(!a.length||!hj) return 0;
-  var sc=0;
-  a.forEach(function(t){
-    var hit=hs.some(function(h){return h.length>=3&&t.length>=3&&(h.indexOf(t)===0||t.indexOf(h)===0);})||(t.length>=4&&hj.indexOf(t)>=0);
-    if(hit) sc++;
-  });
-  if(a.length>=2){            // iniciála: „smetakova.a“ ~ Adéla Smětaková
-    var first=a[0], last=a[a.length-1];
-    if(raw.some(function(h){return h.length===1&&h===first.charAt(0);})&&hs.some(function(h){return h.length>=3&&(last.indexOf(h)===0||h.indexOf(last)===0);})) sc++;
-  }
-  return sc;
-}
-function personCandidates(fullName){
-  return data.people.map(function(p){return {p:p,sc:nameScore(fullName,p.name)};}).filter(function(c){return c.sc>=2;})
-    .sort(function(x,y){return y.sc-x.sc;}).slice(0,4);
-}
-// Duplicity po importu: nový člověk bez bonusů (založený podle celého jména) a podobně pojmenovaný člověk s bonusy.
-function hasBonus(p){return data.bonuses.some(function(b){return b.personId===p.id;});}
-function mergeSuggestions(){
-  var out=[];
-  data.people.forEach(function(x){
-    if(hasBonus(x)||!(x.shipInfo&&x.shipInfo.name)) return;
-    var best=null, bs=0, second=0;
-    data.people.forEach(function(y){
-      if(y===x||!hasBonus(y)) return;
-      var sc=nameScore(x.shipInfo.name,y.name);
-      if(sc>bs){second=bs; bs=sc; best=y;} else if(sc>second) second=sc;
-    });
-    if(best&&bs>=2&&bs>second) out.push({from:x,to:best});
-  });
-  return out;
-}
-// Přesune údaje pro zásilku, stav, historii, poznámky a náklady z „from“ na „to“ a „from“ smaže.
-function mergePeople(fromId,toId){
-  var f=find(data.people,fromId), t=find(data.people,toId); if(!f||!t||f===t) return false;
-  ensureHist(t);
-  ['shipInfo','ship','shipAt','askedAt','pktAt','pktNo','pktId','pktBarcode','pktText','pktCode','pktStatus','pktDeliveredAt'].forEach(function(k){
-    if(f[k]!==undefined) t[k]=f[k]; else delete t[k];
-  });
-  histOf(f).forEach(function(e){t.hist.push(e);});
-  data.notes.forEach(function(n){if(n.personId===f.id) n.personId=t.id;});
-  data.bonuses.forEach(function(b){if(b.personId===f.id) b.personId=t.id;});
-  data.costs.forEach(function(c){if(c.personId===f.id) c.personId=t.id;});
-  data.people=data.people.filter(function(x){return x.id!==f.id;});
-  touchPerson(t.id);
-  return true;
-}
-function openMerge(){
-  var sug=mergeSuggestions();
-  openModal('<h2>🔀 Sloučit duplicity</h2>'+
-    (sug.length?'<div class="cat" style="margin-bottom:8px">Tyhle lidi založil import podle celého jména, ale zřejmě už máš v appce pod Instagram jménem. Sloučí se údaje pro zásilku na toho se jménem z Instagramu.</div>'+
-      sug.map(function(s,i){return '<label class="improw impchk" style="display:flex;gap:10px"><input type="checkbox" checked data-f="'+esc(s.from.id)+'" data-t="'+esc(s.to.id)+'" class="mg-chk"><span><b>'+esc(s.from.name)+'</b> → <b>'+esc(s.to.name)+'</b><br><span class="cat">'+esc([s.from.shipInfo.email,s.from.shipInfo.phone].filter(Boolean).join(' · '))+'</span></span></label>';}).join('')
-      :'<div class="empty" style="padding:16px">Žádné duplicity jsem nenašel.</div>')+
-    '<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button>'+
-    (sug.length?'<button class="btn btn-primary" onclick="mergeRun()">Sloučit vybrané</button>':'')+'</div>');
-}
-function mergeRun(){
-  var n=0;
-  [].slice.call(document.querySelectorAll('.mg-chk')).forEach(function(c){
-    if(c.checked&&mergePeople(c.getAttribute('data-f'),c.getAttribute('data-t'))) n++;
-  });
-  save(); closeModal(); render();
-  toast(n?'🔀 Sloučeno: '+n:'Nic se nesloučilo');
-}
 function importTarget(row){
   var h=row.handle?normHandle(row.handle):'', p=null;
   if(h) p=data.people.filter(function(x){return normHandle(x.name)===h;})[0]||null;
   else{var fn=foldN(row.name); p=data.people.filter(function(x){return foldN(x.name)===fn||(x.shipInfo&&foldN(x.shipInfo.name)===fn);})[0]||null;}
   return p;
-}
-// Dohledá chybějící ID výdejního místa u všech lidí „k odeslání“, kteří mají jeho text.
-function fixAllPoints(){
-  var list=data.people.filter(function(p){return shipOf(p)==='todo'&&p.shipInfo&&p.shipInfo.point&&!p.shipInfo.pointId;});
-  if(!list.length){toast('U nikoho k odeslání nechybí ID výdejního místa.'); return;}
-  toast('⏳ Hledám výdejní místa ('+list.length+')…');
-  loadBranches().then(function(B){
-    var ok=0, unsure=[];
-    list.forEach(function(p){
-      var m=matchBranch(p.shipInfo.point,B);
-      if(m.state==='sure'){p.shipInfo.pointId=m.b.id; p.shipInfo.pointCc=m.b.cc; p.shipInfo.point=m.b.name; touchPerson(p.id); ok++;}
-      else unsure.push(p.name);
-    });
-    if(ok){save(); render();}
-    openModal('<h2>📍 Výdejní místa</h2><div class="cat" style="margin-bottom:8px">Doplněno: <b>'+ok+'</b> z '+list.length+'.</div>'+
-      (unsure.length?'<div class="warn"><b>Nejasné ('+unsure.length+'):</b> '+esc(unsure.join(', '))+'<br>Otevři 📋 u člověka a vyber místo tlačítkem 📍 Mapa.</div>':'')+
-      '<div class="modal-foot" style="margin-top:12px"><button class="btn" onclick="closeModal()">Zavřít</button></div>');
-  }).catch(function(){toast('Seznam výdejních míst se nepodařilo stáhnout. Zkus to znovu.');});
 }
 function openImport(){
   openModal('<h2>📥 Import zákazníků</h2>'+
@@ -2740,10 +2624,8 @@ function impParse(){
   });
   _impRows=rows.map(function(r){
     if(r.err) return {err:r.err,raw:r.raw,include:false};
-    var p=importTarget(r), cands=personCandidates(r.name);
-    var target=p?p.id:((cands.length&&(cands.length===1||cands[0].sc>cands[1].sc))?cands[0].p.id:'');     // přesná shoda, nebo jasně nejpodobnější člověk
-    return {handle:r.handle,name:r.name,point:r.point,email:r.email,phone:r.phone,wish:r.wish,include:true,targetId:target,
-      cands:cands.map(function(c){return c.p.id;}).concat(p&&cands.every(function(c){return c.p.id!==p.id;})?[p.id]:[]),m:{state:'loading',cands:[]},choice:''};
+    var p=importTarget(r);
+    return {handle:r.handle,name:r.name,point:r.point,email:r.email,phone:r.phone,wish:r.wish,include:true,existing:!!p,m:{state:'loading',cands:[]},choice:''};
   });
   impRender();
   loadBranches().then(function(B){
@@ -2771,9 +2653,7 @@ function impRender(){
     }
     html+='<div class="improw'+(r.include?'':' off')+'"><label class="impchk"><input type="checkbox"'+(r.include?' checked':'')+' onchange="impSet('+i+',\'include\',this.checked)"> <b>'+esc(r.name)+'</b></label>'+
       '<div class="imp-line"><span class="cat">IG</span><input class="input" value="'+esc(r.handle)+'" placeholder="Instagram jméno (bez něj se použije celé jméno)" oninput="impSet('+i+',\'handle\',this.value,true)">'+
-        '<span class="impbadge '+(r.targetId?'old':'new')+'">'+(r.targetId?'už existuje':'nový')+'</span></div>'+
-      (r.cands&&r.cands.length?'<div class="imp-line"><span class="cat">Člověk</span><select class="input" onchange="impTarget('+i+',this.value)"><option value="">— vytvořit nového —</option>'+
-        r.cands.map(function(id){var q=find(data.people,id); return q?'<option value="'+esc(id)+'"'+(id===r.targetId?' selected':'')+'>'+esc(q.name)+'</option>':'';}).join('')+'</select></div>':'')+
+        '<span class="impbadge '+(r.existing?'old':'new')+'">'+(r.existing?'už existuje':'nový')+'</span></div>'+
       '<div class="cat">'+esc([r.email,r.phone].filter(Boolean).join(' · '))+'</div>'+pt+
       (r.wish?'<div class="cat" style="margin-top:4px">🎁 '+esc(r.wish)+'</div>':'')+'</div>';
   });
@@ -2785,20 +2665,15 @@ function impRender(){
 function impSet(i,k,v,quiet){
   var r=_impRows[i]; if(!r) return;
   r[k]=v;
-  if(k==='handle'){
-    var ex=importTarget({handle:r.handle,name:r.name});
-    if(ex){r.targetId=ex.id; if((r.cands||[]).indexOf(ex.id)<0) (r.cands=r.cands||[]).push(ex.id);}
-    else if(r.targetId&&(r.cands||[]).indexOf(r.targetId)<0) r.targetId='';
-  }
+  if(k==='handle'){r.existing=!!importTarget({handle:r.handle,name:r.name});}
   if(!quiet) impRender();
 }
 function impPick(i,id){_impRows[i].choice=id; impRender();}
-function impTarget(i,id){_impRows[i].targetId=id; impRender();}
 function impRun(){
   var done=0, noPoint=[], created=0, updated=0;
   _impRows.forEach(function(r){
     if(r.err||!r.include||!r.name) return;
-    var p=r.targetId?find(data.people,r.targetId):importTarget({handle:r.handle,name:r.name}), isNew=!p;
+    var p=importTarget({handle:r.handle,name:r.name}), isNew=!p;
     if(!p){p={id:uid(),name:(r.handle?String(r.handle).replace(/^@/,''):r.name).trim()}; data.people.push(p);}
     var b=r.choice?(r.m.cands||[]).filter(function(x){return x.id===r.choice;})[0]:null;
     var prev=shipOf(p);
