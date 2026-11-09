@@ -99,7 +99,6 @@ main{max-width:820px;width:100%;margin:0 auto;padding:16px 16px 90px}
 .row .when{color:var(--muted);font-size:12px;min-width:92px}
 .row .where{font-weight:600;flex:1;min-width:70px}
 .row .amt{font-weight:700}
-.row .gifts{font-size:13px}
 .row .bnote{flex-basis:100%;font-size:13px;color:var(--muted)}
 .card-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
 
@@ -271,8 +270,6 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .fld label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.gift-row{display:flex;gap:8px;margin-bottom:6px}
-.gift-row select{flex:1}.gift-row input{width:72px}
 .modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 
 @media(max-width:640px){
@@ -716,7 +713,6 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 
 // ── HELPERS ──
-var GIFT={labubu:'🐣 Labubu',dumpling:'🥟 Dumpling'};
 var CATS={reklama:'📢 Reklama / spolupráce',material:'📦 Materiál / balení',postovne:'🚚 Poštovné',jine:'💸 Jiné'};
 var NOTE_COLORS=['default','orange','green','blue','purple','red'];
 var NOTE_HEX={default:'#e9d97a',orange:'#f2a36b',green:'#5dbb85',blue:'#6fa3e6',purple:'#a284e0',red:'#e57b74'};
@@ -731,10 +727,6 @@ function bonusSite(b){
   if(id) return find(data.sites,id).name;
   return b.site||'—';
 }
-function bonusGifts(b){
-  if(Array.isArray(b.gifts)&&b.gifts.length) return b.gifts;
-  return b.gift?[{type:b.gift,qty:b.qty||1}]:[];
-}
 function bonusAmount(b){return Number(b.amount)||0;}
 // Historie částky: b.log = [{d:datum, a:rozdíl}]. Bez logu (staré bonusy) = jediný záznam k datu bonusu.
 // Díky tomu se dodatečné navýšení započítá do dne, kdy proběhlo, ne zpětně.
@@ -745,9 +737,6 @@ function bonusEntries(b){
   var rest=amt-out.reduce(function(s,e){return s+e.a;},0);
   if(Math.abs(rest)>0.001) out.push({d:base,a:rest});
   return out;
-}
-function giftText(b){
-  return bonusGifts(b).map(function(g){return (g.type==='dumpling'?'🥟':'🐣')+'×'+(parseInt(g.qty)||1);}).join(' ');
 }
 function pad(n){return String(n).padStart(2,'0');}
 function isoDay(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
@@ -1331,8 +1320,6 @@ function renderPeopleList(){
     if(bonusFilter&&!mb.length) return;
     shown++;
     var total=sumAmount(mb), allTotal=sumAmount(all), cost=costOf(p.id);
-    var lab=0,dum=0;
-    all.forEach(function(b){bonusGifts(b).forEach(function(g){var q=parseInt(g.qty)||1; if(g.type==='dumpling') dum+=q; else lab+=q;});});
     var doneSites=data.sites.filter(function(s){return rem.indexOf(s)<0;});
     var isOpen=bonusFilter||noteFilter||openP[p.id];
     var notes=data.notes.filter(function(n){return n.personId===p.id;});
@@ -1353,7 +1340,7 @@ function renderPeopleList(){
       '<div class="pc-body">'+
         '<div class="stats"><span>Bonus <b>'+kc(allTotal)+'</b></span>'+(shipOf(p)&&p.shipAt?'<span>'+(shipOf(p)==='done'?'Odesláno':'K odeslání od')+' <b>'+fmtDate(p.shipAt)+'</b></span>':'')+(p.pktBarcode?'<span>'+(p.pktCode?'Podací kód <b>'+esc(pktFmtCode(p.pktCode))+'</b>':'Zásilka <b>'+esc(p.pktBarcode)+'</b>')+'</span>'+(p.pktStatus?'<span>Stav <b>'+esc(pktStatusText(p))+'</b></span>':''):'')+(p.askedAt?'<span>Zeptáno <b>'+fmtDate(p.askedAt)+'</b></span>':'')+(ptsClosed(p)?'<span>Body <b>'+ptsLeft(p)+' / '+esc(p.ptsTotal)+'</b></span>':'<span>Body <b>'+bonusCount(p)+'</b> (neuzavřeno)</span>')+(lc?'<span>Změna <b>'+fmtDate(lc)+'</b></span>':'')+
           (cost?'<span>Náklady <b class="neg">'+kc(cost)+'</b></span><span>Zisk <b class="'+(allTotal-cost>=0?'pos':'neg')+'">'+kc(allTotal-cost)+'</b></span>':'')+
-          '<span>🐣 <b>'+lab+'</b></span><span>🥟 <b>'+dum+'</b></span></div>'+
+          '</div>'+
         '<div class="sites">'+
           '<div><div class="sites-t pos">Hotové stránky</div><div class="pills">'+
             (doneSites.length?doneSites.map(function(s){return '<span class="pill">'+esc(s.name)+'</span>';}).join(''):'<span class="cat">žádné</span>')+'</div></div>'+
@@ -1394,7 +1381,6 @@ function bonusRowHTML(b){
     '<span class="when">'+fmtDate(b.date)+'</span>'+
     '<span class="where">'+esc(bonusSite(b))+'</span>'+
     '<span class="amt">'+kc(bonusAmount(b))+'</span>'+
-    (giftText(b)?'<span class="gifts">'+giftText(b)+'</span>':'')+
     '<button class="icon-btn" onclick="openBonusModal(\'\',\''+b.id+'\')" title="Upravit">✎</button>'+
     '<button class="icon-btn" onclick="deleteBonus(\''+b.id+'\')" title="Smazat">✕</button>'+
     (b.note?'<span class="bnote">'+esc(b.note)+'</span>':'')+
@@ -1489,13 +1475,6 @@ function deletePerson(id){
   save(); render();
 }
 
-function giftRowHTML(type,qty){
-  return '<div class="gift-row"><select class="input g-type">'+
-    Object.keys(GIFT).map(function(k){return '<option value="'+k+'"'+(type===k?' selected':'')+'>'+GIFT[k]+'</option>';}).join('')+
-    '</select><input class="input g-qty" type="number" min="1" value="'+esc(qty||1)+'">'+
-    '<button class="icon-btn" onclick="this.parentNode.remove()">✕</button></div>';
-}
-function addGiftRow(){ $('m-gifts').insertAdjacentHTML('beforeend',giftRowHTML('labubu',1)); }
 
 // stránky, které člověk ještě nemá (+ aktuální při úpravě)
 function refreshSiteOptions(){
@@ -1513,7 +1492,6 @@ function openBonusModal(personId,bonusId){
   if(!data.sites.length){ alert('Nejdřív přidej stránku v záložce Stránky.'); return; }
   var b=bonusId?find(data.bonuses,bonusId):null;
   var pid=b?b.personId:(personId||data.people[0].id);
-  var gifts=b?bonusGifts(b):[{type:'labubu',qty:1}];
   var people=data.people.slice().sort(function(a,c){return String(a.name).localeCompare(String(c.name),'cs');});
   openModal('<h2>'+(b?'Upravit bonus':'Nový bonus')+'</h2><input type="hidden" id="m-id" value="'+(b?b.id:'')+'">'+
     '<div class="two"><div class="fld"><label>Člověk</label><select class="input" id="m-person" onchange="refreshSiteOptions()">'+
@@ -1521,8 +1499,6 @@ function openBonusModal(personId,bonusId){
     '<div class="fld"><label>Stránka</label><select class="input" id="m-site" data-cur="'+esc(b?(bonusSiteId(b)||''):'')+'"></select></div></div>'+
     '<div class="fld"><label>Bonus (Kč)</label><input class="input" id="m-amount" type="number" min="0" value="'+esc(b?b.amount:'')+'"></div>'+
     '<div class="fld"><label>Datum a čas</label><input class="input" id="m-date" type="datetime-local" value="'+esc(b?toLocalInput(b.date):nowLocal())+'"></div>'+
-    '<div class="fld"><label>Dárky <button class="icon-btn" onclick="addGiftRow()">＋ přidat</button></label><div id="m-gifts">'+
-      gifts.map(function(g){return giftRowHTML(g.type,g.qty);}).join('')+'</div></div>'+
     '<div class="fld"><label>Poznámka</label><input class="input" id="m-note" value="'+esc(b?b.note:'')+'"></div>'+
     foot('saveBonus()'));
   refreshSiteOptions();
@@ -1532,11 +1508,7 @@ function saveBonus(){
   var amount=parseFloat($('m-amount').value);
   if(!personId||!siteId){ alert('Vyber člověka a stránku.'); return; }
   if(isNaN(amount)||amount<0){ $('m-amount').focus(); return; }
-  var gifts=[].slice.call($('m-gifts').querySelectorAll('.gift-row')).map(function(r){
-    return {type:r.querySelector('.g-type').value,qty:Math.max(1,parseInt(r.querySelector('.g-qty').value)||1)};
-  });
-  var rec={personId:personId,siteId:siteId,amount:amount,gifts:gifts,
-    gift:gifts.length?gifts[0].type:'labubu',qty:gifts.length?gifts[0].qty:1,
+  var rec={personId:personId,siteId:siteId,amount:amount,
     date:$('m-date').value,note:$('m-note').value.trim()};
   if(id){
     var b=find(data.bonuses,id);
