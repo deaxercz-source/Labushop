@@ -632,7 +632,7 @@ function initData(userId){
   _unsub=db.doc(DB_DOC).onSnapshot(function(doc){
     // Vlastní uložení se vrací jako snapshot se stejným obsahem. Nesmí se nahradit data novými objekty:
     // rozepsané akce (čekání na Zásilkovnu, tlačítko „zpět“) by pak upravovaly staré objekty a změna by se ztratila.
-    if(_loaded&&doc.exists&&canonJSON(doc.data())===canonJSON(root)) return;
+    if(_loaded&&doc.exists&&(_pending||canonJSON(doc.data())===canonJSON(root))) return;   // nebo čeká neuložená místní změna (ta je novější než snapshot)
     if(doc.exists){
       root=doc.data();
     } else {
@@ -854,7 +854,7 @@ function renderOverview(){
   var jointProfit=pPepa.profit+pTomas.profit;
   var toSend=data.people.filter(function(p){return shipOf(p)==='todo';}).length;
   var lateCnt=data.people.filter(function(p){return waitDays(p)>=3;}).length;
-  var askCnt=data.people.filter(askDue).length;
+  var askCnt=data.people.filter(askDue).length, failedCnt=data.people.filter(isFailed).length;
   var holdCnt=_orders.filter(function(o){return o.profile===profile&&o.status==='hold';}).length;
 
   $('tiles').innerHTML=
@@ -862,7 +862,7 @@ function renderOverview(){
       '<div class="s">bonusy '+kc(tBon)+(tExp?' · výdaje −'+kc(tExp):'')+'</div></div>'+
     '<div class="tile"><div class="k">Společný zisk</div><div class="v '+(jointProfit>=0?'pos':'neg')+'">'+kc(jointProfit)+'</div>'+
       '<div class="s">'+esc(profileName('pepa'))+' '+kc(pPepa.profit)+' · '+esc(profileName('tomas'))+' '+kc(pTomas.profit)+'</div></div>'+
-    '<div class="tile"><div class="k">Lidí</div><div class="v">'+data.people.length+'</div></div>'+
+    '<div class="tile"><div class="k">Lidí</div><div class="v">'+(data.people.length-failedCnt)+'</div>'+(failedCnt?'<div class="s">+ '+failedCnt+' neúspěšných</div>':'')+'</div>'+
     '<div class="tile click" onclick="goToSend()" title="Zobrazit zákazníky k odeslání"><div class="k">📦 Balíků k odeslání</div><div class="v">'+toSend+'</div>'+(lateCnt?'<div class="s" style="color:var(--red);font-weight:600">⚠ '+lateCnt+' čeká 3+ dny</div>':'')+'</div>'+
     (askCnt?'<div class="tile click" onclick="goToAsk()" title="Zobrazit lidi, kterým je čas se zeptat, jestli zásilka dorazila"><div class="k">💬 Zeptat se, jestli dorazilo</div><div class="v" style="color:#1d5fb4">'+askCnt+'</div></div>':'')+
     (holdCnt?'<div class="tile click" onclick="openOrders()" title="Objednávky, které čekají na tvé rozhodnutí"><div class="k">📥 Objednávky k vyřízení</div><div class="v" style="color:var(--red)">'+holdCnt+'</div></div>':'');
@@ -1243,7 +1243,7 @@ function setShip(id,state,ev){
   ensureHist(p);                                   // historie se dopočítá ještě ze starého stavu
   p.ship=state; p.shipAt=state?nowLocal():''; p.askedAt='';
   histShip(p,prev,state);
-  if(state==='todo'){delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;}
+  if(state==='todo'){delete p.pktAt; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;}
   touchPerson(id);
   save(); render();
   var label={todo:'Odeslat',done:'Odesláno'}[state]||'bez stavu';
@@ -1473,7 +1473,9 @@ function savePerson(){
     _nameConfirmed=true; renderNameWarn(); $('m-save').textContent='Přesto uložit'; return;
   }
   var pid=_personEditId;
-  if(pid) find(data.people,pid).name=name; else {pid=uid(); data.people.push({id:pid,name:name});}
+  var ex=pid&&find(data.people,pid);
+  if(pid&&!ex){closeModal(); render(); return;}    // člověk mezitím zmizel
+  if(ex) ex.name=name; else {pid=uid(); data.people.push({id:pid,name:name});}
   touchPerson(pid);
   save(); closeModal(); render();
 }
@@ -1538,6 +1540,7 @@ function saveBonus(){
     date:$('m-date').value,note:$('m-note').value.trim()};
   if(id){
     var b=find(data.bonuses,id);
+    if(!b){closeModal(); render(); return;}          // bonus mezitím zmizel (smazán na jiném zařízení)
     touchPerson(b.personId);                       // původní majitel (kdyby se bonus přesunul jinam)
     var oldAmt=bonusAmount(b), oldDate=b.date||'';
     var log=bonusEntries(b);                       // materializuje historii i u starých bonusů
@@ -1614,6 +1617,7 @@ function saveNote(id){
   if(!title&&!text) return;
   if(id){
     var n=find(data.notes,id);
+    if(!n){closeModal(); render(); return;}          // poznámka mezitím zmizela
     touchPerson(n.personId);
     n.title=title; n.text=text; n.personId=pid; n.color=_noteColor;
   } else {
@@ -1816,7 +1820,7 @@ function evaluateOrder(o,force){
     if(!ptsClosed(p)) return Object.assign({ok:false,reason:'Body nejsou uzavřené'},base);
     if(cost>ptsLeft(p)) return Object.assign({ok:false,reason:'Nedostatek bodů (má '+ptsLeft(p)+', chce '+cost+')'},base);
     var si=p.shipInfo||{};
-    if(si.order) return Object.assign({ok:false,reason:'Už má zadanou objednávku, která se ještě neodeslala'},base);
+    if(si.order&&shipOf(p)!=='done') return Object.assign({ok:false,reason:'Už má zadanou objednávku, která se ještě neodeslala'},base);   // odeslaná objednávka další nebrání
     var diff=(si.name&&!sameVal(si.name,o.name))||(si.phone&&!sameVal(si.phone,o.phone,true))||(si.email&&!sameVal(si.email,o.email))||(si.point&&!sameVal(si.point,splitPoint(o.point).text));
     if(diff) return Object.assign({ok:false,reason:'Údaje se liší od uložených'},base);
   }
@@ -1824,12 +1828,12 @@ function evaluateOrder(o,force){
 }
 // Zapíše objednávku člověku: údaje pro zásilku, co chce, odečte body a nastaví „Odeslat“.
 function applyOrder(res,o){
-  var p=res.person, si=p.shipInfo||{};
+  var p=find(data.people,res.person.id)||res.person, si=p.shipInfo||{};   // osoba z aktuálních dat (od posouzení mohl přijít nový snapshot)
   ensureHist(p);                                   // historie ze starého stavu, než se změní
   var pt=splitPoint(o.point), keepId=!pt.id&&(!pt.text||sameVal(pt.text,si.point));
   p.shipInfo={name:o.name||si.name||'',phone:o.phone||si.phone||'',email:o.email||si.email||'',point:pt.text||si.point||'',
     pointId:pt.id||(keepId?si.pointId||'':''),pointCc:pt.id?pt.cc:(keepId?si.pointCc||'':''),order:res.text};
-  delete p.pktAt; delete p.pktNo; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;
+  delete p.pktAt; delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;
   p.ptsSpent=(Number(p.ptsSpent)||0)+res.cost;
   p.ship='todo'; p.shipAt=nowLocal(); p.askedAt='';
   histOrder(p,res.items);
@@ -2337,7 +2341,7 @@ function openShipInfo(id,ev){
     '<div class="fld"><label>Vlož všechno najednou (třeba z DM), roztřídí se samo</label>'+
     '<textarea class="input" id="si-raw" rows="3" placeholder="Jana Nováková, 777 123 456, jana@seznam.cz, Zásilkovna Praha 5 …" oninput="siFromRaw()"></textarea></div>'+
     SI_FIELDS.map(function(f){
-      return '<div class="fld"><label>'+f[1]+'</label><div class="sirow"><input class="input" id="si-'+f[0]+'" value="'+esc(i[f[0]]||'')+'">'+
+      return '<div class="fld"><label>'+f[1]+'</label><div class="sirow"><input class="input" id="si-'+f[0]+'" value="'+esc(i[f[0]]||'')+'"'+(f[0]==='point'?' oninput="siPointTyped()"':'')+'>'+
         (f[0]==='point'&&widgetReady()?'<button class="btn btn-sm" onclick="pickPointMap()">📍 Mapa</button>':'')+
         '<button class="btn btn-sm btn-primary" data-k="'+f[0]+'" onclick="copySi(this.dataset.k)">Kopírovat</button></div>'+
         (f[0]==='point'?'<input type="hidden" id="si-pointid" value="'+esc(i.pointId||'')+'"><input type="hidden" id="si-pointcc" value="'+esc(i.pointCc||'')+'">'+
@@ -2357,6 +2361,11 @@ function siFromRaw(){
   var r=parseShipInfo($('si-raw').value);
   SI_FIELDS.forEach(function(f){$('si-'+f[0]).value=r[f[0]];});
   if(r.point){$('si-pointid').value=''; $('si-pointcc').value=''; $('si-pid').innerHTML=pidLabel('');}   // nový text místa = staré ID už neplatí
+}
+// Ručně přepsaný text místa už nemusí odpovídat uloženému ID, zásilka by šla jinam. ID se smaže, místo se vybere znovu na mapě.
+function siPointTyped(){
+  if(!$('si-pointid')||!$('si-pointid').value) return;
+  $('si-pointid').value=''; $('si-pointcc').value=''; $('si-pid').innerHTML=pidLabel('');
 }
 function pidLabel(id){return id?'✓ ID výdejního místa: <b>'+esc(id)+'</b>':'⚠ Bez ID místa (pro export do Zásilkovny vyber místo na mapě)';}
 function pickPointMap(){
