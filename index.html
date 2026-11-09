@@ -525,6 +525,12 @@ firebase.initializeApp({
 var auth = firebase.auth();
 var db = firebase.firestore();
 
+// JSON s seřazenými klíči (Firestore vrací pole abecedně), pro porovnání dvou stavů dat.
+function canonJSON(v){
+  if(Array.isArray(v)) return '['+v.map(canonJSON).join(',')+']';
+  if(v&&typeof v==='object') return '{'+Object.keys(v).sort().filter(function(k){return v[k]!==undefined;}).map(function(k){return JSON.stringify(k)+':'+canonJSON(v[k]);}).join(',')+'}';
+  return JSON.stringify(v);
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -624,6 +630,9 @@ function initData(userId){
   _loaded=false;
   if(_unsub){_unsub();_unsub=null;}
   _unsub=db.doc(DB_DOC).onSnapshot(function(doc){
+    // Vlastní uložení se vrací jako snapshot se stejným obsahem. Nesmí se nahradit data novými objekty:
+    // rozepsané akce (čekání na Zásilkovnu, tlačítko „zpět“) by pak upravovaly staré objekty a změna by se ztratila.
+    if(_loaded&&doc.exists&&canonJSON(doc.data())===canonJSON(root)) return;
     if(doc.exists){
       root=doc.data();
     } else {
@@ -2075,7 +2084,7 @@ function pktMarkSent(id){
 }
 function pktCreate(id){
   var p=find(data.people,id); if(!p||_pktBusy||p.pktBarcode) return;
-  if(_siPerson===id&&$('si-name')) saveShipInfo(false);          // zohlední i to, co je právě v okně přepsané
+  if(_siPerson===id) saveShipInfo(false);                        // zohlední i to, co je právě v otevřeném okně přepsané
   var cfg=pktCfg(); if(!cfg){openPktSetup(); return;}
   var pr=pktApiProblems(p);
   if(pr.length){pktRefresh(p); pktMsg('Zatím chybí: '+pr.join(', ')+'.'); return;}
@@ -2089,6 +2098,9 @@ function pktCreate(id){
     .then(function(res){
       _pktBusy=false;
       if(!res||!res.ok||!res.barcode){pktRefresh(p); pktMsg('Zásilkovna: '+((res&&res.error)||'neznámá chyba')); return;}
+      var cur=find(data.people,id);                    // data se mezitím mohla načíst znovu, osobu najdeme v aktuálních
+      if(!cur){pktMsg('Zásilka vznikla ('+res.barcode+(res.consignPassword?', podací kód '+res.consignPassword:'')+'), ale člověk už v datech není. Zapiš si kód.'); return;}
+      p=cur;
       p.pktNo=no; p.pktId=String(res.id||''); p.pktBarcode=String(res.barcode); p.pktText=String(res.barcodeText||res.barcode); p.pktAt=nowLocal();
       p.pktCode=String(res.consignPassword||''); p.pktStatus=1;
       if(!p.pktCode) delete p.pktCode;
@@ -2140,7 +2152,7 @@ function pktSyncAll(manual){
       if(profile!==prof) return;
       var changed=0, sent=0, deliv=0;
       (res.items||[]).forEach(function(r){
-        var p=list.filter(function(x){return x.pktBarcode===r.id;})[0]; if(!p) return;
+        var p=data.people.filter(function(x){return x.pktBarcode===r.id;})[0]; if(!p) return;   // v aktuálních datech, ne ve starém seznamu
         var o=pktApply(p,r); if(o.changed) changed++; if(o.sent) sent++; if(o.delivered) deliv++;
       });
       if(changed){
@@ -2172,6 +2184,7 @@ function pktCancel(id){
     .then(function(res){
       _pktBusy=false;
       if(!res||!res.ok){pktRefresh(p); pktMsg('Zásilkovna: '+((res&&res.error)||'neznámá chyba')); return;}
+      p=find(data.people,id)||p;
       delete p.pktId; delete p.pktBarcode; delete p.pktText; delete p.pktAt; delete p.pktCode; delete p.pktStatus; delete p.pktDeliveredAt;   // pktNo zůstává, ať se číslo znovu nepoužije
       if(shipOf(p)==='done'){p.ship='todo'; p.shipAt=nowLocal(); histUnsent(p);}
       touchPerson(id); save(); render(); pktRefresh(p);
@@ -2355,6 +2368,8 @@ function pickPointMap(){
 }
 function saveShipInfo(close){
   var p=find(data.people,_siPerson); if(!p) return;
+  // Zavřené okno si drží staré hodnoty políček. Číst z něj by přepsalo novější údaje (třeba z objednávky) prázdnem.
+  if(!$('modal-bg').classList.contains('open')||!$('si-name')||!$('si-order')) return;
   var info={};
   SI_FIELDS.forEach(function(f){info[f[0]]=$('si-'+f[0]).value.trim();});
   info.order=$('si-order').value.trim();
