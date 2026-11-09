@@ -1229,6 +1229,8 @@ function setShip(id,state,ev){
   if(ev) ev.stopPropagation();
   var p=find(data.people,id); if(!p) return;
   var prev=shipOf(p), prevAt=p.shipAt||'', prevUpd=p.updated, prevAsk=p.askedAt||'', prevHist=p.hist==null?null:JSON.stringify(p.hist);
+  var PK=['pktAt','pktNo','pktId','pktBarcode','pktText','pktCode','pktStatus','pktDeliveredAt'], prevPkt={};
+  PK.forEach(function(k){if(p[k]!=null) prevPkt[k]=p[k];});
   ensureHist(p);                                   // historie se dopočítá ještě ze starého stavu
   p.ship=state; p.shipAt=state?nowLocal():''; p.askedAt='';
   histShip(p,prev,state);
@@ -1239,6 +1241,7 @@ function setShip(id,state,ev){
   toast(p.name+' → '+label,function(){
     p.ship=prev; p.shipAt=prevAt; p.updated=prevUpd; p.askedAt=prevAsk;
     if(prevHist==null) delete p.hist; else p.hist=JSON.parse(prevHist);
+    PK.forEach(function(k){if(prevPkt[k]!=null) p[k]=prevPkt[k];});   // vrátí i kód a stav zásilky z Zásilkovny
     save(); render();
   });
 }
