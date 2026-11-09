@@ -157,7 +157,6 @@ mark{background:#fff2a8;border-radius:3px;color:inherit}
 .stat-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
 .pktgo{border:none;background:var(--green);color:#fff;border-radius:999px;padding:6px 13px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 6px 12px -6px rgba(26,158,92,.8)}
 .pktgo.done{background:var(--green-bg);color:var(--green);box-shadow:none;border:1px solid var(--green)}
-.pktgo.warn{background:#fff4d6;color:#7a5b00;box-shadow:none;border:1px solid #e6c35c}
 .improw{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:#fff}
 .improw.off{opacity:.5}
 .improw .impchk{display:flex;align-items:center;gap:8px;font-size:15px;margin:0;color:var(--text);cursor:pointer}
@@ -2044,13 +2043,10 @@ function pktFmtCode(c){return String(c||'').replace(/\D/g,'').replace(/(\d{3})(?
 
 // Rychlé tlačítko na kartě: „+ Zásilka“ (vytvoří zásilku ve Zásilkovně), po vytvoření kopíruje podací kód.
 function pktQuickBtn(p){
-  var id=esc(p.id);
-  if(shipOf(p)!=='todo'&&!p.pktBarcode) return '';                          // jen u „Odeslat“ nebo když zásilka už existuje
-  if(p.pktBarcode) return '<button class="pktgo done" data-id="'+id+'" onclick="event.stopPropagation();pktCopyCode(this.dataset.id)" title="Zkopírovat podací kód">📋 '+esc(p.pktCode?pktFmtCode(p.pktCode):p.pktBarcode)+'</button>';
-  if(!pktCfg()) return '<button class="pktgo warn" onclick="event.stopPropagation();openPktSetup()" title="Zásilkovna ještě není propojená, klikni a propoj ji">⚙ Propojit</button>';
-  var pr=pktApiProblems(p);
-  if(pr.length) return '<button class="pktgo warn" data-id="'+id+'" onclick="openShipInfo(this.dataset.id,event)" title="'+esc('Pro zásilku chybí: '+pr.join(', ')+'. Klikni a doplň to.')+'">⚠ doplnit</button>';
-  return '<button class="pktgo" data-id="'+id+'" onclick="pktQuick(this.dataset.id,event)" title="Vytvořit zásilku ve Zásilkovně">+ Zásilka</button>';
+  if(!pktCfg()) return '';
+  if(p.pktBarcode) return '<button class="pktgo done" data-id="'+esc(p.id)+'" onclick="event.stopPropagation();pktCopyCode(this.dataset.id)" title="Zkopírovat podací kód">📋 '+esc(p.pktCode?pktFmtCode(p.pktCode):p.pktBarcode)+'</button>';
+  if(shipOf(p)==='todo'&&!pktApiProblems(p).length) return '<button class="pktgo" data-id="'+esc(p.id)+'" onclick="pktQuick(this.dataset.id,event)" title="Vytvořit zásilku ve Zásilkovně">+ Zásilka</button>';
+  return '';
 }
 function pktQuick(id,ev){
   if(ev) ev.stopPropagation();
