@@ -178,7 +178,6 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
 .langsw button svg{width:20px;height:20px;display:block}
 .langsw button:hover{opacity:.85}
 .langsw button.on{opacity:.9;transform:scale(1.08)}
-.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
 .hidden{display:none}
 .done{text-align:center;padding:34px 20px}
 .done .big{font-size:56px;margin-bottom:4px}
@@ -233,7 +232,6 @@ label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-wei
         <div class="picked hidden" id="picked"></div>
         <input class="input hidden" id="f-point" placeholder="Napište výdejní místo (např. Zásilkovna Praha 5, Plzeňská 1)" data-i18n-ph="pt_ph">
       </div>
-      <input class="hp" id="f-web" tabindex="-1" autocomplete="off" aria-hidden="true">
       <button class="btn" id="btn-send" onclick="send()" data-i18n="btn_send">Odeslat objednávku 🎁</button>
       <div id="msg2"></div>
     </div>
@@ -591,7 +589,6 @@ $('items').addEventListener('change',function(e){
 function send(){
   msg('msg2','','');
   if(st.open) return;                                   // neuzavřené body: jen náhled
-  if($('f-web').value){ show('step2',false); show('step3',true); return; }          // past na roboty
   var last=0; try{last=Number(localStorage.getItem('ord-last'))||0;}catch(e){}
   if(Date.now()-last<60000){ msg('msg2','warn',t('m_recent')); return; }
   var items=[], missing=false, missingPick=false;

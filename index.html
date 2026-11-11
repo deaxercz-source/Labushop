@@ -819,7 +819,8 @@ function checkNewDay(){
   if(!$('modal-bg').classList.contains('open')) render();   // o půlnoci se statistiky "Dnes" vynulují
 }
 setInterval(checkNewDay,30000);
-document.addEventListener('visibilitychange',function(){if(!document.hidden) checkNewDay();});
+document.addEventListener('visibilitychange',function(){if(!document.hidden) checkNewDay(); else flushSave();});
+window.addEventListener('pagehide',flushSave);                 // nezavřít okno dřív, než se uloží poslední změna
 function render(){
   renderTplBars();
   renderInboxBadge();
@@ -1931,7 +1932,7 @@ function applyOrder(res,o){
   p.ptsSpent=(Number(p.ptsSpent)||0)+res.cost;
   p.ship='todo'; p.shipAt=nowLocal(); p.askedAt='';
   histOrder(p,res.items);
-  touchPerson(p.id); save(); render();
+  touchPerson(p.id); save(); flushSave(); render();            // objednávka je v databázi už označená jako vyřízená, uložit hned
   toast('📥 '+p.name+': '+res.text);
 }
 function processOrders(){
